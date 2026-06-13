@@ -28,11 +28,36 @@ description = "Build Docker image"
 run = "docker run --rm -i --env-file .env i18n-mcp"
 description = "Run Docker image"
 
+[tasks.fmt]
+run = "gofmt -w ."
+description = "Format Go files"
+
+[tasks.tidy]
+run = "go mod tidy"
+description = "Tidy Go modules"
+
+[tasks.vet]
+run = "go vet ./..."
+description = "Run go vet"
+
 [tasks.test]
 run = "go test ./..."
+description = "Run tests"
 
 [tasks.lint]
 run = "golangci-lint run"
+description = "Run golangci-lint"
+
+[tasks.check]
+run = [
+  "mise run tidy",
+  "mise run fmt",
+  "mise run vet",
+  "mise run lint",
+  "mise run test",
+]
+description = "Run all local checks"
 
 [tasks.clean]
 run = "rm -rf tmp bin"
+description = "Remove build artifacts"
