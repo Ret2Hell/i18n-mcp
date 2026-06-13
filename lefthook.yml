@@ -1,0 +1,20 @@
+pre-commit:
+  commands:
+    gofmt:
+      glob: "*.go"
+      run: gofmt -w {staged_files}
+      stage_fixed: true
+    go-mod-tidy:
+      glob: "*.go"
+      run: go mod tidy
+      stage_fixed: true
+    golangci-lint:
+      glob: "*.go"
+      run: golangci-lint run ./...
+
+pre-push:
+  commands:
+    test:
+      run: go test ./...
+    build:
+      run: go build ./...
