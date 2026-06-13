@@ -15,13 +15,13 @@ run = "air"
 description = "Hot reload"
 
 [tasks.build]
-run = "go build -ldflags='-s -w' -o bin/i18n-mcp ./cmd/i18n-mcp/"
+run = "sh scripts/build.sh"
 
 [tasks.start]
 run = "./bin/i18n-mcp"
 
 [tasks.docker-build]
-run = "docker build -t i18n-mcp ."
+run = "VERSION=$(tr -d '[:space:]' < version); COMMIT=$(git rev-parse --short=12 HEAD); DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ'); docker build --build-arg VERSION=$VERSION --build-arg COMMIT=$COMMIT --build-arg DATE=$DATE -t i18n-mcp:$VERSION -t i18n-mcp:latest ."
 description = "Build Docker image"
 
 [tasks.docker-run]
