@@ -9,6 +9,10 @@ RUN apk add --no-cache ca-certificates=20260413-r0 && \
 
 WORKDIR /app
 
+ARG VERSION=dev
+ARG COMMIT=none
+ARG DATE=unknown
+
 COPY go.mod go.sum ./
 RUN go mod download
 
@@ -16,7 +20,7 @@ COPY cmd/ ./cmd/
 COPY internal/ ./internal/
 
 RUN CGO_ENABLED=0 GOOS=linux go build \
-  -ldflags="-s -w" \
+  -ldflags="-s -w -X github.com/Ret2Hell/i18n-mcp/internal/version.Version=${VERSION} -X github.com/Ret2Hell/i18n-mcp/internal/version.Commit=${COMMIT} -X github.com/Ret2Hell/i18n-mcp/internal/version.Date=${DATE}" \
   -installsuffix 'static' \
   -o bin/i18n-mcp \
   ./cmd/i18n-mcp

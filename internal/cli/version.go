@@ -21,7 +21,7 @@ func newVersionCommand(opts *RootOptions) *cobra.Command {
 				enc.SetIndent("", "  ")
 				return enc.Encode(info)
 			default:
-				_, err := fmt.Fprintf(cmd.OutOrStdout(), "version=%s\ncommit=%s\ndate=%s\ndirty=%s\n", info.Version, info.Commit, info.Date, info.Dirty)
+				_, err := fmt.Fprintf(cmd.OutOrStdout(), "i18n-mcp %s\ncommit: %s\nbuilt:  %s\n", info.Version, info.Commit, info.Date)
 				return err
 			}
 		},
