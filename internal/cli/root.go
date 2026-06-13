@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Ret2Hell/i18n-mcp/internal/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -28,8 +29,9 @@ func newRootCommand(opts *RootOptions) *cobra.Command {
 	v := viper.New()
 
 	cmd := &cobra.Command{
-		Use:           "i18n-mcp",
+		Use:           version.AppName,
 		Short:         "MCP server for JSON i18n locale management",
+		Version:       version.Get().Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -43,6 +45,8 @@ func newRootCommand(opts *RootOptions) *cobra.Command {
 	cmd.PersistentFlags().StringVar(&opts.Project, "project", ".", "Next.js project root")
 	cmd.PersistentFlags().StringVar(&opts.Config, "config", "", "optional .i18n-mcp.json path")
 	cmd.PersistentFlags().StringVar(&opts.LogLevel, "log-level", "warn", "debug, info, warn, error")
+	cmd.SetVersionTemplate("{{.Name}} {{.Version}}\n")
+
 	cmd.PersistentFlags().StringVar(&opts.Output, "output", "table", "table, json, markdown")
 
 	mustBind(v.BindPFlag("project", cmd.PersistentFlags().Lookup("project")))

@@ -20,7 +20,10 @@ func TestVersionCommandJSON(t *testing.T) {
 
 	var got map[string]string
 	require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
+	require.Equal(t, "i18n-mcp", got["name"])
 	require.NotEmpty(t, got["version"])
+	require.NotEmpty(t, got["built"])
+	require.NotContains(t, got, "date")
 	require.NotContains(t, got, "dirty")
 }
 
@@ -33,10 +36,10 @@ func TestVersionCommandText(t *testing.T) {
 	cmd.SetArgs([]string{"version"})
 
 	require.NoError(t, cmd.Execute())
-	require.Contains(t, buf.String(), "i18n-mcp\n")
-	require.Contains(t, buf.String(), "  version  ")
-	require.Contains(t, buf.String(), "  commit   ")
-	require.Contains(t, buf.String(), "  built    ")
+	require.Contains(t, buf.String(), "i18n-mcp ")
+	require.Contains(t, buf.String(), "Build\n")
+	require.Contains(t, buf.String(), "  commit  ")
+	require.Contains(t, buf.String(), "  built   ")
 	require.NotContains(t, buf.String(), "dirty")
 }
 
@@ -50,6 +53,7 @@ func TestVersionCommandMarkdown(t *testing.T) {
 
 	require.NoError(t, cmd.Execute())
 	require.Contains(t, buf.String(), "| Field | Value |")
+	require.Contains(t, buf.String(), "| Name | `i18n-mcp` |")
 	require.Contains(t, buf.String(), "| Version | `")
 	require.Contains(t, buf.String(), "| Commit | `")
 	require.Contains(t, buf.String(), "| Built | `")
