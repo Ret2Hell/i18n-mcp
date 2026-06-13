@@ -1,7 +1,17 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/Ret2Hell/i18n-mcp/internal/cli"
+)
 
 func main() {
-	fmt.Println("i18n-mcp comes to dockerhub")
+	ctx := context.Background()
+	if err := cli.Execute(ctx); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }

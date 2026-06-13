@@ -2,6 +2,7 @@
 go = "1.26.4"
 air = "latest"
 golangci-lint = "2.12.2"
+"go:github.com/spf13/cobra-cli" = "latest"
 
 [env]
 CGO_ENABLED = "0"
