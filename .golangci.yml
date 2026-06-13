@@ -1,0 +1,19 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+  settings:
+    errcheck:
+      # Report errors from type assertions (e.g. v, ok := x.(T) when ok is ignored)
+      check-type-assertions: true
+      # Report when errors are assigned to the blank identifier
+      check-blank: true
+
+issues:
+  # Don't limit the number of issues per linter
+  max-issues-per-linter: 0
+  max-same-issues: 0

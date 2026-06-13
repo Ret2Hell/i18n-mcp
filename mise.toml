@@ -1,0 +1,36 @@
+[tools]
+go = "1.26.4"
+air = "latest"
+golangci-lint = "2.12.2"
+
+[env]
+CGO_ENABLED = "0"
+GOCACHE = "{{env.HOME}}/.cache/go-build"
+_.file = { path = ".env" }
+
+[tasks.dev]
+run = "air"
+description = "Hot reload"
+
+[tasks.build]
+run = "go build -ldflags='-s -w' -o bin/i18n-mcp ./cmd/i18n-mcp/"
+
+[tasks.start]
+run = "./bin/i18n-mcp"
+
+[tasks.docker-build]
+run = "docker build -t i18n-mcp ."
+description = "Build Docker image"
+
+[tasks.docker-run]
+run = "docker run --rm -i --env-file .env i18n-mcp"
+description = "Run Docker image"
+
+[tasks.test]
+run = "go test ./..."
+
+[tasks.lint]
+run = "golangci-lint run"
+
+[tasks.clean]
+run = "rm -rf tmp bin"
