@@ -1,7 +1,7 @@
 # argument for Go version
 ARG GO_VERSION=1.26.4
 
-FROM golang:${GO_VERSION}-alpine AS builder
+FROM golang:${GO_VERSION}-alpine@sha256:7a3e50096189ad57c9f9f865e7e4aa8585ed1585248513dc5cda498e2f41812c AS builder
 
 # Install CA certs and create user in builder (these tools don't exist in scratch)
 RUN apk add --no-cache ca-certificates=20260413-r0 && \
