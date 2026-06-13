@@ -20,8 +20,11 @@ func newVersionCommand(opts *RootOptions) *cobra.Command {
 				enc := json.NewEncoder(cmd.OutOrStdout())
 				enc.SetIndent("", "  ")
 				return enc.Encode(info)
+			case "markdown":
+				_, err := fmt.Fprintf(cmd.OutOrStdout(), "| Field | Value |\n| --- | --- |\n| Version | `%s` |\n| Commit | `%s` |\n| Built | `%s` |\n", info.Version, info.Commit, info.Date)
+				return err
 			default:
-				_, err := fmt.Fprintf(cmd.OutOrStdout(), "i18n-mcp %s\ncommit: %s\nbuilt:  %s\n", info.Version, info.Commit, info.Date)
+				_, err := fmt.Fprintf(cmd.OutOrStdout(), "i18n-mcp\n  version  %s\n  commit   %s\n  built    %s\n", info.Version, info.Commit, info.Date)
 				return err
 			}
 		},
