@@ -13,6 +13,6 @@ func main() {
 	if err := cli.Execute(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 
-		os.Exit(1)
+		os.Exit(cli.ExitCode(err))
 	}
 }
