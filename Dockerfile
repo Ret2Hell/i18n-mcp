@@ -3,9 +3,8 @@ ARG GO_VERSION=1.26.4
 
 FROM golang:${GO_VERSION}-alpine@sha256:7a3e50096189ad57c9f9f865e7e4aa8585ed1585248513dc5cda498e2f41812c AS builder
 
-# Install CA certs and create user in builder (these tools don't exist in scratch)
-RUN apk add --no-cache ca-certificates=20260413-r0 && \
-  adduser -D -g '' -u 1000 appuser
+# Create user in builder (these tools don't exist in scratch)
+RUN adduser -D -g '' -u 1000 appuser
 
 WORKDIR /app
 
@@ -31,9 +30,6 @@ WORKDIR /app
 
 # Copy the static binary
 COPY --from=builder /app/bin/i18n-mcp /bin/i18n-mcp
-
-# Copy CA certificates so HTTPS/TLS works
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Copy user database so we can run as non-root by name
 COPY --from=builder /etc/passwd /etc/passwd
