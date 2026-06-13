@@ -3,5 +3,5 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("i18n-mcp")
+	fmt.Println("i18n-mcp comes to dockerhub")
 }
