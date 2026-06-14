@@ -36,4 +36,4 @@ COPY --from=builder /etc/passwd /etc/passwd
 
 USER appuser
 
-CMD ["/bin/i18n-mcp"]
+ENTRYPOINT ["/bin/i18n-mcp"]
