@@ -2,12 +2,11 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 
+	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/rs/zerolog"
 )
 
@@ -15,27 +14,17 @@ type App struct {
 	Options     Options
 	Logger      *slog.Logger
 	ProjectRoot string
+	Guard       *fsutil.Guard
 }
 
 func New(ctx context.Context, opts Options) (*App, error) {
 	_ = ctx
-	root := opts.ProjectRoot
-	if root == "" {
-		root = "."
-	}
-	abs, err := filepath.Abs(root)
+	guard, err := fsutil.NewGuard(opts.ProjectRoot)
 	if err != nil {
 		return nil, err
 	}
-	info, err := os.Stat(abs)
-	if err != nil {
-		return nil, fmt.Errorf("stat project root: %w", err)
-	}
-	if !info.IsDir() {
-		return nil, fmt.Errorf("project root is not a directory: %s", abs)
-	}
 
-	opts.ProjectRoot = abs
+	opts.ProjectRoot = guard.Root()
 	logger := zerolog.New(os.Stderr).
 		Level(parseLevel(opts.LogLevel)).
 		With().
@@ -45,7 +34,8 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	return &App{
 		Options:     opts,
 		Logger:      slog.New(zerolog.NewSlogHandler(logger)),
-		ProjectRoot: abs,
+		ProjectRoot: guard.Root(),
+		Guard:       guard,
 	}, nil
 }
 
