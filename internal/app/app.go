@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Ret2Hell/i18n-mcp/internal/config"
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/rs/zerolog"
 )
@@ -15,6 +16,7 @@ type App struct {
 	Logger      *slog.Logger
 	ProjectRoot string
 	Guard       *fsutil.Guard
+	Config      *config.Service
 }
 
 func New(ctx context.Context, opts Options) (*App, error) {
@@ -31,11 +33,14 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		Timestamp().
 		Logger()
 
+	configService := config.NewService(guard, opts.ConfigPath)
+
 	return &App{
 		Options:     opts,
 		Logger:      slog.New(zerolog.NewSlogHandler(logger)),
 		ProjectRoot: guard.Root(),
 		Guard:       guard,
+		Config:      configService,
 	}, nil
 }
 
