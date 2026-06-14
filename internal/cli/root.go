@@ -54,6 +54,7 @@ func newRootCommand(opts *RootOptions) *cobra.Command {
 	mustBind(v.BindPFlag("log-level", cmd.PersistentFlags().Lookup("log-level")))
 	mustBind(v.BindPFlag("output", cmd.PersistentFlags().Lookup("output")))
 
+	cmd.AddCommand(newServeCommand(opts))
 	cmd.AddCommand(newVersionCommand(opts))
 
 	return cmd
