@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +13,7 @@ import (
 
 type App struct {
 	Options     Options
-	Logger      *zerolog.Logger
+	Logger      *slog.Logger
 	ProjectRoot string
 }
 
@@ -43,7 +44,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 
 	return &App{
 		Options:     opts,
-		Logger:      &logger,
+		Logger:      slog.New(zerolog.NewSlogHandler(logger)),
 		ProjectRoot: abs,
 	}, nil
 }
