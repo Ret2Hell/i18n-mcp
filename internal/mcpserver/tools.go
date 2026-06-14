@@ -6,6 +6,10 @@ import (
 )
 
 func registerTools(s *mcp.Server, a *app.App) {
-	_ = s
-	_ = a
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.health",
+		Title:       "i18n MCP Health",
+		Description: "Return server version, configured project root, and health status.",
+		Annotations: readOnly("i18n MCP Health"),
+	}, healthTool(a))
 }
