@@ -3,15 +3,16 @@ package app
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/rs/zerolog"
 )
 
 type App struct {
 	Options     Options
-	Logger      *slog.Logger
+	Logger      *zerolog.Logger
 	ProjectRoot string
 }
 
@@ -34,22 +35,28 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	}
 
 	opts.ProjectRoot = abs
+	logger := zerolog.New(os.Stderr).
+		Level(parseLevel(opts.LogLevel)).
+		With().
+		Timestamp().
+		Logger()
+
 	return &App{
 		Options:     opts,
-		Logger:      slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: parseLevel(opts.LogLevel)})),
+		Logger:      &logger,
 		ProjectRoot: abs,
 	}, nil
 }
 
-func parseLevel(level string) slog.Leveler {
+func parseLevel(level string) zerolog.Level {
 	switch strings.ToLower(level) {
 	case "debug":
-		return slog.LevelDebug
+		return zerolog.DebugLevel
 	case "info":
-		return slog.LevelInfo
+		return zerolog.InfoLevel
 	case "error":
-		return slog.LevelError
+		return zerolog.ErrorLevel
 	default:
-		return slog.LevelWarn
+		return zerolog.WarnLevel
 	}
 }
