@@ -43,12 +43,52 @@ func TestValidateRejectsBadConfig(t *testing.T) {
 	require.False(t, got.Valid)
 	require.NotEmpty(t, got.Errors)
 
-	codes := map[string]bool{}
-	for _, diagnostic := range got.Errors {
-		codes[diagnostic.Code] = true
+	requireDiagnostic(t, got.Errors, "target_contains_source", "targetLocales")
+	requireDiagnostic(t, got.Errors, "locale_pattern_missing_locale", "localeFiles[0]")
+	requireDiagnostic(t, got.Errors, "invalid_indent", "format.indent")
+	requireDiagnostic(t, got.Errors, "invalid_translation_mode", "translation.mode")
+}
+
+func TestValidateRejectsProjectPathsOutsideRoot(t *testing.T) {
+	ctx := t.Context()
+	root := t.TempDir()
+	outside := t.TempDir()
+	guard, err := fsutil.NewGuard(root)
+	require.NoError(t, err)
+	service := NewService(guard, "")
+
+	cfg := Resolved{File: Defaults(), ProjectRoot: root}
+	cfg.Translation.StyleGuidePath = outside + "/style.md"
+	cfg.Translation.GlossaryPath = "../glossary.md"
+
+	got := service.Validate(ctx, cfg)
+	require.False(t, got.Valid)
+	requireDiagnostic(t, got.Errors, "path_escapes_project", "translation.styleGuidePath")
+	requireDiagnostic(t, got.Errors, "path_escapes_project", "translation.glossaryPath")
+}
+
+func TestValidateAcceptsProjectPathsInsideRoot(t *testing.T) {
+	ctx := t.Context()
+	root := t.TempDir()
+	guard, err := fsutil.NewGuard(root)
+	require.NoError(t, err)
+	service := NewService(guard, "")
+
+	cfg := Resolved{File: Defaults(), ProjectRoot: root}
+	cfg.Translation.StyleGuidePath = "docs/style.md"
+	cfg.Translation.GlossaryPath = "docs/glossary.md"
+
+	got := service.Validate(ctx, cfg)
+	require.True(t, got.Valid)
+	require.Empty(t, got.Errors)
+}
+
+func requireDiagnostic(t *testing.T, diagnostics []Diagnostic, code string, field string) {
+	t.Helper()
+	for _, diagnostic := range diagnostics {
+		if diagnostic.Code == code && diagnostic.Field == field {
+			return
+		}
 	}
-	require.True(t, codes["target_contains_source"])
-	require.True(t, codes["locale_pattern_missing_locale"])
-	require.True(t, codes["invalid_indent"])
-	require.True(t, codes["invalid_translation_mode"])
+	require.Failf(t, "missing diagnostic", "code %q field %q not found in %#v", code, field, diagnostics)
 }

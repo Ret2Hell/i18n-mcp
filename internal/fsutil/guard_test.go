@@ -20,12 +20,24 @@ func TestGuardResolveInsideRoot(t *testing.T) {
 }
 
 func TestGuardRejectsTraversal(t *testing.T) {
-	root := t.TempDir()
-	guard, err := NewGuard(root)
-	require.NoError(t, err)
+	tests := []struct {
+		name string
+		call func(*Guard) (string, error)
+	}{
+		{name: "resolve", call: func(guard *Guard) (string, error) { return guard.Resolve("../outside.json") }},
+		{name: "rel", call: func(guard *Guard) (string, error) { return guard.Rel("../outside.json") }},
+	}
 
-	_, err = guard.Resolve("../outside.json")
-	require.Error(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			guard, err := NewGuard(root)
+			require.NoError(t, err)
+
+			_, err = tt.call(guard)
+			require.Error(t, err)
+		})
+	}
 }
 
 func TestGuardRejectsAbsoluteOutsideRoot(t *testing.T) {
@@ -73,13 +85,14 @@ func TestGuardResolveEmptyPathReturnsRoot(t *testing.T) {
 	require.Equal(t, guard.Root(), got)
 }
 
-func TestGuardRelRejectsTraversal(t *testing.T) {
+func TestGuardRelReturnsRelativePath(t *testing.T) {
 	root := t.TempDir()
 	guard, err := NewGuard(root)
 	require.NoError(t, err)
 
-	_, err = guard.Rel("../outside.json")
-	require.Error(t, err)
+	got, err := guard.Rel("messages/en.json")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Join("messages", "en.json"), got)
 }
 
 func TestGuardResolveExistingAllowsSymlinkInsideRoot(t *testing.T) {
@@ -129,6 +142,25 @@ func TestNewGuardResolvesRootSymlink(t *testing.T) {
 	guard, err := NewGuard(linkRoot)
 	require.NoError(t, err)
 	require.Equal(t, realRoot, guard.Root())
+}
+
+func TestNewGuardDefaultsEmptyRootToWorkingDirectory(t *testing.T) {
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	realCWD, err := filepath.EvalSymlinks(cwd)
+	require.NoError(t, err)
+
+	guard, err := NewGuard("")
+	require.NoError(t, err)
+	require.Equal(t, filepath.Clean(realCWD), guard.Root())
+}
+
+func TestNewGuardRejectsMissingRoot(t *testing.T) {
+	missingRoot := filepath.Join(t.TempDir(), "missing")
+
+	_, err := NewGuard(missingRoot)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "resolve project root")
 }
 
 func TestNewGuardRejectsFileRoot(t *testing.T) {
