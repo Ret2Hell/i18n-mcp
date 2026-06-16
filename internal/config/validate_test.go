@@ -83,6 +83,56 @@ func TestValidateAcceptsProjectPathsInsideRoot(t *testing.T) {
 	require.Empty(t, got.Errors)
 }
 
+func TestValidateRejectsEmptyLocaleFiles(t *testing.T) {
+	ctx := t.Context()
+	root := t.TempDir()
+	guard, err := fsutil.NewGuard(root)
+	require.NoError(t, err)
+	service := NewService(guard, "")
+
+	cfg := Resolved{File: Defaults(), ProjectRoot: root}
+	cfg.LocaleFiles = nil
+
+	got := service.Validate(ctx, cfg)
+	require.False(t, got.Valid)
+	requireDiagnostic(t, got.Errors, "locale_files_required", "localeFiles")
+}
+
+func TestValidateFormatIndentBoundaries(t *testing.T) {
+	ctx := t.Context()
+	root := t.TempDir()
+	guard, err := fsutil.NewGuard(root)
+	require.NoError(t, err)
+	service := NewService(guard, "")
+
+	tests := []struct {
+		name  string
+		value int
+		valid bool
+	}{
+		{name: "minus one", value: -1, valid: false},
+		{name: "zero", value: 0, valid: true},
+		{name: "one", value: 1, valid: true},
+		{name: "eight", value: 8, valid: true},
+		{name: "nine", value: 9, valid: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := Resolved{File: Defaults(), ProjectRoot: root}
+			cfg.Format.Indent = tt.value
+
+			got := service.Validate(ctx, cfg)
+			require.Equal(t, tt.valid, got.Valid)
+			if tt.valid {
+				require.Empty(t, got.Errors)
+				return
+			}
+			requireDiagnostic(t, got.Errors, "invalid_indent", "format.indent")
+		})
+	}
+}
+
 func requireDiagnostic(t *testing.T, diagnostics []Diagnostic, code string, field string) {
 	t.Helper()
 	for _, diagnostic := range diagnostics {
