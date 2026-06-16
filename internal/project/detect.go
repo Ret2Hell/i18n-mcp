@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Ret2Hell/i18n-mcp/internal/config"
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 )
 
@@ -27,6 +28,7 @@ type Detection struct {
 	LocaleFiles      []LocaleFileCandidate `json:"localeFiles,omitzero"`
 	SourceCandidates []string              `json:"sourceLocaleCandidates,omitzero"`
 	TargetLocales    []string              `json:"targetLocales,omitzero"`
+	ProposedConfig   config.File           `json:"proposedConfig"`
 	Warnings         []string              `json:"warnings,omitzero"`
 }
 
@@ -100,6 +102,14 @@ func (s *Service) Detect(ctx context.Context, opts DetectOptions) (Detection, er
 	}
 	if len(layouts) == 0 {
 		d.Warnings = append(d.Warnings, "no common JSON locale layout was detected")
+	}
+
+	d.ProposedConfig = proposeConfig(d)
+	if len(d.SourceCandidates) == 0 {
+		d.Warnings = append(d.Warnings, "could not infer source locale")
+	}
+	if len(d.TargetLocales) == 0 {
+		d.Warnings = append(d.Warnings, "could not infer target locales")
 	}
 
 	sort.Strings(d.Warnings)
