@@ -49,6 +49,33 @@ func TestConfigGetToolOverInMemoryMCP(t *testing.T) {
 	require.Equal(t, "test-provider", out.Config.Translation.Provider)
 }
 
+func TestConfigGetToolReturnsDefaultsWhenConfigFileIsMissingOverInMemoryMCP(t *testing.T) {
+	ctx := context.Background()
+	projectRoot := t.TempDir()
+
+	clientSession := newInMemoryMCPClientSession(t, ctx, projectRoot)
+	res, err := clientSession.CallTool(ctx, &mcp.CallToolParams{Name: "i18n.config.get"})
+	require.NoError(t, err)
+	require.False(t, res.IsError)
+
+	var out struct {
+		Config config.Resolved `json:"config"`
+	}
+	unmarshalStructuredContent(t, res.StructuredContent, &out)
+
+	require.False(t, out.Config.Exists)
+	require.Equal(t, projectRoot, out.Config.ProjectRoot)
+	require.Equal(t, filepath.Join(projectRoot, config.DefaultConfigFile), out.Config.ConfigPath)
+	require.Equal(t, "en", out.Config.SourceLocale)
+	require.Nil(t, out.Config.TargetLocales)
+	require.Equal(t, []string{"messages/{locale}.json", "locales/{locale}.json"}, out.Config.LocaleFiles)
+	require.Equal(t, "common", out.Config.DefaultNamespace)
+	require.Equal(t, []string{"t", "i18n.t"}, out.Config.TranslationFunctions)
+	require.Equal(t, []string{"useTranslations", "getTranslations"}, out.Config.NamespaceFunctions)
+	require.Equal(t, 2, out.Config.Format.Indent)
+	require.Equal(t, "agent", out.Config.Translation.Mode)
+}
+
 func TestConfigValidateToolOverInMemoryMCP(t *testing.T) {
 	ctx := context.Background()
 	projectRoot := t.TempDir()
