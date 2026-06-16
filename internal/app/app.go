@@ -8,6 +8,7 @@ import (
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
+	"github.com/Ret2Hell/i18n-mcp/internal/project"
 	"github.com/rs/zerolog"
 )
 
@@ -17,6 +18,7 @@ type App struct {
 	ProjectRoot string
 	Guard       *fsutil.Guard
 	Config      *config.Service
+	Project     *project.Service
 }
 
 func New(ctx context.Context, opts Options) (*App, error) {
@@ -34,6 +36,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		Logger()
 
 	configService := config.NewService(guard, opts.ConfigPath)
+	projectService := project.NewService(guard)
 
 	return &App{
 		Options:     opts,
@@ -41,6 +44,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		ProjectRoot: guard.Root(),
 		Guard:       guard,
 		Config:      configService,
+		Project:     projectService,
 	}, nil
 }
 
