@@ -3,6 +3,7 @@ module github.com/Ret2Hell/i18n-mcp
 go 1.26.4
 
 require (
+	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/google/jsonschema-go v0.4.3
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/rs/zerolog v1.35.1

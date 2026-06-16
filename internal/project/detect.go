@@ -18,12 +18,16 @@ type DetectOptions struct {
 }
 
 type Detection struct {
-	ProjectRoot     string        `json:"projectRoot"`
-	Root            RootInfo      `json:"root"`
-	NextJS          NextJSHints   `json:"nextjs"`
-	Libraries       []LibraryHint `json:"libraries,omitzero"`
-	DetectedLibrary string        `json:"detectedLibrary,omitzero"`
-	Warnings        []string      `json:"warnings,omitzero"`
+	ProjectRoot      string                `json:"projectRoot"`
+	Root             RootInfo              `json:"root"`
+	NextJS           NextJSHints           `json:"nextjs"`
+	Libraries        []LibraryHint         `json:"libraries,omitzero"`
+	DetectedLibrary  string                `json:"detectedLibrary,omitzero"`
+	Layouts          []LocaleLayout        `json:"layouts,omitzero"`
+	LocaleFiles      []LocaleFileCandidate `json:"localeFiles,omitzero"`
+	SourceCandidates []string              `json:"sourceLocaleCandidates,omitzero"`
+	TargetLocales    []string              `json:"targetLocales,omitzero"`
+	Warnings         []string              `json:"warnings,omitzero"`
 }
 
 type NextJSHints struct {
@@ -76,6 +80,26 @@ func (s *Service) Detect(ctx context.Context, opts DetectOptions) (Detection, er
 	d.DetectedLibrary = primaryLibrary(d.Libraries)
 	if d.DetectedLibrary == "" {
 		d.Warnings = append(d.Warnings, "no supported i18n library dependency was detected")
+	}
+
+	layouts, layoutWarnings := detectLocaleLayouts(ctx, guard)
+	d.Layouts = layouts
+	d.Warnings = append(d.Warnings, layoutWarnings...)
+	for _, layout := range layouts {
+		d.LocaleFiles = append(d.LocaleFiles, layout.Files...)
+	}
+	locales := uniqueLocales(layouts)
+	d.SourceCandidates = bestSourceCandidates(locales)
+	if len(d.SourceCandidates) > 0 {
+		source := d.SourceCandidates[0]
+		for _, locale := range locales {
+			if locale != source {
+				d.TargetLocales = append(d.TargetLocales, locale)
+			}
+		}
+	}
+	if len(layouts) == 0 {
+		d.Warnings = append(d.Warnings, "no common JSON locale layout was detected")
 	}
 
 	sort.Strings(d.Warnings)
