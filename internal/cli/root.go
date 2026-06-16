@@ -56,6 +56,7 @@ func newRootCommand(opts *RootOptions) *cobra.Command {
 
 	cmd.AddCommand(newServeCommand(opts))
 	cmd.AddCommand(newVersionCommand(opts))
+	cmd.AddCommand(newSchemaCommand(opts))
 
 	return cmd
 }
