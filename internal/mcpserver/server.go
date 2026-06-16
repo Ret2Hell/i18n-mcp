@@ -11,7 +11,7 @@ import (
 
 func New(a *app.App) *mcp.Server {
 	opts := &mcp.ServerOptions{
-		Instructions: "Use this server to inspect, validate, translate, and safely update JSON i18n locale files in the configured Next.js project. Prefer dry-run tools before write tools.",
+		Instructions: "Use this server to inspect, validate, translate, and safely update JSON i18n locale files in the configured project. Prefer dry-run tools before write tools.",
 		Logger:       a.Logger,
 		PageSize:     100,
 		Capabilities: &mcp.ServerCapabilities{

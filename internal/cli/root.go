@@ -42,7 +42,7 @@ func newRootCommand(opts *RootOptions) *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringVar(&opts.Project, "project", ".", "Next.js project root")
+	cmd.PersistentFlags().StringVar(&opts.Project, "project", ".", "project root")
 	cmd.PersistentFlags().StringVar(&opts.Config, "config", "", "optional .i18n-mcp.json path")
 	cmd.PersistentFlags().StringVar(&opts.LogLevel, "log-level", "warn", "debug, info, warn, error")
 	cmd.SetVersionTemplate("{{.Name}} {{.Version}}\n")

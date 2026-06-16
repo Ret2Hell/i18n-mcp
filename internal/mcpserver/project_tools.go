@@ -16,7 +16,7 @@ type ProjectDetectInput struct {
 
 type ProjectDetectOutput struct {
 	ProjectRoot      string                        `json:"projectRoot" jsonschema:"resolved project root"`
-	NextJS           project.NextJSHints           `json:"nextjs" jsonschema:"Next.js detection hints"`
+	NextJS           project.NextJSHints           `json:"nextjs" jsonschema:"Next.js detection hints from detect4nextjs when applicable"`
 	DetectedLibrary  string                        `json:"detectedLibrary,omitzero" jsonschema:"primary detected i18n library"`
 	Libraries        []project.LibraryHint         `json:"libraries,omitzero" jsonschema:"all detected i18n libraries"`
 	Layouts          []project.LocaleLayout        `json:"layouts,omitzero" jsonschema:"detected locale layouts"`

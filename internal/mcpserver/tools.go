@@ -16,7 +16,7 @@ func registerTools(s *mcp.Server, a *app.App) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.project.detect",
 		Title:       "Detect i18n Project",
-		Description: "Detect Next.js hints, i18n libraries, JSON locale layouts, locale candidates, and a proposed i18n MCP config.",
+		Description: "Detect framework hints, i18n libraries, JSON locale layouts, locale candidates, and a proposed i18n MCP config.",
 		Annotations: readOnly("Detect i18n Project"),
 	}, projectDetectTool(a))
 
