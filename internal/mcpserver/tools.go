@@ -19,4 +19,11 @@ func registerTools(s *mcp.Server, a *app.App) {
 		Description: "Return resolved configuration, including defaults and config file origin.",
 		Annotations: readOnly("Get i18n MCP Config"),
 	}, configGetTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.config.validate",
+		Title:       "Validate i18n MCP Config",
+		Description: "Validate resolved configuration and return actionable errors and warnings.",
+		Annotations: readOnly("Validate i18n MCP Config"),
+	}, configValidateTool(a))
 }

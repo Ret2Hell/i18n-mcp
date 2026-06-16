@@ -24,3 +24,22 @@ func configGetTool(a *app.App) func(context.Context, *mcp.CallToolRequest, Confi
 		return nil, ConfigGetOutput{Config: cfg}, nil
 	}
 }
+
+type ConfigValidateInput struct{}
+
+type ConfigValidateOutput struct {
+	Config     config.Resolved         `json:"config" jsonschema:"resolved configuration that was validated"`
+	Validation config.ValidationResult `json:"validation" jsonschema:"validation result with errors and warnings"`
+}
+
+func configValidateTool(a *app.App) func(context.Context, *mcp.CallToolRequest, ConfigValidateInput) (*mcp.CallToolResult, ConfigValidateOutput, error) {
+	return func(ctx context.Context, req *mcp.CallToolRequest, in ConfigValidateInput) (*mcp.CallToolResult, ConfigValidateOutput, error) {
+		_, _ = req, in
+		cfg, err := a.Config.Resolve(ctx)
+		if err != nil {
+			return nil, ConfigValidateOutput{}, err
+		}
+		validation := a.Config.Validate(ctx, cfg)
+		return nil, ConfigValidateOutput{Config: cfg, Validation: validation}, nil
+	}
+}
