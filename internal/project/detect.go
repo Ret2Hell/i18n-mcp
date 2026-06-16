@@ -18,10 +18,12 @@ type DetectOptions struct {
 }
 
 type Detection struct {
-	ProjectRoot string      `json:"projectRoot"`
-	Root        RootInfo    `json:"root"`
-	NextJS      NextJSHints `json:"nextjs"`
-	Warnings    []string    `json:"warnings,omitzero"`
+	ProjectRoot     string        `json:"projectRoot"`
+	Root            RootInfo      `json:"root"`
+	NextJS          NextJSHints   `json:"nextjs"`
+	Libraries       []LibraryHint `json:"libraries,omitzero"`
+	DetectedLibrary string        `json:"detectedLibrary,omitzero"`
+	Warnings        []string      `json:"warnings,omitzero"`
 }
 
 type NextJSHints struct {
@@ -69,6 +71,13 @@ func (s *Service) Detect(ctx context.Context, opts DetectOptions) (Detection, er
 	if !d.NextJS.LooksLikeNextJS {
 		d.Warnings = append(d.Warnings, "project root does not look like a Next.js app")
 	}
+
+	d.Libraries = detectLibraries(pkg)
+	d.DetectedLibrary = primaryLibrary(d.Libraries)
+	if d.DetectedLibrary == "" {
+		d.Warnings = append(d.Warnings, "no supported i18n library dependency was detected")
+	}
+
 	sort.Strings(d.Warnings)
 	return d, nil
 }
