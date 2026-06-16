@@ -14,6 +14,13 @@ func registerTools(s *mcp.Server, a *app.App) {
 	}, healthTool(a))
 
 	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.project.detect",
+		Title:       "Detect i18n Project",
+		Description: "Detect Next.js hints, i18n libraries, JSON locale layouts, locale candidates, and a proposed i18n MCP config.",
+		Annotations: readOnly("Detect i18n Project"),
+	}, projectDetectTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.config.get",
 		Title:       "Get i18n MCP Config",
 		Description: "Return resolved configuration, including defaults and config file origin.",
