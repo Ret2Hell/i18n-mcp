@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "scripts": {
+    "dev": "pnpm next dev",
+    "build": "./node_modules/.bin/next build",
+    "preview": "next start"
+  }
+}

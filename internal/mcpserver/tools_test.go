@@ -22,6 +22,7 @@ func TestListToolsOverInMemoryMCP(t *testing.T) {
 
 	expected := map[string]string{
 		"i18n.health":          "i18n MCP Health",
+		"i18n.project.detect":  "Detect i18n Project",
 		"i18n.config.get":      "Get i18n MCP Config",
 		"i18n.config.validate": "Validate i18n MCP Config",
 	}
