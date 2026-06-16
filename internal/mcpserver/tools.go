@@ -12,4 +12,11 @@ func registerTools(s *mcp.Server, a *app.App) {
 		Description: "Return server version, configured project root, and health status.",
 		Annotations: readOnly("i18n MCP Health"),
 	}, healthTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.config.get",
+		Title:       "Get i18n MCP Config",
+		Description: "Return resolved configuration, including defaults and config file origin.",
+		Annotations: readOnly("Get i18n MCP Config"),
+	}, configGetTool(a))
 }
