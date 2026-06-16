@@ -6,11 +6,11 @@ type File struct {
 	TargetLocales        []string          `json:"targetLocales" jsonschema:"target locales to maintain"`
 	LocaleFiles          []string          `json:"localeFiles" jsonschema:"locale file patterns containing {locale} and optional {namespace}"`
 	DefaultNamespace     string            `json:"defaultNamespace,omitempty" jsonschema:"namespace used when file layout has no namespace segment"`
-	TranslationFunctions []string          `json:"translationFunctions,omitempty" jsonschema:"translation function names to scan in app code"`
-	NamespaceFunctions   []string          `json:"namespaceFunctions,omitempty" jsonschema:"functions that bind a translation namespace"`
-	IgnoredKeyPatterns   []string          `json:"ignoredKeyPatterns,omitempty" jsonschema:"dead-key patterns to ignore"`
-	KeptKeyPatterns      []string          `json:"keptKeyPatterns,omitempty" jsonschema:"dead-key patterns to always keep"`
-	DynamicKeyHints      []string          `json:"dynamicKeyHints,omitempty" jsonschema:"patterns that may be used dynamically"`
+	TranslationFunctions []string          `json:"translationFunctions,omitzero" jsonschema:"translation function names to scan in app code"`
+	NamespaceFunctions   []string          `json:"namespaceFunctions,omitzero" jsonschema:"functions that bind a translation namespace"`
+	IgnoredKeyPatterns   []string          `json:"ignoredKeyPatterns,omitzero" jsonschema:"dead-key patterns to ignore"`
+	KeptKeyPatterns      []string          `json:"keptKeyPatterns,omitzero" jsonschema:"dead-key patterns to always keep"`
+	DynamicKeyHints      []string          `json:"dynamicKeyHints,omitzero" jsonschema:"patterns that may be used dynamically"`
 	Format               FormatConfig      `json:"format" jsonschema:"locale JSON formatting preferences"`
 	Translation          TranslationConfig `json:"translation" jsonschema:"translation mode and optional context files"`
 }

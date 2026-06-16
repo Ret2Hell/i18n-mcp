@@ -1,7 +1,6 @@
 package config
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +10,7 @@ import (
 )
 
 func TestResolveMissingConfigUsesDefaults(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	root := t.TempDir()
 	guard, err := fsutil.NewGuard(root)
 	require.NoError(t, err)
@@ -26,7 +25,7 @@ func TestResolveMissingConfigUsesDefaults(t *testing.T) {
 }
 
 func TestResolveValidConfigMergesDefaults(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	root := t.TempDir()
 	data := []byte(`{
   "sourceLocale": "en-US",
@@ -52,7 +51,7 @@ func TestResolveValidConfigMergesDefaults(t *testing.T) {
 }
 
 func TestResolveRejectsInvalidJSON(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	root := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(root, DefaultConfigFile), []byte(`{"sourceLocale":`), 0o600))
 
@@ -65,7 +64,7 @@ func TestResolveRejectsInvalidJSON(t *testing.T) {
 }
 
 func TestResolveRejectsConfigPathOutsideRoot(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	root := t.TempDir()
 	outside := filepath.Join(t.TempDir(), ".i18n-mcp.json")
 

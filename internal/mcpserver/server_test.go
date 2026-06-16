@@ -1,7 +1,6 @@
 package mcpserver_test
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func TestHealthTool(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	projectRoot := t.TempDir()
 
 	application, err := app.New(ctx, app.Options{ProjectRoot: projectRoot, LogLevel: "error"})

@@ -15,8 +15,8 @@ type Diagnostic struct {
 
 type ValidationResult struct {
 	Valid    bool         `json:"valid"`
-	Errors   []Diagnostic `json:"errors,omitempty"`
-	Warnings []Diagnostic `json:"warnings,omitempty"`
+	Errors   []Diagnostic `json:"errors,omitzero"`
+	Warnings []Diagnostic `json:"warnings,omitzero"`
 }
 
 func (s *Service) Validate(ctx context.Context, cfg Resolved) ValidationResult {

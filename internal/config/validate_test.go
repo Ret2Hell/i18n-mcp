@@ -1,7 +1,6 @@
 package config
 
 import (
-	"context"
 	"testing"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
@@ -9,7 +8,7 @@ import (
 )
 
 func TestValidateDefaultsAreValid(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	root := t.TempDir()
 	guard, err := fsutil.NewGuard(root)
 	require.NoError(t, err)
@@ -23,7 +22,7 @@ func TestValidateDefaultsAreValid(t *testing.T) {
 }
 
 func TestValidateRejectsBadConfig(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	root := t.TempDir()
 	guard, err := fsutil.NewGuard(root)
 	require.NoError(t, err)

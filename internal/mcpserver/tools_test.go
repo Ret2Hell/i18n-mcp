@@ -1,7 +1,6 @@
 package mcpserver_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -9,7 +8,7 @@ import (
 )
 
 func TestListToolsOverInMemoryMCP(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	clientSession := newInMemoryMCPClientSession(t, ctx, t.TempDir())
 
 	res, err := clientSession.ListTools(ctx, nil)

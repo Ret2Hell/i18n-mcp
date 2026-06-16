@@ -15,7 +15,7 @@ import (
 )
 
 func TestConfigGetToolOverInMemoryMCP(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	projectRoot := t.TempDir()
 	configPath := filepath.Join(projectRoot, config.DefaultConfigFile)
 	require.NoError(t, os.WriteFile(configPath, []byte(`{
@@ -50,7 +50,7 @@ func TestConfigGetToolOverInMemoryMCP(t *testing.T) {
 }
 
 func TestConfigGetToolReturnsDefaultsWhenConfigFileIsMissingOverInMemoryMCP(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	projectRoot := t.TempDir()
 
 	clientSession := newInMemoryMCPClientSession(t, ctx, projectRoot)
@@ -77,7 +77,7 @@ func TestConfigGetToolReturnsDefaultsWhenConfigFileIsMissingOverInMemoryMCP(t *t
 }
 
 func TestConfigValidateToolOverInMemoryMCP(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	projectRoot := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(projectRoot, config.DefaultConfigFile), []byte(`{
   "sourceLocale": "en",

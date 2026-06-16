@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,7 +9,7 @@ import (
 )
 
 func TestNewNormalizesProjectRoot(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	root := t.TempDir()
 	projectRoot := filepath.Join(root, ".")
 
@@ -25,7 +24,7 @@ func TestNewNormalizesProjectRoot(t *testing.T) {
 }
 
 func TestNewRejectsMissingProjectRoot(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	missingRoot := filepath.Join(t.TempDir(), "missing")
 
 	_, err := New(ctx, Options{ProjectRoot: missingRoot})
@@ -34,7 +33,7 @@ func TestNewRejectsMissingProjectRoot(t *testing.T) {
 }
 
 func TestNewRejectsFileProjectRoot(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	root := t.TempDir()
 	file := filepath.Join(root, "file.txt")
 	require.NoError(t, os.WriteFile(file, []byte{}, 0o600))
