@@ -1,0 +1,11 @@
+{
+  "arrayValue": ["a", "b"],
+  "count": 3,
+  "nested": {
+    "title": "Nested title"
+  },
+  "rich": {
+    "defaultMessage": "Hello {name}",
+    "description": "Greeting"
+  }
+}

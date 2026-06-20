@@ -1,0 +1,8 @@
+{
+  "sourceLocale": "en",
+  "localeFiles": [
+    "messages/{locale}.json",
+    "locales/{locale}/{namespace}.json"
+  ],
+  "defaultNamespace": "common"
+}

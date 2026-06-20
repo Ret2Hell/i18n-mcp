@@ -1,0 +1,6 @@
+{
+  "sourceLocale": "en",
+  "targetLocales": ["de"],
+  "localeFiles": ["locales/{locale}/{namespace}.json"],
+  "defaultNamespace": "common"
+}
