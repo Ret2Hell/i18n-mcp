@@ -42,9 +42,9 @@ func (s *Service) InventoryForConfig(ctx context.Context, cfg config.Resolved) (
 		CountsByNamespace: map[string]int{},
 	}
 
-	seenPath := map[string]bool{}
-	seenLocale := map[string]bool{}
-	seenNamespace := map[string]bool{}
+	seenPath := map[string]struct{}{}
+	seenLocale := map[string]struct{}{}
+	seenNamespace := map[string]struct{}{}
 	filesByLocaleNamespace := map[string][]string{}
 
 	for _, pattern := range cfg.LocaleFiles {
@@ -53,10 +53,10 @@ func (s *Service) InventoryForConfig(ctx context.Context, cfg config.Resolved) (
 			return Inventory{}, err
 		}
 		for _, ref := range refs {
-			if seenPath[ref.Path] {
+			if _, ok := seenPath[ref.Path]; ok {
 				continue
 			}
-			seenPath[ref.Path] = true
+			seenPath[ref.Path] = struct{}{}
 			ref.Namespace = cmp.Or(ref.Namespace, cfg.DefaultNamespace, "common")
 
 			doc, err := ParseJSONFile(ctx, s.guard, ref.Path)
@@ -75,8 +75,8 @@ func (s *Service) InventoryForConfig(ctx context.Context, cfg config.Resolved) (
 			inv.CountsByLocale[ref.Locale] += len(flat.Units)
 			inv.CountsByNamespace[ref.Namespace] += len(flat.Units)
 
-			seenLocale[ref.Locale] = true
-			seenNamespace[ref.Namespace] = true
+			seenLocale[ref.Locale] = struct{}{}
+			seenNamespace[ref.Namespace] = struct{}{}
 			dupKey := ref.Locale + "\x00" + ref.Namespace
 			filesByLocaleNamespace[dupKey] = append(filesByLocaleNamespace[dupKey], ref.Path)
 		}
@@ -139,32 +139,17 @@ func sortInventory(inv *Inventory) {
 }
 
 func lessUnit(a, b Unit) bool {
-	if a.Locale != b.Locale {
-		return a.Locale < b.Locale
-	}
-	if a.Namespace != b.Namespace {
-		return a.Namespace < b.Namespace
-	}
-	if a.Key != b.Key {
-		return a.Key < b.Key
-	}
-	return a.FilePath < b.FilePath
+	return slices.Compare(
+		[]string{a.Locale, a.Namespace, a.Key, a.FilePath},
+		[]string{b.Locale, b.Namespace, b.Key, b.FilePath},
+	) < 0
 }
 
 func lessWarning(a, b Warning) bool {
-	if a.Locale != b.Locale {
-		return a.Locale < b.Locale
-	}
-	if a.Namespace != b.Namespace {
-		return a.Namespace < b.Namespace
-	}
-	if a.FilePath != b.FilePath {
-		return a.FilePath < b.FilePath
-	}
-	if a.Key != b.Key {
-		return a.Key < b.Key
-	}
-	return a.Code < b.Code
+	return slices.Compare(
+		[]string{a.Locale, a.Namespace, a.FilePath, a.Key, a.Code},
+		[]string{b.Locale, b.Namespace, b.FilePath, b.Key, b.Code},
+	) < 0
 }
 
 var ErrNamespaceNotFound = errors.New("locale namespace not found")
