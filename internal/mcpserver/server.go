@@ -30,5 +30,6 @@ func New(a *app.App) *mcp.Server {
 	}, opts)
 
 	registerTools(server, a)
+	registerResources(server, a)
 	return server
 }
