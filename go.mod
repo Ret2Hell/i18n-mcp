@@ -3,7 +3,7 @@ module github.com/Ret2Hell/i18n-mcp
 go 1.26.4
 
 require (
-	github.com/Ret2Hell/detect4nextjs v0.0.0
+	github.com/Ret2Hell/detect4nextjs v0.1.1
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/google/jsonschema-go v0.4.3
 	github.com/modelcontextprotocol/go-sdk v1.6.1
@@ -37,5 +37,3 @@ require (
 	golang.org/x/text v0.28.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/Ret2Hell/detect4nextjs => ../detect4nextjs
