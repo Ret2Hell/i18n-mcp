@@ -6,9 +6,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/bmatcuk/doublestar/v4"
@@ -106,4 +108,93 @@ func uniqueSorted(values []string) []string {
 		}
 	}
 	return out
+}
+
+func DiscoverPattern(ctx context.Context, guard *fsutil.Guard, pattern string) ([]FileRef, error) {
+	paths, err := ExpandPattern(ctx, guard, pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	refs := make([]FileRef, 0, len(paths))
+	for _, relPath := range paths {
+		ref, ok, err := MatchPattern(pattern, relPath)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			refs = append(refs, ref)
+		}
+	}
+	sort.Slice(refs, func(i, j int) bool { return lessFileRef(refs[i], refs[j]) })
+	return refs, nil
+}
+
+func MatchPattern(pattern string, relPath string) (FileRef, bool, error) {
+	if err := validatePattern(pattern); err != nil {
+		return FileRef{}, false, err
+	}
+
+	re, err := patternRegexp(pattern)
+	if err != nil {
+		return FileRef{}, false, err
+	}
+	relPath = strings.TrimPrefix(filepath.ToSlash(relPath), "./")
+	matches := re.FindStringSubmatch(relPath)
+	if matches == nil {
+		return FileRef{}, false, nil
+	}
+
+	ref := FileRef{Path: relPath, Pattern: pattern}
+	for i, name := range re.SubexpNames() {
+		if i == 0 || name == "" {
+			continue
+		}
+		switch name {
+		case "locale":
+			ref.Locale = matches[i]
+		case "namespace":
+			ref.Namespace = matches[i]
+		}
+	}
+	if ref.Locale == "" {
+		return FileRef{}, false, nil
+	}
+	return ref, true, nil
+}
+
+func patternRegexp(pattern string) (*regexp.Regexp, error) {
+	var b strings.Builder
+	b.WriteString("^")
+
+	for len(pattern) > 0 {
+		switch {
+		case strings.HasPrefix(pattern, "{locale}"):
+			b.WriteString("(?P<locale>[^/]+)")
+			pattern = strings.TrimPrefix(pattern, "{locale}")
+		case strings.HasPrefix(pattern, "{namespace}"):
+			b.WriteString("(?P<namespace>[^/]+)")
+			pattern = strings.TrimPrefix(pattern, "{namespace}")
+		default:
+			r, size := utf8.DecodeRuneInString(pattern)
+			b.WriteString(regexp.QuoteMeta(string(r)))
+			pattern = pattern[size:]
+		}
+	}
+
+	b.WriteString("$")
+	return regexp.Compile(b.String())
+}
+
+func lessFileRef(a, b FileRef) bool {
+	if a.Locale != b.Locale {
+		return a.Locale < b.Locale
+	}
+	if a.Namespace != b.Namespace {
+		return a.Namespace < b.Namespace
+	}
+	if a.Path != b.Path {
+		return a.Path < b.Path
+	}
+	return a.Pattern < b.Pattern
 }
