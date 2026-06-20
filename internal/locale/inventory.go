@@ -2,6 +2,7 @@ package locale
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -173,4 +174,41 @@ func lessWarning(a, b Warning) bool {
 		return a.Key < b.Key
 	}
 	return a.Code < b.Code
+}
+
+var ErrNamespaceNotFound = errors.New("locale namespace not found")
+
+func (s *Service) Namespace(ctx context.Context, localeCode string, namespace string) (NamespaceContent, error) {
+	inv, err := s.Inventory(ctx)
+	if err != nil {
+		return NamespaceContent{}, err
+	}
+
+	out := NamespaceContent{Locale: localeCode, Namespace: namespace}
+	for _, file := range inv.Files {
+		if file.Locale != localeCode || file.Namespace != namespace {
+			continue
+		}
+		out.Files = append(out.Files, file)
+		doc, err := ParseJSONFile(ctx, s.guard, file.Path)
+		if err != nil {
+			return NamespaceContent{}, err
+		}
+		out.RawFiles = append(out.RawFiles, RawFileContent{Path: file.Path, JSON: doc.Raw})
+	}
+	for _, unit := range inv.Units {
+		if unit.Locale == localeCode && unit.Namespace == namespace {
+			out.Units = append(out.Units, unit)
+		}
+	}
+	for _, warning := range inv.Warnings {
+		if warning.Locale == localeCode && warning.Namespace == namespace {
+			out.Warnings = append(out.Warnings, warning)
+		}
+	}
+
+	if len(out.Files) == 0 {
+		return NamespaceContent{}, fmt.Errorf("%w: %s/%s", ErrNamespaceNotFound, localeCode, namespace)
+	}
+	return out, nil
 }

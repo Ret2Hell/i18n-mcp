@@ -1,5 +1,7 @@
 package locale
 
+import "encoding/json"
+
 type FileRef struct {
 	Locale    string `json:"locale"`
 	Namespace string `json:"namespace,omitzero"`
@@ -54,4 +56,18 @@ type DuplicateNamespaceIssue struct {
 	Locale    string   `json:"locale"`
 	Namespace string   `json:"namespace"`
 	Paths     []string `json:"paths"`
+}
+
+type NamespaceContent struct {
+	Locale    string           `json:"locale"`
+	Namespace string           `json:"namespace"`
+	Files     []FileSummary    `json:"files"`
+	RawFiles  []RawFileContent `json:"rawFiles"`
+	Units     []Unit           `json:"units"`
+	Warnings  []Warning        `json:"warnings,omitzero"`
+}
+
+type RawFileContent struct {
+	Path string          `json:"path"`
+	JSON json.RawMessage `json:"json"`
 }

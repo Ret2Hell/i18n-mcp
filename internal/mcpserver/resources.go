@@ -3,8 +3,12 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net/url"
+	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
+	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -17,6 +21,15 @@ func registerResources(s *mcp.Server, a *app.App) {
 		MIMEType:    "application/json",
 		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.9},
 	}, readLocalesResource(a))
+
+	s.AddResourceTemplate(&mcp.ResourceTemplate{
+		URITemplate: "i18n://locales/{locale}/{namespace}",
+		Name:        "locale_namespace",
+		Title:       "Locale Namespace",
+		Description: "Read one locale namespace as raw JSON files and flattened translation units.",
+		MIMEType:    "application/json",
+		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.9},
+	}, readLocaleNamespaceResource(a))
 }
 
 func readLocalesResource(a *app.App) mcp.ResourceHandler {
@@ -45,4 +58,45 @@ func jsonResource(uri string, value any) (*mcp.ReadResourceResult, error) {
 			Text:     string(data),
 		}},
 	}, nil
+}
+
+func readLocaleNamespaceResource(a *app.App) mcp.ResourceHandler {
+	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+		localeCode, namespace, ok := parseLocaleNamespaceURI(req.Params.URI)
+		if !ok {
+			return nil, mcp.ResourceNotFoundError(req.Params.URI)
+		}
+
+		content, err := a.Locales.Namespace(ctx, localeCode, namespace)
+		if err != nil {
+			if errors.Is(err, locale.ErrNamespaceNotFound) {
+				return nil, mcp.ResourceNotFoundError(req.Params.URI)
+			}
+			return nil, err
+		}
+		return jsonResource(req.Params.URI, content)
+	}
+}
+
+func parseLocaleNamespaceURI(rawURI string) (string, string, bool) {
+	parsed, err := url.Parse(rawURI)
+	if err != nil || parsed.Scheme != "i18n" || parsed.Host != "locales" {
+		return "", "", false
+	}
+	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	localeCode, err := url.PathUnescape(parts[0])
+	if err != nil {
+		return "", "", false
+	}
+	namespace, err := url.PathUnescape(parts[1])
+	if err != nil {
+		return "", "", false
+	}
+	if localeCode == "" || namespace == "" {
+		return "", "", false
+	}
+	return localeCode, namespace, true
 }
