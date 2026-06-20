@@ -1,6 +1,7 @@
 package fsutil
 
 import (
+	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,9 +17,7 @@ type Guard struct {
 // Resolving the root up front makes later containment checks compare against the
 // real project directory rather than a symlink alias.
 func NewGuard(root string) (*Guard, error) {
-	if root == "" {
-		root = "."
-	}
+	root = cmp.Or(root, ".")
 	abs, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
@@ -109,7 +108,8 @@ func (g *Guard) ensureInside(path string) error {
 	if err != nil {
 		return err
 	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+	_, climbsOut := strings.CutPrefix(rel, ".."+string(filepath.Separator))
+	if rel == ".." || climbsOut || filepath.IsAbs(rel) {
 		return fmt.Errorf("path escapes project root: %s", path)
 	}
 	return nil

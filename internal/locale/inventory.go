@@ -1,10 +1,12 @@
 package locale
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
@@ -35,7 +37,7 @@ func (s *Service) Inventory(ctx context.Context) (Inventory, error) {
 func (s *Service) InventoryForConfig(ctx context.Context, cfg config.Resolved) (Inventory, error) {
 	inv := Inventory{
 		SourceLocale:      cfg.SourceLocale,
-		TargetLocales:     append([]string(nil), cfg.TargetLocales...),
+		TargetLocales:     slices.Clone(cfg.TargetLocales),
 		CountsByLocale:    map[string]int{},
 		CountsByNamespace: map[string]int{},
 	}
@@ -55,12 +57,7 @@ func (s *Service) InventoryForConfig(ctx context.Context, cfg config.Resolved) (
 				continue
 			}
 			seenPath[ref.Path] = true
-			if ref.Namespace == "" {
-				ref.Namespace = cfg.DefaultNamespace
-			}
-			if ref.Namespace == "" {
-				ref.Namespace = "common"
-			}
+			ref.Namespace = cmp.Or(ref.Namespace, cfg.DefaultNamespace, "common")
 
 			doc, err := ParseJSONFile(ctx, s.guard, ref.Path)
 			if err != nil {
@@ -85,14 +82,8 @@ func (s *Service) InventoryForConfig(ctx context.Context, cfg config.Resolved) (
 		}
 	}
 
-	for locale := range seenLocale {
-		inv.Locales = append(inv.Locales, locale)
-	}
-	for namespace := range seenNamespace {
-		inv.Namespaces = append(inv.Namespaces, namespace)
-	}
-	sort.Strings(inv.Locales)
-	sort.Strings(inv.Namespaces)
+	inv.Locales = slices.Sorted(maps.Keys(seenLocale))
+	inv.Namespaces = slices.Sorted(maps.Keys(seenNamespace))
 
 	if len(inv.TargetLocales) == 0 {
 		for _, locale := range inv.Locales {
@@ -106,9 +97,9 @@ func (s *Service) InventoryForConfig(ctx context.Context, cfg config.Resolved) (
 		if len(paths) < 2 {
 			continue
 		}
-		sort.Strings(paths)
+		slices.Sort(paths)
 		localeCode, namespace, _ := strings.Cut(key, "\x00")
-		issue := DuplicateNamespaceIssue{Locale: localeCode, Namespace: namespace, Paths: append([]string(nil), paths...)}
+		issue := DuplicateNamespaceIssue{Locale: localeCode, Namespace: namespace, Paths: slices.Clone(paths)}
 		inv.Duplicates = append(inv.Duplicates, issue)
 		inv.Warnings = append(inv.Warnings, Warning{
 			Code:      "duplicate_namespace",
@@ -135,15 +126,15 @@ func configValidationError(validation config.ValidationResult) error {
 }
 
 func sortInventory(inv *Inventory) {
-	sort.Strings(inv.TargetLocales)
-	sort.Slice(inv.Files, func(i, j int) bool { return lessFileRef(inv.Files[i].FileRef, inv.Files[j].FileRef) })
-	sort.Slice(inv.Units, func(i, j int) bool { return lessUnit(inv.Units[i], inv.Units[j]) })
-	sort.Slice(inv.Warnings, func(i, j int) bool { return lessWarning(inv.Warnings[i], inv.Warnings[j]) })
-	sort.Slice(inv.Duplicates, func(i, j int) bool {
-		if inv.Duplicates[i].Locale != inv.Duplicates[j].Locale {
-			return inv.Duplicates[i].Locale < inv.Duplicates[j].Locale
+	slices.Sort(inv.TargetLocales)
+	slices.SortFunc(inv.Files, func(a, b FileSummary) int { return compareLess(a.FileRef, b.FileRef, lessFileRef) })
+	slices.SortFunc(inv.Units, func(a, b Unit) int { return compareLess(a, b, lessUnit) })
+	slices.SortFunc(inv.Warnings, func(a, b Warning) int { return compareLess(a, b, lessWarning) })
+	slices.SortFunc(inv.Duplicates, func(a, b DuplicateNamespaceIssue) int {
+		if a.Locale != b.Locale {
+			return strings.Compare(a.Locale, b.Locale)
 		}
-		return inv.Duplicates[i].Namespace < inv.Duplicates[j].Namespace
+		return strings.Compare(a.Namespace, b.Namespace)
 	})
 }
 

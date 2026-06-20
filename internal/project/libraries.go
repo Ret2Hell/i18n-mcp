@@ -1,6 +1,9 @@
 package project
 
-import "sort"
+import (
+	"cmp"
+	"slices"
+)
 
 type LibraryHint struct {
 	Name       string `json:"name"`
@@ -20,7 +23,7 @@ var knownLibraries = []string{
 func detectLibraries(pkg packageJSON) []LibraryHint {
 	var hints []LibraryHint
 	for _, name := range knownLibraries {
-		if version := dependencyVersion(pkg, name); version != "" {
+		if version := cmp.Or(pkg.Dependencies[name], pkg.DevDependencies[name]); version != "" {
 			hints = append(hints, LibraryHint{
 				Name:       name,
 				Version:    version,
@@ -29,8 +32,8 @@ func detectLibraries(pkg packageJSON) []LibraryHint {
 			})
 		}
 	}
-	sort.Slice(hints, func(i, j int) bool {
-		return libraryRank(hints[i].Name) < libraryRank(hints[j].Name)
+	slices.SortFunc(hints, func(a, b LibraryHint) int {
+		return cmp.Compare(libraryRank(a.Name), libraryRank(b.Name))
 	})
 	return hints
 }

@@ -1,6 +1,10 @@
 package project
 
-import "github.com/Ret2Hell/i18n-mcp/internal/config"
+import (
+	"slices"
+
+	"github.com/Ret2Hell/i18n-mcp/internal/config"
+)
 
 func proposeConfig(d Detection) config.File {
 	cfg := config.Defaults()
@@ -8,7 +12,7 @@ func proposeConfig(d Detection) config.File {
 	if len(d.SourceCandidates) > 0 {
 		cfg.SourceLocale = d.SourceCandidates[0]
 	}
-	cfg.TargetLocales = append([]string(nil), d.TargetLocales...)
+	cfg.TargetLocales = slices.Clone(d.TargetLocales)
 
 	if len(d.Layouts) > 0 {
 		cfg.LocaleFiles = []string{d.Layouts[0].Pattern}

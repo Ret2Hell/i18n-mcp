@@ -1,7 +1,6 @@
 package locale
 
 import (
-	"context"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -49,7 +48,7 @@ func TestInventoryUnsupportedValuesAndDuplicateNamespace(t *testing.T) {
 
 func TestNamespaceContent(t *testing.T) {
 	service := localeServiceForFixture(t, "i18next-namespaces")
-	content, err := service.Namespace(context.Background(), "en", "common")
+	content, err := service.Namespace(t.Context(), "en", "common")
 	require.NoError(t, err)
 
 	require.Equal(t, "en", content.Locale)
@@ -62,7 +61,7 @@ func TestNamespaceContent(t *testing.T) {
 func inventoryFixture(t *testing.T, name string) Inventory {
 	t.Helper()
 	service := localeServiceForFixture(t, name)
-	inv, err := service.Inventory(context.Background())
+	inv, err := service.Inventory(t.Context())
 	require.NoError(t, err)
 	return inv
 }

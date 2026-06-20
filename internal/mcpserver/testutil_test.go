@@ -14,7 +14,7 @@ import (
 
 func newTestClientSession(t *testing.T, root string) (context.Context, *mcp.ClientSession) {
 	t.Helper()
-	ctx := context.Background()
+	ctx := t.Context()
 	application, err := app.New(ctx, app.Options{ProjectRoot: root, LogLevel: "error"})
 	require.NoError(t, err)
 

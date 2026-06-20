@@ -1,10 +1,10 @@
 package project
 
 import (
-	"context"
+	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"testing"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
@@ -82,22 +82,17 @@ func detectRoot(t *testing.T, root string) Detection {
 	t.Helper()
 	guard, err := fsutil.NewGuard(root)
 	require.NoError(t, err)
-	d, err := NewService(guard).Detect(context.Background(), DetectOptions{})
+	d, err := NewService(guard).Detect(t.Context(), DetectOptions{})
 	require.NoError(t, err)
 	return d
 }
 
 func sortedLocalesFromFiles(files []LocaleFileCandidate) []string {
 	seen := map[string]bool{}
-	var out []string
 	for _, file := range files {
-		if !seen[file.Locale] {
-			seen[file.Locale] = true
-			out = append(out, file.Locale)
-		}
+		seen[file.Locale] = true
 	}
-	sort.Strings(out)
-	return out
+	return slices.Sorted(maps.Keys(seen))
 }
 
 func assertProposedConfig(t *testing.T, got config.File, want config.File) {

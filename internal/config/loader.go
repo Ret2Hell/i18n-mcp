@@ -1,6 +1,7 @@
 package config
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -22,10 +23,7 @@ func NewService(guard *fsutil.Guard, configPath string) *Service {
 func (s *Service) Resolve(ctx context.Context) (Resolved, error) {
 	_ = ctx
 	cfg := Defaults()
-	path := s.configPath
-	if path == "" {
-		path = DefaultConfigFile
-	}
+	path := cmp.Or(s.configPath, DefaultConfigFile)
 
 	resolvedPath, err := s.guard.Resolve(path)
 	if err != nil {

@@ -1,12 +1,13 @@
 package project
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
@@ -57,16 +58,16 @@ func detectLocaleLayouts(ctx context.Context, guard *fsutil.Guard) ([]LocaleLayo
 			layouts = append(layouts, layout)
 		}
 	}
-	sort.Slice(layouts, func(i, j int) bool {
-		if len(layouts[i].Files) != len(layouts[j].Files) {
-			return len(layouts[i].Files) > len(layouts[j].Files)
+	slices.SortFunc(layouts, func(a, b LocaleLayout) int {
+		if n := cmp.Compare(len(b.Files), len(a.Files)); n != 0 {
+			return n
 		}
-		if layouts[i].TotalKeys != layouts[j].TotalKeys {
-			return layouts[i].TotalKeys > layouts[j].TotalKeys
+		if n := cmp.Compare(b.TotalKeys, a.TotalKeys); n != 0 {
+			return n
 		}
-		return layouts[i].Pattern < layouts[j].Pattern
+		return strings.Compare(a.Pattern, b.Pattern)
 	})
-	sort.Strings(warnings)
+	slices.Sort(warnings)
 	return layouts, warnings
 }
 
@@ -76,7 +77,7 @@ func detectLocaleLayout(guard *fsutil.Guard, pattern string) (LocaleLayout, []st
 	if err != nil {
 		return LocaleLayout{Pattern: pattern}, []string{err.Error()}
 	}
-	sort.Strings(matches)
+	slices.Sort(matches)
 
 	layout := LocaleLayout{Pattern: pattern}
 	seenNamespaces := map[string]bool{}
@@ -107,7 +108,7 @@ func detectLocaleLayout(guard *fsutil.Guard, pattern string) (LocaleLayout, []st
 			layout.Namespaces = append(layout.Namespaces, candidate.Namespace)
 		}
 	}
-	sort.Strings(layout.Namespaces)
+	slices.Sort(layout.Namespaces)
 	return layout, warnings
 }
 
@@ -118,8 +119,8 @@ func patternToGlob(pattern string) string {
 }
 
 func matchLocalePattern(pattern string, path string) (LocaleFileCandidate, bool) {
-	patternParts := strings.Split(filepath.ToSlash(pattern), "/")
-	pathParts := strings.Split(filepath.ToSlash(path), "/")
+	patternParts := slices.Collect(strings.SplitSeq(filepath.ToSlash(pattern), "/"))
+	pathParts := slices.Collect(strings.SplitSeq(filepath.ToSlash(path), "/"))
 	if len(patternParts) != len(pathParts) {
 		return LocaleFileCandidate{}, false
 	}
@@ -132,11 +133,11 @@ func matchLocalePattern(pattern string, path string) (LocaleFileCandidate, bool)
 		case "{locale}":
 			candidate.Locale = actual
 		case "{namespace}.json":
-			candidate.Namespace = strings.TrimSuffix(actual, ".json")
+			candidate.Namespace, _ = strings.CutSuffix(actual, ".json")
 		case "{namespace}":
 			candidate.Namespace = actual
 		case "{locale}.json":
-			candidate.Locale = strings.TrimSuffix(actual, ".json")
+			candidate.Locale, _ = strings.CutSuffix(actual, ".json")
 		default:
 			if pp != actual {
 				return LocaleFileCandidate{}, false
@@ -186,12 +187,7 @@ func uniqueLocales(layouts []LocaleLayout) []string {
 			seen[file.Locale] = true
 		}
 	}
-	locales := make([]string, 0, len(seen))
-	for locale := range seen {
-		locales = append(locales, locale)
-	}
-	sort.Strings(locales)
-	return locales
+	return slices.Sorted(maps.Keys(seen))
 }
 
 func bestSourceCandidates(locales []string) []string {
@@ -205,7 +201,7 @@ func bestSourceCandidates(locales []string) []string {
 		}
 	}
 	for _, locale := range locales {
-		if strings.HasPrefix(locale, "en-") && !seen[locale] {
+		if _, ok := strings.CutPrefix(locale, "en-"); ok && !seen[locale] {
 			out = append(out, locale)
 			seen[locale] = true
 		}

@@ -1,18 +1,19 @@
 package locale
 
 import (
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 )
 
 func Flatten(ref FileRef, value any) FlattenResult {
 	var result FlattenResult
 	flattenValue(ref, nil, value, &result)
-	sort.Slice(result.Units, func(i, j int) bool {
-		if result.Units[i].Key != result.Units[j].Key {
-			return result.Units[i].Key < result.Units[j].Key
+	slices.SortFunc(result.Units, func(a, b Unit) int {
+		if a.Key != b.Key {
+			return strings.Compare(a.Key, b.Key)
 		}
-		return result.Units[i].FilePath < result.Units[j].FilePath
+		return strings.Compare(a.FilePath, b.FilePath)
 	})
 	return result
 }
@@ -30,22 +31,18 @@ func flattenValue(ref FileRef, jsonPath []string, value any, result *FlattenResu
 			return
 		}
 
-		keys := make([]string, 0, len(v))
-		for key := range v {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
+		keys := slices.Sorted(maps.Keys(v))
 		for _, key := range keys {
-			flattenValue(ref, appendJSONPath(jsonPath, key), v[key], result)
+			flattenValue(ref, append(slices.Clone(jsonPath), key), v[key], result)
 		}
 	case string:
 		result.Units = append(result.Units, Unit{
 			Locale:    ref.Locale,
 			Namespace: ref.Namespace,
-			Key:       keyFromPath(jsonPath),
+			Key:       strings.Join(jsonPath, "."),
 			Value:     v,
 			FilePath:  ref.Path,
-			JSONPath:  append([]string(nil), jsonPath...),
+			JSONPath:  slices.Clone(jsonPath),
 		})
 	case []any:
 		result.Warnings = append(result.Warnings, newWarning(
@@ -78,8 +75,8 @@ func newWarning(ref FileRef, code string, message string, jsonPath []string) War
 		Locale:    ref.Locale,
 		Namespace: ref.Namespace,
 		FilePath:  ref.Path,
-		Key:       keyFromPath(jsonPath),
-		JSONPath:  append([]string(nil), jsonPath...),
+		Key:       strings.Join(jsonPath, "."),
+		JSONPath:  slices.Clone(jsonPath),
 	}
 }
 
@@ -98,15 +95,4 @@ func looksLikeRichObject(value map[string]any) bool {
 		}
 	}
 	return false
-}
-
-func appendJSONPath(path []string, next string) []string {
-	out := make([]string, len(path)+1)
-	copy(out, path)
-	out[len(path)] = next
-	return out
-}
-
-func keyFromPath(path []string) string {
-	return strings.Join(path, ".")
 }

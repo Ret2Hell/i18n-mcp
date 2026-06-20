@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 	"unicode/utf8"
 
@@ -35,7 +34,7 @@ func ExpandPattern(ctx context.Context, guard *fsutil.Guard, pattern string) ([]
 
 	out := make([]string, 0, len(matches))
 	for _, match := range matches {
-		rel := strings.TrimPrefix(filepath.ToSlash(match), "./")
+		rel, _ := strings.CutPrefix(filepath.ToSlash(match), "./")
 		if rel == "" || rel == "." {
 			continue
 		}
@@ -65,18 +64,22 @@ func validatePattern(pattern string) error {
 	if strings.TrimSpace(pattern) == "" {
 		return fmt.Errorf("locale file pattern is empty")
 	}
-	if filepath.IsAbs(pattern) || strings.HasPrefix(pattern, "/") {
+	_, startsWithSlash := strings.CutPrefix(pattern, "/")
+	if filepath.IsAbs(pattern) || startsWithSlash {
 		return fmt.Errorf("locale file pattern must be project-relative: %s", pattern)
 	}
 	if strings.Contains(pattern, "\\") {
 		return fmt.Errorf("locale file pattern must use slash separators: %s", pattern)
 	}
 	clean := path.Clean(pattern)
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || strings.Contains(clean, "/../") {
+	_, climbsOut := strings.CutPrefix(clean, "../")
+	if clean == "." || clean == ".." || climbsOut || strings.Contains(clean, "/../") {
 		return fmt.Errorf("locale file pattern must not contain traversal: %s", pattern)
 	}
-	if slices.Contains(strings.Split(pattern, "/"), "..") {
-		return fmt.Errorf("locale file pattern must not contain traversal: %s", pattern)
+	for part := range strings.SplitSeq(pattern, "/") {
+		if part == ".." {
+			return fmt.Errorf("locale file pattern must not contain traversal: %s", pattern)
+		}
 	}
 	if !strings.Contains(pattern, "{locale}") {
 		return fmt.Errorf("locale file pattern must contain {locale}: %s", pattern)
@@ -87,7 +90,7 @@ func validatePattern(pattern string) error {
 	if strings.Count(pattern, "{namespace}") > 1 {
 		return fmt.Errorf("locale file pattern must contain at most one {namespace}: %s", pattern)
 	}
-	if !strings.HasSuffix(pattern, ".json") {
+	if _, ok := strings.CutSuffix(pattern, ".json"); !ok {
 		return fmt.Errorf("locale file pattern must point at JSON files: %s", pattern)
 	}
 	return nil
@@ -100,7 +103,7 @@ func patternToGlob(pattern string) string {
 }
 
 func uniqueSorted(values []string) []string {
-	sort.Strings(values)
+	slices.Sort(values)
 	out := values[:0]
 	for _, value := range values {
 		if len(out) == 0 || out[len(out)-1] != value {
@@ -126,7 +129,7 @@ func DiscoverPattern(ctx context.Context, guard *fsutil.Guard, pattern string) (
 			refs = append(refs, ref)
 		}
 	}
-	sort.Slice(refs, func(i, j int) bool { return lessFileRef(refs[i], refs[j]) })
+	slices.SortFunc(refs, func(a, b FileRef) int { return compareLess(a, b, lessFileRef) })
 	return refs, nil
 }
 
@@ -139,7 +142,7 @@ func MatchPattern(pattern string, relPath string) (FileRef, bool, error) {
 	if err != nil {
 		return FileRef{}, false, err
 	}
-	relPath = strings.TrimPrefix(filepath.ToSlash(relPath), "./")
+	relPath, _ = strings.CutPrefix(filepath.ToSlash(relPath), "./")
 	matches := re.FindStringSubmatch(relPath)
 	if matches == nil {
 		return FileRef{}, false, nil
@@ -168,18 +171,19 @@ func patternRegexp(pattern string) (*regexp.Regexp, error) {
 	b.WriteString("^")
 
 	for len(pattern) > 0 {
-		switch {
-		case strings.HasPrefix(pattern, "{locale}"):
+		if rest, ok := strings.CutPrefix(pattern, "{locale}"); ok {
 			b.WriteString("(?P<locale>[^/]+)")
-			pattern = strings.TrimPrefix(pattern, "{locale}")
-		case strings.HasPrefix(pattern, "{namespace}"):
-			b.WriteString("(?P<namespace>[^/]+)")
-			pattern = strings.TrimPrefix(pattern, "{namespace}")
-		default:
-			r, size := utf8.DecodeRuneInString(pattern)
-			b.WriteString(regexp.QuoteMeta(string(r)))
-			pattern = pattern[size:]
+			pattern = rest
+			continue
 		}
+		if rest, ok := strings.CutPrefix(pattern, "{namespace}"); ok {
+			b.WriteString("(?P<namespace>[^/]+)")
+			pattern = rest
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(pattern)
+		b.WriteString(regexp.QuoteMeta(string(r)))
+		pattern = pattern[size:]
 	}
 
 	b.WriteString("$")

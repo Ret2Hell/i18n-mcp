@@ -23,7 +23,7 @@ func TestLocalesListTool(t *testing.T) {
 			Locales        []string       `json:"locales"`
 			TargetLocales  []string       `json:"targetLocales"`
 			CountsByLocale map[string]int `json:"countsByLocale"`
-			Units          []any          `json:"units,omitempty"`
+			Units          []any          `json:"units,omitzero"`
 		} `json:"inventory"`
 	}
 	require.NoError(t, json.Unmarshal(data, &out))

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"sort"
+	"slices"
 
 	"github.com/Ret2Hell/detect4nextjs"
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
@@ -94,7 +94,7 @@ func (s *Service) Detect(ctx context.Context, opts DetectOptions) (Detection, er
 		d.Warnings = append(d.Warnings, "could not infer target locales")
 	}
 
-	sort.Strings(d.Warnings)
+	slices.Sort(d.Warnings)
 	return d, nil
 }
 
@@ -112,18 +112,4 @@ func readPackageJSON(guard *fsutil.Guard) (packageJSON, error) {
 		return packageJSON{}, err
 	}
 	return pkg, nil
-}
-
-func dependencyVersion(pkg packageJSON, name string) string {
-	if pkg.Dependencies != nil {
-		if version := pkg.Dependencies[name]; version != "" {
-			return version
-		}
-	}
-	if pkg.DevDependencies != nil {
-		if version := pkg.DevDependencies[name]; version != "" {
-			return version
-		}
-	}
-	return ""
 }
