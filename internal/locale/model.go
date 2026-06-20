@@ -30,3 +30,28 @@ type FlattenResult struct {
 	Units    []Unit    `json:"units"`
 	Warnings []Warning `json:"warnings,omitzero"`
 }
+
+type Inventory struct {
+	SourceLocale      string                    `json:"sourceLocale"`
+	TargetLocales     []string                  `json:"targetLocales"`
+	Locales           []string                  `json:"locales"`
+	Namespaces        []string                  `json:"namespaces"`
+	Files             []FileSummary             `json:"files"`
+	Units             []Unit                    `json:"units,omitzero"`
+	CountsByLocale    map[string]int            `json:"countsByLocale"`
+	CountsByNamespace map[string]int            `json:"countsByNamespace"`
+	Warnings          []Warning                 `json:"warnings,omitzero"`
+	Duplicates        []DuplicateNamespaceIssue `json:"duplicates,omitzero"`
+}
+
+type FileSummary struct {
+	FileRef
+	StringKeys int `json:"stringKeys"`
+	Bytes      int `json:"bytes"`
+}
+
+type DuplicateNamespaceIssue struct {
+	Locale    string   `json:"locale"`
+	Namespace string   `json:"namespace"`
+	Paths     []string `json:"paths"`
+}
