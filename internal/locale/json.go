@@ -15,7 +15,7 @@ import (
 type JSONDocument struct {
 	Path  string          `json:"path"`
 	Bytes int             `json:"bytes"`
-	Raw   json.RawMessage `json:"raw,omitempty"`
+	Raw   json.RawMessage `json:"raw,omitzero"`
 	Value any             `json:"-"`
 }
 
