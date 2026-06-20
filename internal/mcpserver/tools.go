@@ -33,4 +33,11 @@ func registerTools(s *mcp.Server, a *app.App) {
 		Description: "Validate resolved configuration and return actionable errors and warnings.",
 		Annotations: readOnly("Validate i18n MCP Config"),
 	}, configValidateTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.locales.list",
+		Title:       "List i18n Locales",
+		Description: "List locale files, locales, namespaces, key counts, warnings, and duplicate namespace issues.",
+		Annotations: readOnly("List i18n Locales"),
+	}, localesListTool(a))
 }
