@@ -78,6 +78,44 @@ func TestDetectDoesNotRequireI18nMCPConfig(t *testing.T) {
 	require.Equal(t, []string{"messages/{locale}.json"}, d.ProposedConfig.LocaleFiles)
 }
 
+func TestLibraryRank(t *testing.T) {
+	tests := []struct {
+		name string
+		want int
+	}{
+		{name: "next-intl", want: 0},
+		{name: "next-i18next", want: 1},
+		{name: "next-translate", want: 2},
+		{name: "react-i18next", want: 3},
+		{name: "i18next", want: 4},
+		{name: "unknown", want: 100},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, libraryRank(tt.name))
+		})
+	}
+}
+
+func TestDetectLibrariesSortsByRank(t *testing.T) {
+	hints := detectLibraries(packageJSON{Dependencies: map[string]string{
+		"i18next":        "23.0.0",
+		"next-translate": "2.0.0",
+		"next-i18next":   "15.0.0",
+		"next-intl":      "4.0.0",
+		"react-i18next":  "15.0.0",
+	}})
+
+	require.Equal(t, []LibraryHint{
+		{Name: "next-intl", Version: "4.0.0", Source: "package.json", Confidence: "high"},
+		{Name: "next-i18next", Version: "15.0.0", Source: "package.json", Confidence: "high"},
+		{Name: "next-translate", Version: "2.0.0", Source: "package.json", Confidence: "high"},
+		{Name: "react-i18next", Version: "15.0.0", Source: "package.json", Confidence: "high"},
+		{Name: "i18next", Version: "23.0.0", Source: "package.json", Confidence: "high"},
+	}, hints)
+}
+
 func detectRoot(t *testing.T, root string) Detection {
 	t.Helper()
 	guard, err := fsutil.NewGuard(root)
