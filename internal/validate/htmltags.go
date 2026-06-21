@@ -1,8 +1,9 @@
 package validate
 
 import (
+	"maps"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -20,17 +21,12 @@ var (
 )
 
 func ExtractTags(s string) []string {
-	seen := map[string]bool{}
-	var out []string
-	for _, token := range ExtractTagTokens(s) {
-		if seen[token.Normalized] {
-			continue
-		}
-		seen[token.Normalized] = true
-		out = append(out, token.Normalized)
+	tokens := ExtractTagTokens(s)
+	seen := make(map[string]struct{}, len(tokens))
+	for _, token := range tokens {
+		seen[token.Normalized] = struct{}{}
 	}
-	sort.Strings(out)
-	return out
+	return slices.Sorted(maps.Keys(seen))
 }
 
 func ExtractTagTokens(s string) []TagToken {
@@ -52,8 +48,10 @@ func normalizeTag(raw string) (TagToken, bool) {
 		return TagToken{}, false
 	}
 	name = strings.ToLower(name)
-	closing := strings.HasPrefix(trimmed, "</")
-	selfClosing := !closing && strings.HasSuffix(strings.TrimSpace(strings.TrimSuffix(trimmed, ">")), "/")
+	_, closing := strings.CutPrefix(trimmed, "</")
+	withoutEnd, _ := strings.CutSuffix(trimmed, ">")
+	_, selfClosing := strings.CutSuffix(strings.TrimSpace(withoutEnd), "/")
+	selfClosing = !closing && selfClosing
 
 	normalized := "<" + name + ">"
 	if closing {

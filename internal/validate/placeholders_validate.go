@@ -2,7 +2,8 @@ package validate
 
 import (
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 )
 
 func comparePlaceholders(source string, target string) []Issue {
@@ -18,23 +19,12 @@ func comparePlaceholders(source string, target string) []Issue {
 }
 
 func compareTokenCounts(source map[string]int, target map[string]int, label string, missingCode string, extraCode string, countChangedCode string, severity Severity) []Issue {
-	keys := make([]string, 0, len(source)+len(target))
-	seen := map[string]bool{}
-	for key := range source {
-		seen[key] = true
-		keys = append(keys, key)
-	}
-	for key := range target {
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
+	keys := make(map[string]int, len(source)+len(target))
+	maps.Copy(keys, source)
+	maps.Copy(keys, target)
 
 	var issues []Issue
-	for _, key := range keys {
+	for _, key := range slices.Sorted(maps.Keys(keys)) {
 		sourceCount := source[key]
 		targetCount := target[key]
 		switch {

@@ -2,8 +2,9 @@ package validate
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
-	"sort"
+	"slices"
 )
 
 type MarkdownLink struct {
@@ -53,7 +54,7 @@ func compareMarkdownLinks(source string, target string) []Issue {
 }
 
 func markdownDestinationCounts(links []MarkdownLink) map[string]int {
-	counts := map[string]int{}
+	counts := make(map[string]int, len(links))
 	for _, link := range links {
 		counts[link.Destination]++
 	}
@@ -61,15 +62,10 @@ func markdownDestinationCounts(links []MarkdownLink) map[string]int {
 }
 
 func MarkdownLinkDestinations(s string) []string {
-	seen := map[string]bool{}
-	var out []string
-	for _, link := range ExtractMarkdownLinks(s) {
-		if seen[link.Destination] {
-			continue
-		}
-		seen[link.Destination] = true
-		out = append(out, link.Destination)
+	links := ExtractMarkdownLinks(s)
+	seen := make(map[string]struct{}, len(links))
+	for _, link := range links {
+		seen[link.Destination] = struct{}{}
 	}
-	sort.Strings(out)
-	return out
+	return slices.Sorted(maps.Keys(seen))
 }

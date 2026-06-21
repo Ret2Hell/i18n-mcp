@@ -1,8 +1,10 @@
 package validate
 
 import (
+	"cmp"
+	"maps"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -37,17 +39,12 @@ var placeholderPatterns = []placeholderPattern{
 }
 
 func ExtractPlaceholders(s string) []string {
-	seen := map[string]bool{}
-	var out []string
-	for _, span := range collectPlaceholderSpans(s) {
-		if seen[span.value] {
-			continue
-		}
-		seen[span.value] = true
-		out = append(out, span.value)
+	spans := collectPlaceholderSpans(s)
+	seen := make(map[string]struct{}, len(spans))
+	for _, span := range spans {
+		seen[span.value] = struct{}{}
 	}
-	sort.Strings(out)
-	return out
+	return slices.Sorted(maps.Keys(seen))
 }
 
 func collectPlaceholderSpans(s string) []placeholderSpan {
@@ -59,7 +56,8 @@ func collectPlaceholderSpans(s string) []placeholderSpan {
 				continue
 			}
 			match := s[loc[0]:loc[1]]
-			if strings.HasPrefix(match, "%") && loc[0] > 0 && s[loc[0]-1] == '%' {
+			_, hasPercentPrefix := strings.CutPrefix(match, "%")
+			if hasPercentPrefix && loc[0] > 0 && s[loc[0]-1] == '%' {
 				continue
 			}
 			for i := loc[0]; i < loc[1]; i++ {
@@ -68,34 +66,32 @@ func collectPlaceholderSpans(s string) []placeholderSpan {
 			spans = append(spans, placeholderSpan{start: loc[0], end: loc[1], value: pattern.normalize(match)})
 		}
 	}
-	sort.Slice(spans, func(i, j int) bool {
-		if spans[i].start != spans[j].start {
-			return spans[i].start < spans[j].start
+	slices.SortFunc(spans, func(a, b placeholderSpan) int {
+		if byStart := cmp.Compare(a.start, b.start); byStart != 0 {
+			return byStart
 		}
-		return spans[i].end < spans[j].end
+		return cmp.Compare(a.end, b.end)
 	})
 	return spans
 }
 
 func placeholderCounts(s string) map[string]int {
-	counts := map[string]int{}
-	for _, span := range collectPlaceholderSpans(s) {
+	spans := collectPlaceholderSpans(s)
+	counts := make(map[string]int, len(spans))
+	for _, span := range spans {
 		counts[span.value]++
 	}
 	return counts
 }
 
 func overlapsOccupied(occupied []bool, start int, end int) bool {
-	for i := start; i < end; i++ {
-		if occupied[i] {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(occupied[start:end], true)
 }
 
 func normalizeDoubleBracePlaceholder(match string) string {
-	inner := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(match, "{{"), "}}"))
+	inner, _ := strings.CutPrefix(match, "{{")
+	inner, _ = strings.CutSuffix(inner, "}}")
+	inner = strings.TrimSpace(inner)
 	return "{{" + inner + "}}"
 }
 

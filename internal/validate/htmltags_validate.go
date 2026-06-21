@@ -1,24 +1,29 @@
 package validate
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 func compareTags(source string, target string) []Issue {
+	sourceTokens := ExtractTagTokens(source)
+	targetTokens := ExtractTagTokens(target)
 	issues := compareTokenCounts(
-		tagCounts(ExtractTagTokens(source)),
-		tagCounts(ExtractTagTokens(target)),
+		tagCounts(sourceTokens),
+		tagCounts(targetTokens),
 		"tag",
 		"tag_missing",
 		"tag_extra",
 		"tag_count_changed",
 		SeverityError,
 	)
-	issues = append(issues, validateTagBalance("source", ExtractTagTokens(source))...)
-	issues = append(issues, validateTagBalance("target", ExtractTagTokens(target))...)
+	issues = append(issues, validateTagBalance("source", sourceTokens)...)
+	issues = append(issues, validateTagBalance("target", targetTokens)...)
 	return issues
 }
 
 func tagCounts(tokens []TagToken) map[string]int {
-	counts := map[string]int{}
+	counts := make(map[string]int, len(tokens))
 	for _, token := range tokens {
 		counts[token.Normalized]++
 	}
@@ -55,10 +60,10 @@ func validateTagBalance(label string, tokens []TagToken) []Issue {
 		}
 		stack = stack[:len(stack)-1]
 	}
-	for i := len(stack) - 1; i >= 0; i-- {
+	for _, token := range slices.Backward(stack) {
 		issues = append(issues, Issue{
 			Code:     "tag_unclosed",
-			Message:  fmt.Sprintf("%s has unclosed tag %s", label, stack[i].Normalized),
+			Message:  fmt.Sprintf("%s has unclosed tag %s", label, token.Normalized),
 			Severity: SeverityError,
 		})
 	}
