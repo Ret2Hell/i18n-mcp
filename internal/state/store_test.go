@@ -1,7 +1,6 @@
 package state
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -15,7 +14,7 @@ import (
 func TestLoadMissingStateReturnsEmptyFile(t *testing.T) {
 	store := newTestStore(t)
 
-	file, err := store.Load(context.Background())
+	file, err := store.Load(t.Context())
 	require.NoError(t, err)
 	require.Equal(t, CurrentVersion, file.Version)
 	require.Empty(t, file.Entries)
@@ -40,7 +39,7 @@ func TestLoadValidState(t *testing.T) {
 
 	guard, err := fsutil.NewGuard(root)
 	require.NoError(t, err)
-	loaded, err := NewStore(guard).Load(context.Background())
+	loaded, err := NewStore(guard).Load(t.Context())
 	require.NoError(t, err)
 	require.Equal(t, "en", loaded.SourceLocale)
 	require.Len(t, loaded.Entries, 1)
@@ -53,7 +52,7 @@ func TestLoadCorruptStateReturnsError(t *testing.T) {
 
 	guard, err := fsutil.NewGuard(root)
 	require.NoError(t, err)
-	_, err = NewStore(guard).Load(context.Background())
+	_, err = NewStore(guard).Load(t.Context())
 	require.Error(t, err)
 }
 
@@ -71,9 +70,9 @@ func TestSaveWritesStateAtomically(t *testing.T) {
 		UpdatedAt:          time.Now().UTC(),
 	}
 
-	require.NoError(t, store.Save(context.Background(), file))
+	require.NoError(t, store.Save(t.Context(), file))
 
-	loaded, err := store.Load(context.Background())
+	loaded, err := store.Load(t.Context())
 	require.NoError(t, err)
 	require.Len(t, loaded.Entries, 1)
 
@@ -90,7 +89,7 @@ func TestSaveRejectsPathOutsideRoot(t *testing.T) {
 	require.NoError(t, err)
 	store := NewStoreAt(guard, "../state.json")
 
-	err = store.Save(context.Background(), NewFile("en", time.Now()))
+	err = store.Save(t.Context(), NewFile("en", time.Now()))
 	require.Error(t, err)
 }
 
@@ -102,7 +101,7 @@ func TestSaveRejectsStateFileSymlink(t *testing.T) {
 
 	guard, err := fsutil.NewGuard(root)
 	require.NoError(t, err)
-	err = NewStore(guard).Save(context.Background(), NewFile("en", time.Now()))
+	err = NewStore(guard).Save(t.Context(), NewFile("en", time.Now()))
 	require.Error(t, err)
 }
 

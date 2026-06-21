@@ -48,10 +48,10 @@ func (s *Service) Rebuild(ctx context.Context, opts RebuildOptions) (RebuildResu
 
 	now := s.now()
 	next := NewFile(inv.SourceLocale, now)
-	sourceByKey := map[string]locale.Unit{}
-	targetLocales := map[string]bool{}
+	sourceByKey := make(map[string]locale.Unit, len(inv.Units))
+	targetLocales := make(map[string]struct{}, len(inv.TargetLocales))
 	for _, localeCode := range inv.TargetLocales {
-		targetLocales[localeCode] = true
+		targetLocales[localeCode] = struct{}{}
 	}
 
 	for _, unit := range inv.Units {
@@ -67,9 +67,11 @@ func (s *Service) Rebuild(ctx context.Context, opts RebuildOptions) (RebuildResu
 		if unit.Locale == inv.SourceLocale {
 			continue
 		}
-		if len(targetLocales) > 0 && !targetLocales[unit.Locale] {
-			skipped++
-			continue
+		if len(targetLocales) > 0 {
+			if _, ok := targetLocales[unit.Locale]; !ok {
+				skipped++
+				continue
+			}
 		}
 		if strings.TrimSpace(unit.Value) == "" {
 			skipped++

@@ -3,7 +3,6 @@ package state
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"strings"
 )
 
 const (
@@ -20,7 +19,6 @@ func TargetHash(value string) string {
 }
 
 func textHash(version string, value string) string {
-	parts := []string{version, value}
-	sum := sha256.Sum256([]byte(strings.Join(parts, "\x1e")))
+	sum := sha256.Sum256([]byte(version + "\x1e" + value))
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
