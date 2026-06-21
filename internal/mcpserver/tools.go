@@ -44,7 +44,7 @@ func registerTools(s *mcp.Server, a *app.App) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.state.rebuild",
 		Title:       "Rebuild i18n State",
-		Description: "Preview rebuilding .i18n-mcp/state.json from existing locale files. Dry-run only at this stage.",
+		Description: "Rebuild .i18n-mcp/state.json from existing locale files. Dry-run by default; writes only with apply true.",
 		Annotations: writeOp("Rebuild i18n State", false, true),
 	}, stateRebuildTool(a))
 }

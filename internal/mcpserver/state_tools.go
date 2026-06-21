@@ -8,7 +8,9 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-type StateRebuildInput struct{}
+type StateRebuildInput struct {
+	Apply bool `json:"apply,omitzero" jsonschema:"write .i18n-mcp/state.json when true; false previews only"`
+}
 
 type StateRebuildOutput struct {
 	Result state.RebuildResult `json:"result" jsonschema:"state rebuild preview result"`
@@ -16,8 +18,8 @@ type StateRebuildOutput struct {
 
 func stateRebuildTool(a *app.App) func(context.Context, *mcp.CallToolRequest, StateRebuildInput) (*mcp.CallToolResult, StateRebuildOutput, error) {
 	return func(ctx context.Context, req *mcp.CallToolRequest, in StateRebuildInput) (*mcp.CallToolResult, StateRebuildOutput, error) {
-		_, _ = req, in
-		result, err := a.State.Rebuild(ctx, state.RebuildOptions{Apply: false})
+		_ = req
+		result, err := a.State.Rebuild(ctx, state.RebuildOptions{Apply: in.Apply})
 		if err != nil {
 			return nil, StateRebuildOutput{}, err
 		}
