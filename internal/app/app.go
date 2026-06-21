@@ -10,6 +10,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/project"
+	"github.com/Ret2Hell/i18n-mcp/internal/state"
 	"github.com/rs/zerolog"
 )
 
@@ -21,6 +22,7 @@ type App struct {
 	Config      *config.Service
 	Project     *project.Service
 	Locales     *locale.Service
+	State       *state.Service
 }
 
 func New(ctx context.Context, opts Options) (*App, error) {
@@ -40,6 +42,8 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	configService := config.NewService(guard, opts.ConfigPath)
 	projectService := project.NewService(guard)
 	localeService := locale.NewService(guard, configService)
+	stateStore := state.NewStore(guard)
+	stateService := state.NewService(stateStore, localeService)
 
 	return &App{
 		Options:     opts,
@@ -49,6 +53,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		Config:      configService,
 		Project:     projectService,
 		Locales:     localeService,
+		State:       stateService,
 	}, nil
 }
 
