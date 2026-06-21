@@ -8,11 +8,6 @@ lefthook = "latest"
 [env]
 CGO_ENABLED = "0"
 GOCACHE = "{{env.HOME}}/.cache/go-build"
-_.file = { path = ".env" }
-
-[tasks.dev]
-run = "air"
-description = "Hot reload"
 
 [tasks.build]
 run = "sh scripts/build.sh"
