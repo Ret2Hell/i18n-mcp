@@ -40,4 +40,11 @@ func registerTools(s *mcp.Server, a *app.App) {
 		Description: "List locale files, locales, namespaces, key counts, warnings, and duplicate namespace issues.",
 		Annotations: readOnly("List i18n Locales"),
 	}, localesListTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.state.rebuild",
+		Title:       "Rebuild i18n State",
+		Description: "Preview rebuilding .i18n-mcp/state.json from existing locale files. Dry-run only at this stage.",
+		Annotations: writeOp("Rebuild i18n State", false, true),
+	}, stateRebuildTool(a))
 }

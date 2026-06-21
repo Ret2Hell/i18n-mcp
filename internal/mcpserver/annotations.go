@@ -9,3 +9,13 @@ func readOnly(title string) *mcp.ToolAnnotations {
 		OpenWorldHint: new(false),
 	}
 }
+
+func writeOp(title string, destructive bool, idempotent bool) *mcp.ToolAnnotations {
+	return &mcp.ToolAnnotations{
+		Title:           title,
+		ReadOnlyHint:    false,
+		DestructiveHint: new(destructive),
+		IdempotentHint:  idempotent,
+		OpenWorldHint:   new(false),
+	}
+}
