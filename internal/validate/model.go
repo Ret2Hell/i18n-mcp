@@ -27,3 +27,12 @@ type Service struct{}
 func NewService() *Service {
 	return &Service{}
 }
+
+type Pair struct {
+	SourceLocale string `json:"sourceLocale,omitzero"`
+	Locale       string `json:"locale,omitzero"`
+	Namespace    string `json:"namespace,omitzero"`
+	Key          string `json:"key,omitzero"`
+	Source       string `json:"source"`
+	Target       string `json:"target"`
+}

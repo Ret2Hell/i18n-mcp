@@ -11,6 +11,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/project"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
+	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 	"github.com/rs/zerolog"
 )
 
@@ -23,6 +24,7 @@ type App struct {
 	Project     *project.Service
 	Locales     *locale.Service
 	State       *state.Service
+	Validator   *validate.Service
 }
 
 func New(ctx context.Context, opts Options) (*App, error) {
@@ -44,6 +46,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	localeService := locale.NewService(guard, configService)
 	stateStore := state.NewStore(guard)
 	stateService := state.NewService(stateStore, localeService)
+	validatorService := validate.NewService()
 
 	return &App{
 		Options:     opts,
@@ -54,6 +57,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		Project:     projectService,
 		Locales:     localeService,
 		State:       stateService,
+		Validator:   validatorService,
 	}, nil
 }
 
