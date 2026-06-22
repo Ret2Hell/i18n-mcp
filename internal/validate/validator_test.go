@@ -1,6 +1,7 @@
 package validate
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -109,10 +110,8 @@ func TestValidPair(t *testing.T) {
 
 func requireIssueCode(t *testing.T, issues []Issue, code string) {
 	t.Helper()
-	for _, issue := range issues {
-		if issue.Code == code {
-			return
-		}
+	if slices.ContainsFunc(issues, func(issue Issue) bool { return issue.Code == code }) {
+		return
 	}
 	require.Failf(t, "missing issue", "expected issue code %q in %#v", code, issues)
 }

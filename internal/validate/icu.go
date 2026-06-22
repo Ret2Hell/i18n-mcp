@@ -2,8 +2,9 @@ package validate
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
-	"sort"
+	"slices"
 )
 
 var icuHeadPattern = regexp.MustCompile(`\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(plural|select|selectordinal|number|date|time)\b`)
@@ -14,17 +15,14 @@ func LooksLikeICU(s string) bool {
 
 func ExtractICUArguments(s string) []string {
 	matches := icuHeadPattern.FindAllStringSubmatch(s, -1)
-	seen := map[string]bool{}
-	var out []string
+	seen := make(map[string]struct{}, len(matches))
 	for _, match := range matches {
-		if len(match) < 2 || seen[match[1]] {
+		if len(match) < 2 {
 			continue
 		}
-		seen[match[1]] = true
-		out = append(out, match[1])
+		seen[match[1]] = struct{}{}
 	}
-	sort.Strings(out)
-	return out
+	return slices.Sorted(maps.Keys(seen))
 }
 
 func HasBalancedBraces(s string) bool {

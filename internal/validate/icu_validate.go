@@ -22,8 +22,9 @@ func compareICUArguments(source string, target string) []Issue {
 }
 
 func icuArgumentCounts(s string) map[string]int {
-	counts := map[string]int{}
-	for _, arg := range ExtractICUArguments(s) {
+	args := ExtractICUArguments(s)
+	counts := make(map[string]int, len(args))
+	for _, arg := range args {
 		counts[arg]++
 	}
 	return counts
