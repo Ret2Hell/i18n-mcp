@@ -42,6 +42,13 @@ func registerTools(s *mcp.Server, a *app.App) {
 	}, localesListTool(a))
 
 	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.keys.diff",
+		Title:       "Diff Locale Keys",
+		Description: "Compare source and target locales for missing, stale, extra, invalid, unknown, and current keys.",
+		Annotations: readOnly("Diff Locale Keys"),
+	}, keysDiffTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.state.rebuild",
 		Title:       "Rebuild i18n State",
 		Description: "Rebuild .i18n-mcp/state.json from existing locale files. Dry-run by default; writes only with apply true.",
