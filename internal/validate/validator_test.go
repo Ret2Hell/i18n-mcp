@@ -73,6 +73,26 @@ func TestICUArgumentParityValidation(t *testing.T) {
 	requireIssueCode(t, result.Warnings, "icu_argument_extra")
 }
 
+func TestICUArgumentValidationWhenOnlySourceLooksLikeICU(t *testing.T) {
+	result := NewService().ValidateStrings(
+		"{count, plural, one {# item} other {# items}}",
+		"Aucun element",
+	)
+
+	require.False(t, result.OK)
+	requireIssueCode(t, result.Issues, "icu_argument_missing")
+}
+
+func TestICUArgumentValidationWhenOnlyTargetLooksLikeICU(t *testing.T) {
+	result := NewService().ValidateStrings(
+		"No items",
+		"{count, plural, one {# element} other {# elements}}",
+	)
+
+	require.True(t, result.OK)
+	requireIssueCode(t, result.Warnings, "icu_argument_extra")
+}
+
 func TestEmptyTargetIsBlocking(t *testing.T) {
 	result := NewService().ValidateStrings("Save", "")
 
