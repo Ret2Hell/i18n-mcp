@@ -103,14 +103,14 @@ func TestConfigValidateToolOverInMemoryMCP(t *testing.T) {
 	require.False(t, out.Validation.Valid)
 	require.Empty(t, out.Validation.Warnings)
 
-	codes := make(map[string]bool, len(out.Validation.Errors))
+	codes := make(map[string]struct{}, len(out.Validation.Errors))
 	for _, diagnostic := range out.Validation.Errors {
-		codes[diagnostic.Code] = true
+		codes[diagnostic.Code] = struct{}{}
 	}
-	require.True(t, codes["target_contains_source"])
-	require.True(t, codes["locale_pattern_missing_locale"])
-	require.True(t, codes["invalid_indent"])
-	require.True(t, codes["invalid_translation_mode"])
+	require.Contains(t, codes, "target_contains_source")
+	require.Contains(t, codes, "locale_pattern_missing_locale")
+	require.Contains(t, codes, "invalid_indent")
+	require.Contains(t, codes, "invalid_translation_mode")
 }
 
 func newInMemoryMCPClientSession(t *testing.T, ctx context.Context, projectRoot string) *mcp.ClientSession {

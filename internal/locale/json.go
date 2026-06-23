@@ -63,7 +63,7 @@ func ParseJSONFile(ctx context.Context, guard *fsutil.Guard, relPath string) (JS
 	return JSONDocument{
 		Path:  relPath,
 		Bytes: len(data),
-		Raw:   append(json.RawMessage(nil), data...),
+		Raw:   json.RawMessage(bytes.Clone(data)),
 		Value: value,
 	}, nil
 }

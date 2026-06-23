@@ -1,6 +1,7 @@
 package locale
 
 import (
+	"cmp"
 	"maps"
 	"slices"
 	"strings"
@@ -10,10 +11,10 @@ func Flatten(ref FileRef, value any) FlattenResult {
 	var result FlattenResult
 	flattenValue(ref, nil, value, &result)
 	slices.SortFunc(result.Units, func(a, b Unit) int {
-		if a.Key != b.Key {
-			return strings.Compare(a.Key, b.Key)
-		}
-		return strings.Compare(a.FilePath, b.FilePath)
+		return cmp.Or(
+			cmp.Compare(a.Key, b.Key),
+			cmp.Compare(a.FilePath, b.FilePath),
+		)
 	})
 	return result
 }

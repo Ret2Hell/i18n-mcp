@@ -67,11 +67,9 @@ func (s *Service) Rebuild(ctx context.Context, opts RebuildOptions) (RebuildResu
 		if unit.Locale == inv.SourceLocale {
 			continue
 		}
-		if len(targetLocales) > 0 {
-			if _, ok := targetLocales[unit.Locale]; !ok {
-				skipped++
-				continue
-			}
+		if _, ok := targetLocales[unit.Locale]; !ok {
+			skipped++
+			continue
 		}
 		if strings.TrimSpace(unit.Value) == "" {
 			skipped++
@@ -139,6 +137,6 @@ func rebuildAssumptions() []string {
 		"existing non-empty target strings are treated as accepted current translations",
 		"target keys without a matching source key are skipped",
 		"empty target strings are skipped",
-		"placeholder, rich-text tag, and ICU validation will be added in Epic D",
+		"rebuild records current state only; placeholder, rich-text tag, and ICU checks are reported by validation tools",
 	}
 }

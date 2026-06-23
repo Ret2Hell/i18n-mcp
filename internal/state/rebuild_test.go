@@ -57,6 +57,8 @@ func TestServiceRebuildDryRunAndApplySemantics(t *testing.T) {
 	require.Equal(t, 1, applied.Created)
 	require.Equal(t, 1, applied.Updated)
 	require.Equal(t, 3, applied.Skipped)
+	require.NotContains(t, applied.Assumptions, "placeholder, rich-text tag, and ICU validation will be added in Epic D")
+	require.Contains(t, applied.Assumptions, "rebuild records current state only; placeholder, rich-text tag, and ICU checks are reported by validation tools")
 
 	loadedAfterApply, err := store.Load(t.Context())
 	require.NoError(t, err)

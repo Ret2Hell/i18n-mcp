@@ -127,29 +127,34 @@ func configValidationError(validation config.ValidationResult) error {
 
 func sortInventory(inv *Inventory) {
 	slices.Sort(inv.TargetLocales)
-	slices.SortFunc(inv.Files, func(a, b FileSummary) int { return compareLess(a.FileRef, b.FileRef, lessFileRef) })
-	slices.SortFunc(inv.Units, func(a, b Unit) int { return compareLess(a, b, lessUnit) })
-	slices.SortFunc(inv.Warnings, func(a, b Warning) int { return compareLess(a, b, lessWarning) })
+	slices.SortFunc(inv.Files, func(a, b FileSummary) int { return compareFileRef(a.FileRef, b.FileRef) })
+	slices.SortFunc(inv.Units, compareUnit)
+	slices.SortFunc(inv.Warnings, compareWarning)
 	slices.SortFunc(inv.Duplicates, func(a, b DuplicateNamespaceIssue) int {
-		if a.Locale != b.Locale {
-			return strings.Compare(a.Locale, b.Locale)
-		}
-		return strings.Compare(a.Namespace, b.Namespace)
+		return cmp.Or(
+			cmp.Compare(a.Locale, b.Locale),
+			cmp.Compare(a.Namespace, b.Namespace),
+		)
 	})
 }
 
-func lessUnit(a, b Unit) bool {
-	return slices.Compare(
-		[]string{a.Locale, a.Namespace, a.Key, a.FilePath},
-		[]string{b.Locale, b.Namespace, b.Key, b.FilePath},
-	) < 0
+func compareUnit(a, b Unit) int {
+	return cmp.Or(
+		cmp.Compare(a.Locale, b.Locale),
+		cmp.Compare(a.Namespace, b.Namespace),
+		cmp.Compare(a.Key, b.Key),
+		cmp.Compare(a.FilePath, b.FilePath),
+	)
 }
 
-func lessWarning(a, b Warning) bool {
-	return slices.Compare(
-		[]string{a.Locale, a.Namespace, a.FilePath, a.Key, a.Code},
-		[]string{b.Locale, b.Namespace, b.FilePath, b.Key, b.Code},
-	) < 0
+func compareWarning(a, b Warning) int {
+	return cmp.Or(
+		cmp.Compare(a.Locale, b.Locale),
+		cmp.Compare(a.Namespace, b.Namespace),
+		cmp.Compare(a.FilePath, b.FilePath),
+		cmp.Compare(a.Key, b.Key),
+		cmp.Compare(a.Code, b.Code),
+	)
 }
 
 var ErrNamespaceNotFound = errors.New("locale namespace not found")

@@ -93,22 +93,22 @@ func TestLessFileRef(t *testing.T) {
 		name string
 		a    FileRef
 		b    FileRef
-		want bool
+		want int
 	}{
-		{name: "equal", a: base, b: base, want: false},
-		{name: "locale less", a: FileRef{Locale: "de"}, b: base, want: true},
-		{name: "namespace less", a: FileRef{Locale: "en", Namespace: "admin"}, b: base, want: true},
-		{name: "path less", a: FileRef{Locale: "en", Namespace: "common", Path: "a.json"}, b: base, want: true},
-		{name: "pattern less", a: FileRef{Locale: "en", Namespace: "common", Path: "messages/en.json", Pattern: "a/{locale}.json"}, b: base, want: true},
-		{name: "locale greater", a: base, b: FileRef{Locale: "de"}, want: false},
-		{name: "namespace greater", a: base, b: FileRef{Locale: "en", Namespace: "admin"}, want: false},
-		{name: "path greater", a: base, b: FileRef{Locale: "en", Namespace: "common", Path: "a.json"}, want: false},
-		{name: "pattern greater", a: base, b: FileRef{Locale: "en", Namespace: "common", Path: "messages/en.json", Pattern: "a/{locale}.json"}, want: false},
+		{name: "equal", a: base, b: base, want: 0},
+		{name: "locale less", a: FileRef{Locale: "de"}, b: base, want: -1},
+		{name: "namespace less", a: FileRef{Locale: "en", Namespace: "admin"}, b: base, want: -1},
+		{name: "path less", a: FileRef{Locale: "en", Namespace: "common", Path: "a.json"}, b: base, want: -1},
+		{name: "pattern less", a: FileRef{Locale: "en", Namespace: "common", Path: "messages/en.json", Pattern: "a/{locale}.json"}, b: base, want: -1},
+		{name: "locale greater", a: base, b: FileRef{Locale: "de"}, want: 1},
+		{name: "namespace greater", a: base, b: FileRef{Locale: "en", Namespace: "admin"}, want: 1},
+		{name: "path greater", a: base, b: FileRef{Locale: "en", Namespace: "common", Path: "a.json"}, want: 1},
+		{name: "pattern greater", a: base, b: FileRef{Locale: "en", Namespace: "common", Path: "messages/en.json", Pattern: "a/{locale}.json"}, want: 1},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, lessFileRef(tt.a, tt.b))
+			require.Equal(t, tt.want, compareFileRef(tt.a, tt.b))
 		})
 	}
 }

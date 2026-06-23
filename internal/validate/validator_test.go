@@ -12,92 +12,98 @@ func TestExtractPlaceholders(t *testing.T) {
 	require.Equal(t, []string{"%02d", "%{count}", "{name}", "{{user}}"}, got)
 }
 
-func TestPlaceholderParityValidation(t *testing.T) {
-	result := NewService().ValidateStrings("Hello {name}, you have %{count}", "Bonjour {name}")
-
-	require.False(t, result.OK)
-	requireIssueCode(t, result.Issues, "placeholder_missing")
-}
-
-func TestPlaceholderCountChanged(t *testing.T) {
-	result := NewService().ValidateStrings("{name} invited {name}", "{name} a invite")
-
-	require.False(t, result.OK)
-	requireIssueCode(t, result.Issues, "placeholder_count_changed")
-}
-
 func TestExtractTags(t *testing.T) {
 	got := ExtractTags("Click <Link href=\"/x\"><strong>here</strong></Link><br />")
 	require.Equal(t, []string{"</link>", "</strong>", "<br/>", "<link>", "<strong>"}, got)
 }
 
-func TestTagParityValidation(t *testing.T) {
-	result := NewService().ValidateStrings("Click <strong>here</strong>", "Cliquez ici")
+func TestValidationIssueAndWarningCodes(t *testing.T) {
+	tests := []struct {
+		name         string
+		source       string
+		target       string
+		wantOK       bool
+		issueCodes   []string
+		warningCodes []string
+	}{
+		{
+			name:       "placeholder missing",
+			source:     "Hello {name}, you have %{count}",
+			target:     "Bonjour {name}",
+			issueCodes: []string{"placeholder_missing"},
+		},
+		{
+			name:       "placeholder count changed",
+			source:     "{name} invited {name}",
+			target:     "{name} a invite",
+			issueCodes: []string{"placeholder_count_changed"},
+		},
+		{
+			name:       "tag missing",
+			source:     "Click <strong>here</strong>",
+			target:     "Cliquez ici",
+			issueCodes: []string{"tag_missing"},
+		},
+		{
+			name:       "tag mismatched",
+			source:     "Click <strong>here</strong>",
+			target:     "Cliquez <strong>ici</em>",
+			issueCodes: []string{"tag_mismatched"},
+		},
+		{
+			name:         "markdown link warning",
+			source:       "Read [docs](/docs)",
+			target:       "Lire la documentation",
+			wantOK:       true,
+			warningCodes: []string{"markdown_link_count_changed"},
+		},
+		{
+			name:       "ICU target unbalanced braces",
+			source:     "{count, plural, one {# item} other {# items}}",
+			target:     "{count, plural, one {# element} other {# elements}",
+			issueCodes: []string{"icu_target_unbalanced_braces"},
+		},
+		{
+			name:         "ICU argument parity",
+			source:       "{count, plural, one {# item} other {# items}}",
+			target:       "{total, plural, one {# element} other {# elements}}",
+			issueCodes:   []string{"icu_argument_missing"},
+			warningCodes: []string{"icu_argument_extra"},
+		},
+		{
+			name:       "only source looks like ICU",
+			source:     "{count, plural, one {# item} other {# items}}",
+			target:     "Aucun element",
+			issueCodes: []string{"icu_argument_missing"},
+		},
+		{
+			name:         "only target looks like ICU",
+			source:       "No items",
+			target:       "{count, plural, one {# element} other {# elements}}",
+			wantOK:       true,
+			warningCodes: []string{"icu_argument_extra"},
+		},
+		{
+			name:       "empty target",
+			source:     "Save",
+			target:     "",
+			issueCodes: []string{"target_empty"},
+		},
+	}
 
-	require.False(t, result.OK)
-	requireIssueCode(t, result.Issues, "tag_missing")
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NewService().ValidateStrings(tt.source, tt.target)
 
-func TestTagMismatchValidation(t *testing.T) {
-	result := NewService().ValidateStrings("Click <strong>here</strong>", "Cliquez <strong>ici</em>")
-
-	require.False(t, result.OK)
-	requireIssueCode(t, result.Issues, "tag_mismatched")
-}
-
-func TestMarkdownLinkValidationWarns(t *testing.T) {
-	result := NewService().ValidateStrings("Read [docs](/docs)", "Lire la documentation")
-
-	require.True(t, result.OK)
-	requireIssueCode(t, result.Warnings, "markdown_link_count_changed")
-}
-
-func TestICUShapeValidation(t *testing.T) {
-	result := NewService().ValidateStrings(
-		"{count, plural, one {# item} other {# items}}",
-		"{count, plural, one {# element} other {# elements}",
-	)
-
-	require.False(t, result.OK)
-	requireIssueCode(t, result.Issues, "icu_target_unbalanced_braces")
-}
-
-func TestICUArgumentParityValidation(t *testing.T) {
-	result := NewService().ValidateStrings(
-		"{count, plural, one {# item} other {# items}}",
-		"{total, plural, one {# element} other {# elements}}",
-	)
-
-	require.False(t, result.OK)
-	requireIssueCode(t, result.Issues, "icu_argument_missing")
-	requireIssueCode(t, result.Warnings, "icu_argument_extra")
-}
-
-func TestICUArgumentValidationWhenOnlySourceLooksLikeICU(t *testing.T) {
-	result := NewService().ValidateStrings(
-		"{count, plural, one {# item} other {# items}}",
-		"Aucun element",
-	)
-
-	require.False(t, result.OK)
-	requireIssueCode(t, result.Issues, "icu_argument_missing")
-}
-
-func TestICUArgumentValidationWhenOnlyTargetLooksLikeICU(t *testing.T) {
-	result := NewService().ValidateStrings(
-		"No items",
-		"{count, plural, one {# element} other {# elements}}",
-	)
-
-	require.True(t, result.OK)
-	requireIssueCode(t, result.Warnings, "icu_argument_extra")
-}
-
-func TestEmptyTargetIsBlocking(t *testing.T) {
-	result := NewService().ValidateStrings("Save", "")
-
-	require.False(t, result.OK)
-	requireIssueCode(t, result.Issues, "target_empty")
+			require.Equal(t, tt.wantOK, result.OK)
+			for _, code := range tt.issueCodes {
+				requireIssueCode(t, result.Issues, code)
+			}
+			for _, code := range tt.warningCodes {
+				requireIssueCode(t, result.Warnings, code)
+			}
+		})
+	}
 }
 
 func TestUntranslatedTargetIsWarning(t *testing.T) {

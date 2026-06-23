@@ -126,9 +126,9 @@ func detectRoot(t *testing.T, root string) Detection {
 }
 
 func sortedLocalesFromFiles(files []LocaleFileCandidate) []string {
-	seen := map[string]bool{}
+	seen := map[string]struct{}{}
 	for _, file := range files {
-		seen[file.Locale] = true
+		seen[file.Locale] = struct{}{}
 	}
 	return slices.Sorted(maps.Keys(seen))
 }

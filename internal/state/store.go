@@ -1,6 +1,7 @@
 package state
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -21,10 +22,7 @@ func NewStore(guard *fsutil.Guard) *Store {
 }
 
 func NewStoreAt(guard *fsutil.Guard, path string) *Store {
-	if path == "" {
-		path = DefaultStatePath
-	}
-	return &Store{guard: guard, path: path}
+	return &Store{guard: guard, path: cmp.Or(path, DefaultStatePath)}
 }
 
 func (s *Store) Path() string {

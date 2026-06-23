@@ -150,22 +150,22 @@ func TestLessUnit(t *testing.T) {
 		name string
 		a    Unit
 		b    Unit
-		want bool
+		want int
 	}{
-		{name: "equal", a: base, b: base, want: false},
-		{name: "locale less", a: Unit{Locale: "de"}, b: base, want: true},
-		{name: "namespace less", a: Unit{Locale: "en", Namespace: "admin"}, b: base, want: true},
-		{name: "key less", a: Unit{Locale: "en", Namespace: "common", Key: "a"}, b: base, want: true},
-		{name: "file less", a: Unit{Locale: "en", Namespace: "common", Key: "home.title", FilePath: "a.json"}, b: base, want: true},
-		{name: "locale greater", a: base, b: Unit{Locale: "de"}, want: false},
-		{name: "namespace greater", a: base, b: Unit{Locale: "en", Namespace: "admin"}, want: false},
-		{name: "key greater", a: base, b: Unit{Locale: "en", Namespace: "common", Key: "a"}, want: false},
-		{name: "file greater", a: base, b: Unit{Locale: "en", Namespace: "common", Key: "home.title", FilePath: "a.json"}, want: false},
+		{name: "equal", a: base, b: base, want: 0},
+		{name: "locale less", a: Unit{Locale: "de"}, b: base, want: -1},
+		{name: "namespace less", a: Unit{Locale: "en", Namespace: "admin"}, b: base, want: -1},
+		{name: "key less", a: Unit{Locale: "en", Namespace: "common", Key: "a"}, b: base, want: -1},
+		{name: "file less", a: Unit{Locale: "en", Namespace: "common", Key: "home.title", FilePath: "a.json"}, b: base, want: -1},
+		{name: "locale greater", a: base, b: Unit{Locale: "de"}, want: 1},
+		{name: "namespace greater", a: base, b: Unit{Locale: "en", Namespace: "admin"}, want: 1},
+		{name: "key greater", a: base, b: Unit{Locale: "en", Namespace: "common", Key: "a"}, want: 1},
+		{name: "file greater", a: base, b: Unit{Locale: "en", Namespace: "common", Key: "home.title", FilePath: "a.json"}, want: 1},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, lessUnit(tt.a, tt.b))
+			require.Equal(t, tt.want, compareUnit(tt.a, tt.b))
 		})
 	}
 }
@@ -177,24 +177,24 @@ func TestLessWarning(t *testing.T) {
 		name string
 		a    Warning
 		b    Warning
-		want bool
+		want int
 	}{
-		{name: "equal", a: base, b: base, want: false},
-		{name: "locale less", a: Warning{Locale: "de"}, b: base, want: true},
-		{name: "namespace less", a: Warning{Locale: "en", Namespace: "admin"}, b: base, want: true},
-		{name: "file less", a: Warning{Locale: "en", Namespace: "common", FilePath: "a.json"}, b: base, want: true},
-		{name: "key less", a: Warning{Locale: "en", Namespace: "common", FilePath: "messages/en.json", Key: "a"}, b: base, want: true},
-		{name: "code less", a: Warning{Locale: "en", Namespace: "common", FilePath: "messages/en.json", Key: "home.title", Code: "a"}, b: base, want: true},
-		{name: "locale greater", a: base, b: Warning{Locale: "de"}, want: false},
-		{name: "namespace greater", a: base, b: Warning{Locale: "en", Namespace: "admin"}, want: false},
-		{name: "file greater", a: base, b: Warning{Locale: "en", Namespace: "common", FilePath: "a.json"}, want: false},
-		{name: "key greater", a: base, b: Warning{Locale: "en", Namespace: "common", FilePath: "messages/en.json", Key: "a"}, want: false},
-		{name: "code greater", a: base, b: Warning{Locale: "en", Namespace: "common", FilePath: "messages/en.json", Key: "home.title", Code: "a"}, want: false},
+		{name: "equal", a: base, b: base, want: 0},
+		{name: "locale less", a: Warning{Locale: "de"}, b: base, want: -1},
+		{name: "namespace less", a: Warning{Locale: "en", Namespace: "admin"}, b: base, want: -1},
+		{name: "file less", a: Warning{Locale: "en", Namespace: "common", FilePath: "a.json"}, b: base, want: -1},
+		{name: "key less", a: Warning{Locale: "en", Namespace: "common", FilePath: "messages/en.json", Key: "a"}, b: base, want: -1},
+		{name: "code less", a: Warning{Locale: "en", Namespace: "common", FilePath: "messages/en.json", Key: "home.title", Code: "a"}, b: base, want: -1},
+		{name: "locale greater", a: base, b: Warning{Locale: "de"}, want: 1},
+		{name: "namespace greater", a: base, b: Warning{Locale: "en", Namespace: "admin"}, want: 1},
+		{name: "file greater", a: base, b: Warning{Locale: "en", Namespace: "common", FilePath: "a.json"}, want: 1},
+		{name: "key greater", a: base, b: Warning{Locale: "en", Namespace: "common", FilePath: "messages/en.json", Key: "a"}, want: 1},
+		{name: "code greater", a: base, b: Warning{Locale: "en", Namespace: "common", FilePath: "messages/en.json", Key: "home.title", Code: "a"}, want: 1},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, lessWarning(tt.a, tt.b))
+			require.Equal(t, tt.want, compareWarning(tt.a, tt.b))
 		})
 	}
 }

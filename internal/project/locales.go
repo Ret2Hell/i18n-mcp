@@ -59,13 +59,11 @@ func detectLocaleLayouts(ctx context.Context, guard *fsutil.Guard) ([]LocaleLayo
 		}
 	}
 	slices.SortFunc(layouts, func(a, b LocaleLayout) int {
-		if n := cmp.Compare(len(b.Files), len(a.Files)); n != 0 {
-			return n
-		}
-		if n := cmp.Compare(b.TotalKeys, a.TotalKeys); n != 0 {
-			return n
-		}
-		return strings.Compare(a.Pattern, b.Pattern)
+		return cmp.Or(
+			cmp.Compare(len(b.Files), len(a.Files)),
+			cmp.Compare(b.TotalKeys, a.TotalKeys),
+			cmp.Compare(a.Pattern, b.Pattern),
+		)
 	})
 	slices.Sort(warnings)
 	return layouts, warnings
@@ -80,7 +78,7 @@ func detectLocaleLayout(guard *fsutil.Guard, pattern string) (LocaleLayout, []st
 	slices.Sort(matches)
 
 	layout := LocaleLayout{Pattern: pattern}
-	seenNamespaces := map[string]bool{}
+	seenNamespaces := map[string]struct{}{}
 	var warnings []string
 	for _, match := range matches {
 		candidate, ok := matchLocalePattern(pattern, filepath.ToSlash(match))
@@ -103,8 +101,8 @@ func detectLocaleLayout(guard *fsutil.Guard, pattern string) (LocaleLayout, []st
 		candidate.Bytes = bytes
 		layout.TotalKeys += keys
 		layout.Files = append(layout.Files, candidate)
-		if candidate.Namespace != "" && !seenNamespaces[candidate.Namespace] {
-			seenNamespaces[candidate.Namespace] = true
+		if _, ok := seenNamespaces[candidate.Namespace]; candidate.Namespace != "" && !ok {
+			seenNamespaces[candidate.Namespace] = struct{}{}
 			layout.Namespaces = append(layout.Namespaces, candidate.Namespace)
 		}
 	}
@@ -181,10 +179,10 @@ func countStrings(value any) int {
 }
 
 func uniqueLocales(layouts []LocaleLayout) []string {
-	seen := map[string]bool{}
+	seen := map[string]struct{}{}
 	for _, layout := range layouts {
 		for _, file := range layout.Files {
-			seen[file.Locale] = true
+			seen[file.Locale] = struct{}{}
 		}
 	}
 	return slices.Sorted(maps.Keys(seen))
@@ -193,21 +191,22 @@ func uniqueLocales(layouts []LocaleLayout) []string {
 func bestSourceCandidates(locales []string) []string {
 	preferred := []string{"en", "en-US", "en-GB"}
 	var out []string
-	seen := map[string]bool{}
+	seen := map[string]struct{}{}
 	for _, locale := range preferred {
 		if slices.Contains(locales, locale) {
 			out = append(out, locale)
-			seen[locale] = true
+			seen[locale] = struct{}{}
 		}
 	}
 	for _, locale := range locales {
-		if _, ok := strings.CutPrefix(locale, "en-"); ok && !seen[locale] {
+		_, alreadySeen := seen[locale]
+		if _, ok := strings.CutPrefix(locale, "en-"); ok && !alreadySeen {
 			out = append(out, locale)
-			seen[locale] = true
+			seen[locale] = struct{}{}
 		}
 	}
 	for _, locale := range locales {
-		if !seen[locale] {
+		if _, ok := seen[locale]; !ok {
 			out = append(out, locale)
 		}
 	}

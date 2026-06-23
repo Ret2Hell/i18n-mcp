@@ -1,6 +1,7 @@
 package locale
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"os"
@@ -104,13 +105,7 @@ func patternToGlob(pattern string) string {
 
 func uniqueSorted(values []string) []string {
 	slices.Sort(values)
-	out := values[:0]
-	for _, value := range values {
-		if len(out) == 0 || out[len(out)-1] != value {
-			out = append(out, value)
-		}
-	}
-	return out
+	return slices.Compact(values)
 }
 
 func DiscoverPattern(ctx context.Context, guard *fsutil.Guard, pattern string) ([]FileRef, error) {
@@ -129,7 +124,7 @@ func DiscoverPattern(ctx context.Context, guard *fsutil.Guard, pattern string) (
 			refs = append(refs, ref)
 		}
 	}
-	slices.SortFunc(refs, func(a, b FileRef) int { return compareLess(a, b, lessFileRef) })
+	slices.SortFunc(refs, compareFileRef)
 	return refs, nil
 }
 
@@ -190,15 +185,11 @@ func patternRegexp(pattern string) (*regexp.Regexp, error) {
 	return regexp.Compile(b.String())
 }
 
-func lessFileRef(a, b FileRef) bool {
-	if a.Locale != b.Locale {
-		return a.Locale < b.Locale
-	}
-	if a.Namespace != b.Namespace {
-		return a.Namespace < b.Namespace
-	}
-	if a.Path != b.Path {
-		return a.Path < b.Path
-	}
-	return a.Pattern < b.Pattern
+func compareFileRef(a, b FileRef) int {
+	return cmp.Or(
+		cmp.Compare(a.Locale, b.Locale),
+		cmp.Compare(a.Namespace, b.Namespace),
+		cmp.Compare(a.Path, b.Path),
+		cmp.Compare(a.Pattern, b.Pattern),
+	)
 }

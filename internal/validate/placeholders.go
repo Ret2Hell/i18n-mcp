@@ -67,10 +67,10 @@ func collectPlaceholderSpans(s string) []placeholderSpan {
 		}
 	}
 	slices.SortFunc(spans, func(a, b placeholderSpan) int {
-		if byStart := cmp.Compare(a.start, b.start); byStart != 0 {
-			return byStart
-		}
-		return cmp.Compare(a.end, b.end)
+		return cmp.Or(
+			cmp.Compare(a.start, b.start),
+			cmp.Compare(a.end, b.end),
+		)
 	})
 	return spans
 }

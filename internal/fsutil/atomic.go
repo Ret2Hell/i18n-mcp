@@ -74,7 +74,13 @@ func rejectSymlinkAncestors(root string, path string) error {
 		return nil
 	}
 	_, climbsOut := strings.CutPrefix(rel, ".."+string(filepath.Separator))
-	if rel == ".." || climbsOut || filepath.IsAbs(rel) {
+	if rel == ".." {
+		return fmt.Errorf("path escapes project root: %s", path)
+	}
+	if climbsOut {
+		return fmt.Errorf("path escapes project root: %s", path)
+	}
+	if filepath.IsAbs(rel) {
 		return fmt.Errorf("path escapes project root: %s", path)
 	}
 
