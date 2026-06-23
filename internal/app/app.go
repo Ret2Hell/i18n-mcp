@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
+	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/project"
@@ -25,6 +26,7 @@ type App struct {
 	Locales     *locale.Service
 	State       *state.Service
 	Validator   *validate.Service
+	Diff        *diff.Service
 }
 
 func New(ctx context.Context, opts Options) (*App, error) {
@@ -47,6 +49,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	stateStore := state.NewStore(guard)
 	stateService := state.NewService(stateStore, localeService)
 	validatorService := validate.NewService()
+	diffService := diff.NewService(localeService, stateService, validatorService)
 
 	return &App{
 		Options:     opts,
@@ -58,6 +61,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		Locales:     localeService,
 		State:       stateService,
 		Validator:   validatorService,
+		Diff:        diffService,
 	}, nil
 }
 

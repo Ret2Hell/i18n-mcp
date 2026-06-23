@@ -77,6 +77,7 @@ func (s *Service) Analyze(ctx context.Context) (Report, error) {
 	}
 
 	sortReport(&report)
+	report.Summary = Summarize(report.Items)
 	return report, nil
 }
 
