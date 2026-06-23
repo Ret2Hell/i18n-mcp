@@ -128,6 +128,10 @@ func (s *Service) Rebuild(ctx context.Context, opts RebuildOptions) (RebuildResu
 	return result, nil
 }
 
+func (s *Service) Load(ctx context.Context) (File, error) {
+	return s.store.Load(ctx)
+}
+
 func unitIdentity(namespace string, key string) string {
 	return namespace + "\x00" + key
 }

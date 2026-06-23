@@ -6,18 +6,25 @@ import (
 	"sort"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
+	"github.com/Ret2Hell/i18n-mcp/internal/state"
 )
 
 type Service struct {
-	locales *locale.Service
+	locales      *locale.Service
+	stateService *state.Service
 }
 
-func NewService(locales *locale.Service) *Service {
-	return &Service{locales: locales}
+func NewService(locales *locale.Service, stateService *state.Service) *Service {
+	return &Service{locales: locales, stateService: stateService}
 }
 
 func (s *Service) Analyze(ctx context.Context) (Report, error) {
 	inv, err := s.locales.Inventory(ctx)
+	if err != nil {
+		return Report{}, err
+	}
+
+	stateFile, err := s.stateService.Load(ctx)
 	if err != nil {
 		return Report{}, err
 	}
@@ -32,17 +39,20 @@ func (s *Service) Analyze(ctx context.Context) (Report, error) {
 	for _, sourceUnit := range sortedUnits(sourceByKey) {
 		for _, localeCode := range targetLocales(inv) {
 			key := targetIdentity(localeCode, sourceUnit.Namespace, sourceUnit.Key)
-			if _, ok := targetByKey[key]; ok {
+			targetUnit, ok := targetByKey[key]
+			if !ok {
+				report.Items = append(report.Items, KeyDiff{
+					Locale:         localeCode,
+					Namespace:      sourceUnit.Namespace,
+					Key:            sourceUnit.Key,
+					Status:         Missing,
+					SourceValue:    sourceUnit.Value,
+					SourceFilePath: sourceUnit.FilePath,
+				})
 				continue
 			}
-			report.Items = append(report.Items, KeyDiff{
-				Locale:         localeCode,
-				Namespace:      sourceUnit.Namespace,
-				Key:            sourceUnit.Key,
-				Status:         Missing,
-				SourceValue:    sourceUnit.Value,
-				SourceFilePath: sourceUnit.FilePath,
-			})
+
+			report.Items = append(report.Items, classifyExisting(sourceUnit, targetUnit, stateFile))
 		}
 	}
 
@@ -162,4 +172,25 @@ func lessKeyDiff(a, b KeyDiff) bool {
 		return a.Key < b.Key
 	}
 	return a.Status < b.Status
+}
+
+func classifyExisting(sourceUnit locale.Unit, targetUnit locale.Unit, stateFile state.File) KeyDiff {
+	entry, ok := stateFile.Entries[state.EntryKey(targetUnit.Locale, targetUnit.Namespace, targetUnit.Key)]
+	status := Current
+	if !ok {
+		status = Unknown
+	}
+	return KeyDiff{
+		Locale:             targetUnit.Locale,
+		Namespace:          targetUnit.Namespace,
+		Key:                targetUnit.Key,
+		Status:             status,
+		SourceValue:        sourceUnit.Value,
+		TargetValue:        targetUnit.Value,
+		SourceHash:         state.SourceHash(sourceUnit.Value),
+		TranslatedFromHash: entry.TranslatedFromHash,
+		TargetHash:         entry.TargetHash,
+		SourceFilePath:     sourceUnit.FilePath,
+		TargetFilePath:     targetUnit.FilePath,
+	}
 }
