@@ -7,15 +7,17 @@ import (
 
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
+	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 )
 
 type Service struct {
 	locales      *locale.Service
 	stateService *state.Service
+	validator    *validate.Service
 }
 
-func NewService(locales *locale.Service, stateService *state.Service) *Service {
-	return &Service{locales: locales, stateService: stateService}
+func NewService(locales *locale.Service, stateService *state.Service, validator *validate.Service) *Service {
+	return &Service{locales: locales, stateService: stateService, validator: validator}
 }
 
 func (s *Service) Analyze(ctx context.Context) (Report, error) {
@@ -52,7 +54,7 @@ func (s *Service) Analyze(ctx context.Context) (Report, error) {
 				continue
 			}
 
-			report.Items = append(report.Items, classifyExisting(sourceUnit, targetUnit, stateFile))
+			report.Items = append(report.Items, s.classifyExisting(inv.SourceLocale, sourceUnit, targetUnit, stateFile))
 		}
 	}
 
@@ -174,7 +176,7 @@ func lessKeyDiff(a, b KeyDiff) bool {
 	return a.Status < b.Status
 }
 
-func classifyExisting(sourceUnit locale.Unit, targetUnit locale.Unit, stateFile state.File) KeyDiff {
+func (s *Service) classifyExisting(sourceLocale string, sourceUnit locale.Unit, targetUnit locale.Unit, stateFile state.File) KeyDiff {
 	currentSourceHash := state.SourceHash(sourceUnit.Value)
 	entry, ok := stateFile.Entries[state.EntryKey(targetUnit.Locale, targetUnit.Namespace, targetUnit.Key)]
 	status := Current
@@ -182,6 +184,20 @@ func classifyExisting(sourceUnit locale.Unit, targetUnit locale.Unit, stateFile 
 		status = Unknown
 	} else if entry.TranslatedFromHash != currentSourceHash {
 		status = Stale
+	}
+
+	validation := s.validator.ValidatePair(validate.Pair{
+		SourceLocale: sourceLocale,
+		Locale:       targetUnit.Locale,
+		Namespace:    targetUnit.Namespace,
+		Key:          targetUnit.Key,
+		Source:       sourceUnit.Value,
+		Target:       targetUnit.Value,
+	})
+	validationIssues := append([]validate.Issue{}, validation.Issues...)
+	validationIssues = append(validationIssues, validation.Warnings...)
+	if !validation.OK {
+		status = Invalid
 	}
 
 	return KeyDiff{
@@ -196,5 +212,6 @@ func classifyExisting(sourceUnit locale.Unit, targetUnit locale.Unit, stateFile 
 		TargetHash:         entry.TargetHash,
 		SourceFilePath:     sourceUnit.FilePath,
 		TargetFilePath:     targetUnit.FilePath,
+		Validation:         validationIssues,
 	}
 }
