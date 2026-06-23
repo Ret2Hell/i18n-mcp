@@ -30,6 +30,15 @@ func registerResources(s *mcp.Server, a *app.App) {
 		MIMEType:    "application/json",
 		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.9},
 	}, readLocaleNamespaceResource(a))
+
+	s.AddResource(&mcp.Resource{
+		URI:         "i18n://analysis/diff",
+		Name:        "analysis_diff",
+		Title:       "i18n Key Diff Analysis",
+		Description: "Latest key diff report with missing, stale, extra, invalid, unknown, and current statuses.",
+		MIMEType:    "application/json",
+		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.9},
+	}, readDiffResource(a))
 }
 
 func readLocalesResource(a *app.App) mcp.ResourceHandler {
@@ -100,4 +109,17 @@ func parseLocaleNamespaceURI(rawURI string) (string, string, bool) {
 		return "", "", false
 	}
 	return localeCode, namespace, true
+}
+
+func readDiffResource(a *app.App) mcp.ResourceHandler {
+	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+		if req.Params.URI != "i18n://analysis/diff" {
+			return nil, mcp.ResourceNotFoundError(req.Params.URI)
+		}
+		report, err := a.Diff.Analyze(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return jsonResource(req.Params.URI, report)
+	}
 }
