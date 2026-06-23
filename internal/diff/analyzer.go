@@ -46,6 +46,24 @@ func (s *Service) Analyze(ctx context.Context) (Report, error) {
 		}
 	}
 
+	targetSet := targetLocaleSet(inv)
+	for _, targetUnit := range sortedUnits(targetByKey) {
+		if !targetSet[targetUnit.Locale] {
+			continue
+		}
+		if _, ok := sourceByKey[sourceIdentity(targetUnit.Namespace, targetUnit.Key)]; ok {
+			continue
+		}
+		report.Items = append(report.Items, KeyDiff{
+			Locale:         targetUnit.Locale,
+			Namespace:      targetUnit.Namespace,
+			Key:            targetUnit.Key,
+			Status:         Extra,
+			TargetValue:    targetUnit.Value,
+			TargetFilePath: targetUnit.FilePath,
+		})
+	}
+
 	sortReport(&report)
 	return report, nil
 }
