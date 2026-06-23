@@ -175,11 +175,15 @@ func lessKeyDiff(a, b KeyDiff) bool {
 }
 
 func classifyExisting(sourceUnit locale.Unit, targetUnit locale.Unit, stateFile state.File) KeyDiff {
+	currentSourceHash := state.SourceHash(sourceUnit.Value)
 	entry, ok := stateFile.Entries[state.EntryKey(targetUnit.Locale, targetUnit.Namespace, targetUnit.Key)]
 	status := Current
 	if !ok {
 		status = Unknown
+	} else if entry.TranslatedFromHash != currentSourceHash {
+		status = Stale
 	}
+
 	return KeyDiff{
 		Locale:             targetUnit.Locale,
 		Namespace:          targetUnit.Namespace,
@@ -187,7 +191,7 @@ func classifyExisting(sourceUnit locale.Unit, targetUnit locale.Unit, stateFile 
 		Status:             status,
 		SourceValue:        sourceUnit.Value,
 		TargetValue:        targetUnit.Value,
-		SourceHash:         state.SourceHash(sourceUnit.Value),
+		SourceHash:         currentSourceHash,
 		TranslatedFromHash: entry.TranslatedFromHash,
 		TargetHash:         entry.TargetHash,
 		SourceFilePath:     sourceUnit.FilePath,
