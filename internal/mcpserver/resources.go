@@ -39,6 +39,15 @@ func registerResources(s *mcp.Server, a *app.App) {
 		MIMEType:    "application/json",
 		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.9},
 	}, readDiffResource(a))
+
+	s.AddResource(&mcp.Resource{
+		URI:         "i18n://translation/plan/latest",
+		Name:        "translation_plan_latest",
+		Title:       "Latest i18n Translation Plan",
+		Description: "Latest prepared translation batch for missing and stale locale keys.",
+		MIMEType:    "application/json",
+		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.9},
+	}, readTranslationPlanResource(a))
 }
 
 func readLocalesResource(a *app.App) mcp.ResourceHandler {
@@ -124,5 +133,19 @@ func readDiffResource(a *app.App) mcp.ResourceHandler {
 			return nil, err
 		}
 		return jsonResource(req.Params.URI, report)
+	}
+}
+
+func readTranslationPlanResource(a *app.App) mcp.ResourceHandler {
+	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+		_ = ctx
+		if req.Params.URI != "i18n://translation/plan/latest" {
+			return nil, mcp.ResourceNotFoundError(req.Params.URI)
+		}
+		batch, ok := a.Translation.LatestPlan()
+		if !ok {
+			return jsonResource(req.Params.URI, map[string]any{"batch": nil, "message": "no translation plan has been created yet"})
+		}
+		return jsonResource(req.Params.URI, batch)
 	}
 }
