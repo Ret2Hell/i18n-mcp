@@ -1,7 +1,6 @@
 package diff
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -43,8 +42,8 @@ func TestAnalyzeCoversAllStatuses(t *testing.T) {
 func TestAnalyzeIsDeterministicallySorted(t *testing.T) {
 	report := analyzeFixture(t, makeDiffFixture(t))
 
-	for i := 1; i < len(report.Items); i++ {
-		require.False(t, lessKeyDiff(report.Items[i], report.Items[i-1]), "items are not sorted at index %d", i)
+	for i := range len(report.Items) - 1 {
+		require.False(t, lessKeyDiff(report.Items[i+1], report.Items[i]), "items are not sorted at index %d", i+1)
 	}
 }
 
@@ -57,7 +56,7 @@ func analyzeFixture(t *testing.T, root string) Report {
 	stateStore := state.NewStore(guard)
 	stateService := state.NewService(stateStore, localeService)
 	service := NewService(localeService, stateService, validate.NewService())
-	report, err := service.Analyze(context.Background())
+	report, err := service.Analyze(t.Context())
 	require.NoError(t, err)
 	return report
 }
@@ -121,7 +120,7 @@ func writeDiffFile(t *testing.T, root string, relPath string, contents string) {
 }
 
 func statusesByLocaleKey(items []KeyDiff) map[string]KeyStatus {
-	out := map[string]KeyStatus{}
+	out := make(map[string]KeyStatus, len(items))
 	for _, item := range items {
 		out[item.Locale+"/"+item.Namespace+"/"+item.Key] = item.Status
 	}

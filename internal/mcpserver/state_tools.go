@@ -17,8 +17,7 @@ type StateRebuildOutput struct {
 }
 
 func stateRebuildTool(a *app.App) func(context.Context, *mcp.CallToolRequest, StateRebuildInput) (*mcp.CallToolResult, StateRebuildOutput, error) {
-	return func(ctx context.Context, req *mcp.CallToolRequest, in StateRebuildInput) (*mcp.CallToolResult, StateRebuildOutput, error) {
-		_ = req
+	return func(ctx context.Context, _ *mcp.CallToolRequest, in StateRebuildInput) (*mcp.CallToolResult, StateRebuildOutput, error) {
 		result, err := a.State.Rebuild(ctx, state.RebuildOptions{Apply: in.Apply})
 		if err != nil {
 			return nil, StateRebuildOutput{}, err

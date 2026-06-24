@@ -92,7 +92,10 @@ func parseLocaleNamespaceURI(rawURI string) (string, string, bool) {
 	if err != nil || parsed.Scheme != "i18n" || parsed.Host != "locales" {
 		return "", "", false
 	}
-	path, _ := strings.CutPrefix(parsed.Path, "/")
+	path, ok := strings.CutPrefix(parsed.Path, "/")
+	if !ok {
+		return "", "", false
+	}
 	localePart, namespacePart, ok := strings.Cut(path, "/")
 	if !ok || strings.Contains(namespacePart, "/") {
 		return "", "", false

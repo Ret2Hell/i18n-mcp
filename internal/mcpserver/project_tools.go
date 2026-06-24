@@ -28,8 +28,7 @@ type ProjectDetectOutput struct {
 }
 
 func projectDetectTool(a *app.App) func(context.Context, *mcp.CallToolRequest, ProjectDetectInput) (*mcp.CallToolResult, ProjectDetectOutput, error) {
-	return func(ctx context.Context, req *mcp.CallToolRequest, in ProjectDetectInput) (*mcp.CallToolResult, ProjectDetectOutput, error) {
-		_ = req
+	return func(ctx context.Context, _ *mcp.CallToolRequest, in ProjectDetectInput) (*mcp.CallToolResult, ProjectDetectOutput, error) {
 		d, err := a.Project.Detect(ctx, project.DetectOptions{
 			ProjectRoot: in.ProjectRoot,
 			MaxDepth:    in.MaxDepth,

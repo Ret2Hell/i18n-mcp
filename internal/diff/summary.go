@@ -1,7 +1,7 @@
 package diff
 
 func Summarize(items []KeyDiff) Summary {
-	summary := Summary{ByLocale: map[string]StatusCounts{}}
+	summary := Summary{ByLocale: make(map[string]StatusCounts, len(items))}
 	for _, item := range items {
 		summary.Total++
 		addStatus(&summary, item.Status)

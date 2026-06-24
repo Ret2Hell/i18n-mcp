@@ -15,8 +15,7 @@ type ConfigGetOutput struct {
 }
 
 func configGetTool(a *app.App) func(context.Context, *mcp.CallToolRequest, ConfigGetInput) (*mcp.CallToolResult, ConfigGetOutput, error) {
-	return func(ctx context.Context, req *mcp.CallToolRequest, in ConfigGetInput) (*mcp.CallToolResult, ConfigGetOutput, error) {
-		_, _ = req, in
+	return func(ctx context.Context, _ *mcp.CallToolRequest, _ ConfigGetInput) (*mcp.CallToolResult, ConfigGetOutput, error) {
 		cfg, err := a.Config.Resolve(ctx)
 		if err != nil {
 			return nil, ConfigGetOutput{}, err
@@ -33,8 +32,7 @@ type ConfigValidateOutput struct {
 }
 
 func configValidateTool(a *app.App) func(context.Context, *mcp.CallToolRequest, ConfigValidateInput) (*mcp.CallToolResult, ConfigValidateOutput, error) {
-	return func(ctx context.Context, req *mcp.CallToolRequest, in ConfigValidateInput) (*mcp.CallToolResult, ConfigValidateOutput, error) {
-		_, _ = req, in
+	return func(ctx context.Context, _ *mcp.CallToolRequest, _ ConfigValidateInput) (*mcp.CallToolResult, ConfigValidateOutput, error) {
 		cfg, err := a.Config.Resolve(ctx)
 		if err != nil {
 			return nil, ConfigValidateOutput{}, err

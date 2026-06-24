@@ -15,9 +15,7 @@ type KeysDiffOutput struct {
 }
 
 func keysDiffTool(a *app.App) func(context.Context, *mcp.CallToolRequest, KeysDiffInput) (*mcp.CallToolResult, KeysDiffOutput, error) {
-	return func(ctx context.Context, req *mcp.CallToolRequest, in KeysDiffInput) (*mcp.CallToolResult, KeysDiffOutput, error) {
-		_ = req
-		_ = in
+	return func(ctx context.Context, _ *mcp.CallToolRequest, _ KeysDiffInput) (*mcp.CallToolResult, KeysDiffOutput, error) {
 		report, err := a.Diff.Analyze(ctx)
 		if err != nil {
 			return nil, KeysDiffOutput{}, err

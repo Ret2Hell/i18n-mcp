@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
@@ -103,14 +104,17 @@ func TestConfigValidateToolOverInMemoryMCP(t *testing.T) {
 	require.False(t, out.Validation.Valid)
 	require.Empty(t, out.Validation.Warnings)
 
-	codes := make(map[string]struct{}, len(out.Validation.Errors))
-	for _, diagnostic := range out.Validation.Errors {
-		codes[diagnostic.Code] = struct{}{}
-	}
-	require.Contains(t, codes, "target_contains_source")
-	require.Contains(t, codes, "locale_pattern_missing_locale")
-	require.Contains(t, codes, "invalid_indent")
-	require.Contains(t, codes, "invalid_translation_mode")
+	requireValidationCode(t, out.Validation.Errors, "target_contains_source")
+	requireValidationCode(t, out.Validation.Errors, "locale_pattern_missing_locale")
+	requireValidationCode(t, out.Validation.Errors, "invalid_indent")
+	requireValidationCode(t, out.Validation.Errors, "invalid_translation_mode")
+}
+
+func requireValidationCode(t *testing.T, diagnostics []config.Diagnostic, code string) {
+	t.Helper()
+	require.True(t, slices.ContainsFunc(diagnostics, func(diagnostic config.Diagnostic) bool {
+		return diagnostic.Code == code
+	}), "expected validation code %q", code)
 }
 
 func newInMemoryMCPClientSession(t *testing.T, ctx context.Context, projectRoot string) *mcp.ClientSession {

@@ -18,8 +18,7 @@ type HealthOutput struct {
 }
 
 func healthTool(a *app.App) func(context.Context, *mcp.CallToolRequest, HealthInput) (*mcp.CallToolResult, HealthOutput, error) {
-	return func(ctx context.Context, req *mcp.CallToolRequest, in HealthInput) (*mcp.CallToolResult, HealthOutput, error) {
-		_, _, _ = ctx, req, in
+	return func(_ context.Context, _ *mcp.CallToolRequest, _ HealthInput) (*mcp.CallToolResult, HealthOutput, error) {
 		return nil, HealthOutput{
 			Name:        "i18n-mcp",
 			Version:     version.Get(),

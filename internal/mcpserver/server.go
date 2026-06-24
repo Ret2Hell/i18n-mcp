@@ -17,8 +17,7 @@ func New(a *app.App) *mcp.Server {
 		Capabilities: &mcp.ServerCapabilities{
 			Logging: &mcp.LoggingCapabilities{},
 		},
-		InitializedHandler: func(ctx context.Context, req *mcp.InitializedRequest) {
-			_ = ctx
+		InitializedHandler: func(_ context.Context, req *mcp.InitializedRequest) {
 			a.Logger.Info("mcp session initialized", slog.String("session", req.Session.ID()))
 		},
 	}

@@ -1,9 +1,11 @@
 package diff
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
@@ -32,14 +34,15 @@ func (s *Service) Analyze(ctx context.Context) (Report, error) {
 	}
 
 	sourceByKey, targetByKey := indexUnits(inv)
+	targetLocaleCodes := targetLocales(inv)
 	report := Report{
 		SourceLocale:  inv.SourceLocale,
-		TargetLocales: append([]string(nil), inv.TargetLocales...),
+		TargetLocales: slices.Clone(inv.TargetLocales),
 		Warnings:      inventoryWarnings(inv.Warnings),
 	}
 
 	for _, sourceUnit := range sortedUnits(sourceByKey) {
-		for _, localeCode := range targetLocales(inv) {
+		for _, localeCode := range targetLocaleCodes {
 			key := targetIdentity(localeCode, sourceUnit.Namespace, sourceUnit.Key)
 			targetUnit, ok := targetByKey[key]
 			if !ok {
@@ -58,9 +61,9 @@ func (s *Service) Analyze(ctx context.Context) (Report, error) {
 		}
 	}
 
-	targetSet := targetLocaleSet(inv)
+	targetSet := targetLocaleSet(targetLocaleCodes)
 	for _, targetUnit := range sortedUnits(targetByKey) {
-		if !targetSet[targetUnit.Locale] {
+		if _, ok := targetSet[targetUnit.Locale]; !ok {
 			continue
 		}
 		if _, ok := sourceByKey[sourceIdentity(targetUnit.Namespace, targetUnit.Key)]; ok {
@@ -82,8 +85,8 @@ func (s *Service) Analyze(ctx context.Context) (Report, error) {
 }
 
 func indexUnits(inv locale.Inventory) (map[string]locale.Unit, map[string]locale.Unit) {
-	sourceByKey := map[string]locale.Unit{}
-	targetByKey := map[string]locale.Unit{}
+	sourceByKey := make(map[string]locale.Unit, len(inv.Units))
+	targetByKey := make(map[string]locale.Unit, len(inv.Units))
 	for _, unit := range inv.Units {
 		if unit.Locale == inv.SourceLocale {
 			sourceByKey[sourceIdentity(unit.Namespace, unit.Key)] = unit
@@ -96,8 +99,8 @@ func indexUnits(inv locale.Inventory) (map[string]locale.Unit, map[string]locale
 
 func targetLocales(inv locale.Inventory) []string {
 	if len(inv.TargetLocales) > 0 {
-		out := append([]string(nil), inv.TargetLocales...)
-		sort.Strings(out)
+		out := slices.Clone(inv.TargetLocales)
+		slices.Sort(out)
 		return out
 	}
 	var out []string
@@ -106,33 +109,28 @@ func targetLocales(inv locale.Inventory) []string {
 			out = append(out, localeCode)
 		}
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 
-func targetLocaleSet(inv locale.Inventory) map[string]bool {
-	set := map[string]bool{}
-	for _, localeCode := range targetLocales(inv) {
-		set[localeCode] = true
+func targetLocaleSet(locales []string) map[string]struct{} {
+	set := make(map[string]struct{}, len(locales))
+	for _, localeCode := range locales {
+		set[localeCode] = struct{}{}
 	}
 	return set
 }
 
 func sortedUnits(units map[string]locale.Unit) []locale.Unit {
-	out := make([]locale.Unit, 0, len(units))
-	for _, unit := range units {
-		out = append(out, unit)
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Locale != out[j].Locale {
-			return out[i].Locale < out[j].Locale
-		}
-		if out[i].Namespace != out[j].Namespace {
-			return out[i].Namespace < out[j].Namespace
-		}
-		return out[i].Key < out[j].Key
-	})
-	return out
+	return slices.SortedFunc(maps.Values(units), compareUnit)
+}
+
+func compareUnit(a, b locale.Unit) int {
+	return cmp.Or(
+		cmp.Compare(a.Locale, b.Locale),
+		cmp.Compare(a.Namespace, b.Namespace),
+		cmp.Compare(a.Key, b.Key),
+	)
 }
 
 func inventoryWarnings(warnings []locale.Warning) []string {
@@ -144,7 +142,7 @@ func inventoryWarnings(warnings []locale.Warning) []string {
 		}
 		out = append(out, warning.Code+": "+warning.Message)
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 
@@ -157,24 +155,22 @@ func targetIdentity(localeCode string, namespace string, key string) string {
 }
 
 func sortReport(report *Report) {
-	sort.Strings(report.TargetLocales)
-	sort.Strings(report.Warnings)
-	sort.Slice(report.Items, func(i, j int) bool {
-		return lessKeyDiff(report.Items[i], report.Items[j])
-	})
+	slices.Sort(report.TargetLocales)
+	slices.Sort(report.Warnings)
+	slices.SortFunc(report.Items, compareKeyDiff)
 }
 
 func lessKeyDiff(a, b KeyDiff) bool {
-	if a.Locale != b.Locale {
-		return a.Locale < b.Locale
-	}
-	if a.Namespace != b.Namespace {
-		return a.Namespace < b.Namespace
-	}
-	if a.Key != b.Key {
-		return a.Key < b.Key
-	}
-	return a.Status < b.Status
+	return compareKeyDiff(a, b) < 0
+}
+
+func compareKeyDiff(a, b KeyDiff) int {
+	return cmp.Or(
+		cmp.Compare(a.Locale, b.Locale),
+		cmp.Compare(a.Namespace, b.Namespace),
+		cmp.Compare(a.Key, b.Key),
+		cmp.Compare(a.Status, b.Status),
+	)
 }
 
 func (s *Service) classifyExisting(sourceLocale string, sourceUnit locale.Unit, targetUnit locale.Unit, stateFile state.File) KeyDiff {
@@ -195,7 +191,7 @@ func (s *Service) classifyExisting(sourceLocale string, sourceUnit locale.Unit, 
 		Source:       sourceUnit.Value,
 		Target:       targetUnit.Value,
 	})
-	validationIssues := append([]validate.Issue{}, validation.Issues...)
+	validationIssues := slices.Clone(validation.Issues)
 	validationIssues = append(validationIssues, validation.Warnings...)
 	if !validation.OK {
 		status = Invalid

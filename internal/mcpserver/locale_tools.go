@@ -17,8 +17,7 @@ type LocalesListOutput struct {
 }
 
 func localesListTool(a *app.App) func(context.Context, *mcp.CallToolRequest, LocalesListInput) (*mcp.CallToolResult, LocalesListOutput, error) {
-	return func(ctx context.Context, req *mcp.CallToolRequest, in LocalesListInput) (*mcp.CallToolResult, LocalesListOutput, error) {
-		_ = req
+	return func(ctx context.Context, _ *mcp.CallToolRequest, in LocalesListInput) (*mcp.CallToolResult, LocalesListOutput, error) {
 		inv, err := a.Locales.Inventory(ctx)
 		if err != nil {
 			return nil, LocalesListOutput{}, err
