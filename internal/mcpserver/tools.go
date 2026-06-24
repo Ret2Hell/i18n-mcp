@@ -49,6 +49,13 @@ func registerTools(s *mcp.Server, a *app.App) {
 	}, keysDiffTool(a))
 
 	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.translation.plan",
+		Title:       "Plan Translations",
+		Description: "Build a deterministic translation batch from missing and stale locale keys. Does not generate translations.",
+		Annotations: readOnly("Plan Translations"),
+	}, translationPlanTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.state.rebuild",
 		Title:       "Rebuild i18n State",
 		Description: "Rebuild .i18n-mcp/state.json from existing locale files. Dry-run by default; writes only with apply true.",
