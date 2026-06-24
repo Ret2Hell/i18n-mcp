@@ -12,6 +12,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/project"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
+	"github.com/Ret2Hell/i18n-mcp/internal/translate"
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 	"github.com/rs/zerolog"
 )
@@ -27,6 +28,7 @@ type App struct {
 	State       *state.Service
 	Validator   *validate.Service
 	Diff        *diff.Service
+	Translation *translate.Service
 }
 
 func New(ctx context.Context, opts Options) (*App, error) {
@@ -50,6 +52,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	stateService := state.NewService(stateStore, localeService)
 	validatorService := validate.NewService()
 	diffService := diff.NewService(localeService, stateService, validatorService)
+	translationService := translate.NewService(configService, guard, localeService, stateService, diffService, validatorService)
 
 	return &App{
 		Options:     opts,
@@ -62,6 +65,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		State:       stateService,
 		Validator:   validatorService,
 		Diff:        diffService,
+		Translation: translationService,
 	}, nil
 }
 
