@@ -56,6 +56,13 @@ func registerTools(s *mcp.Server, a *app.App) {
 	}, translationPlanTool(a))
 
 	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.translation.validate",
+		Title:       "Validate Translations",
+		Description: "Validate proposed translations against current source values, placeholders, tags, ICU shape, and batch constraints.",
+		Annotations: readOnly("Validate Translations"),
+	}, translationValidateTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.state.rebuild",
 		Title:       "Rebuild i18n State",
 		Description: "Rebuild .i18n-mcp/state.json from existing locale files. Dry-run by default; writes only with apply true.",
