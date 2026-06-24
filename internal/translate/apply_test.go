@@ -37,6 +37,72 @@ func TestApplyDryRunDoesNotWriteFilesOrState(t *testing.T) {
 	require.NoFileExists(t, filepath.Join(root, ".i18n-mcp", "state.json"))
 }
 
+func TestApplyInputContract(t *testing.T) {
+	cases := []struct {
+		name      string
+		dryRun    *bool
+		apply     bool
+		wantDry   bool
+		wantWrite bool
+	}{
+		{
+			name:    "dryRun omitted apply omitted",
+			wantDry: true,
+		},
+		{
+			name:    "dryRun true apply true",
+			dryRun:  boolPtr(true),
+			apply:   true,
+			wantDry: true,
+		},
+		{
+			name:    "dryRun false apply omitted",
+			dryRun:  boolPtr(false),
+			wantDry: true,
+		},
+		{
+			name:      "dryRun omitted apply true",
+			apply:     true,
+			wantWrite: true,
+		},
+		{
+			name:      "dryRun false apply true",
+			dryRun:    boolPtr(false),
+			apply:     true,
+			wantWrite: true,
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			root := setupApplyProject(t, `{"hello":"Hello"}`)
+			svc, _ := newApplyTestService(t, root)
+
+			out, err := svc.Apply(context.Background(), ApplyInput{
+				DryRun: tt.dryRun,
+				Apply:  tt.apply,
+				Translations: []ProposedTranslation{{
+					Locale: "fr", Namespace: "common", Key: "hello", SourceValue: "Hello", Value: "Bonjour",
+				}},
+			})
+
+			require.NoError(t, err)
+			require.Equal(t, tt.wantDry, out.DryRun)
+			if tt.wantWrite {
+				require.Equal(t, 1, out.Applied)
+				require.Equal(t, 1, out.StateUpdates)
+				require.FileExists(t, filepath.Join(root, "locales", "fr.json"))
+				require.FileExists(t, filepath.Join(root, ".i18n-mcp", "state.json"))
+				return
+			}
+			require.Zero(t, out.Applied)
+			require.Zero(t, out.StateUpdates)
+			require.NoFileExists(t, filepath.Join(root, "locales", "fr.json"))
+			require.NoFileExists(t, filepath.Join(root, ".i18n-mcp", "state.json"))
+		})
+	}
+}
+
 func TestApplyWriteUpdatesLocaleThenState(t *testing.T) {
 	root := setupApplyProject(t, `{"hello":"Hello"}`)
 	svc, stateSvc := newApplyTestService(t, root)
@@ -106,6 +172,10 @@ func TestApplyRejectsSourceDriftBeforeWrites(t *testing.T) {
 	require.Empty(t, out.ChangedFiles)
 	require.NoFileExists(t, filepath.Join(root, "locales", "fr.json"))
 	require.NoFileExists(t, filepath.Join(root, ".i18n-mcp", "state.json"))
+}
+
+func boolPtr(v bool) *bool {
+	return &v
 }
 
 func setupApplyProject(t *testing.T, sourceJSON string) string {
