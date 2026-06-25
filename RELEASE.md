@@ -65,7 +65,7 @@ Before publishing, the release workflow checks that:
 3. `go vet ./...` passes.
 4. `go test ./...` passes.
 
-If those checks pass, GoReleaser creates the GitHub Release, publishes Docker images, generates SBOMs, and creates artifact attestations.
+If those checks pass, the workflow generates release notes and GoReleaser creates the GitHub Release, publishes Docker images, and generates SBOMs.
 
 ## Manual tag releases
 
@@ -92,7 +92,7 @@ Snapshot artifacts are written to `dist/`, which is ignored by Git.
 
 ## Release notes
 
-GoReleaser generates release notes from commit messages since the previous tag.
+The release workflow generates release notes from commit messages since the previous tag using `scripts/release-notes.sh`.
 
 Use clear commit messages, for example:
 
@@ -104,7 +104,9 @@ docs: document release process
 
 The generated notes are grouped into:
 
-- Added
-- Fixed
+- Features
+- Bug Fixes
 - Documentation
-- Other
+- Other Changes
+
+Conventional commit prefixes are removed from the release notes, so `feat(cli): add JSON output` becomes `cli: add JSON output`.

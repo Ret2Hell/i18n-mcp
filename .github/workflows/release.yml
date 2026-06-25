@@ -82,11 +82,19 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Generate release notes
+        env:
+          DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/i18n-mcp
+        run: |
+          mkdir -p tmp
+          scripts/release-notes.sh "${GITHUB_REF_NAME}" > tmp/RELEASE_NOTES.md
+          cat tmp/RELEASE_NOTES.md
+
       - name: Run GoReleaser
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/i18n-mcp
-        run: goreleaser release --clean
+        run: goreleaser release --clean --release-notes tmp/RELEASE_NOTES.md
 
       # Artifact attestations are disabled while this repository is private.
       # GitHub currently does not support persisting attestations for

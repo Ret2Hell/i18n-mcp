@@ -75,6 +75,8 @@ snapshot:
 
 changelog:
   sort: asc
+  abbrev: 7
+  format: '{{ .Message }} ({{ .SHA }})'
   filters:
     exclude:
       - '^chore:'
@@ -102,12 +104,14 @@ release:
   github:
     owner: Ret2Hell
     name: i18n-mcp
-  name_template: "{{ .Tag }}"
+  name_template: "{{ .ProjectName }}: {{ .Tag }}"
   make_latest: true
   footer: |
     ---
 
-    Docker images are published as `{{ .Env.DOCKER_IMAGE }}:{{ .Version }}` and `{{ .Env.DOCKER_IMAGE }}:latest`.
+    Docker images:
+    - `{{ .Env.DOCKER_IMAGE }}:{{ .Version }}`
+    - `{{ .Env.DOCKER_IMAGE }}:latest`
 
 dockers_v2:
   - id: i18n-mcp
