@@ -109,65 +109,23 @@ release:
 
     Docker images are published as `{{ .Env.DOCKER_IMAGE }}:{{ .Version }}` and `{{ .Env.DOCKER_IMAGE }}:latest`.
 
-dockers:
-  - id: linux-amd64
+dockers_v2:
+  - id: i18n-mcp
     ids:
       - i18n-mcp
-    goos: linux
-    goarch: amd64
-    use: buildx
     dockerfile: Dockerfile.goreleaser
-    image_templates:
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-amd64"
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.source={{ .GitURL }}"
-      - "--label=org.opencontainers.image.created={{ .Date }}"
-  - id: linux-arm64
-    ids:
-      - i18n-mcp
-    goos: linux
-    goarch: arm64
-    use: buildx
-    dockerfile: Dockerfile.goreleaser
-    image_templates:
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-arm64"
-    build_flag_templates:
-      - "--platform=linux/arm64"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.source={{ .GitURL }}"
-      - "--label=org.opencontainers.image.created={{ .Date }}"
-  - id: linux-armv7
-    ids:
-      - i18n-mcp
-    goos: linux
-    goarch: arm
-    goarm: "7"
-    use: buildx
-    dockerfile: Dockerfile.goreleaser
-    image_templates:
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-armv7"
-    build_flag_templates:
-      - "--platform=linux/arm/v7"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.source={{ .GitURL }}"
-      - "--label=org.opencontainers.image.created={{ .Date }}"
-
-docker_manifests:
-  - name_template: "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}"
-    image_templates:
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-amd64"
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-arm64"
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-armv7"
-  - name_template: "{{ .Env.DOCKER_IMAGE }}:latest"
-    image_templates:
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-amd64"
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-arm64"
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-armv7"
+    images:
+      - "{{ .Env.DOCKER_IMAGE }}"
+    tags:
+      - "{{ .Version }}"
+      - latest
+    platforms:
+      - linux/amd64
+      - linux/arm64
+      - linux/arm/v7
+    labels:
+      org.opencontainers.image.title: "{{ .ProjectName }}"
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.source: "{{ .GitURL }}"
+      org.opencontainers.image.created: "{{ .Date }}"
