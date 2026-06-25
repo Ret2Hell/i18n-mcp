@@ -3,6 +3,7 @@ go = "1.26.4"
 golangci-lint = "2.12.2"
 lefthook = "latest"
 goreleaser = "2.16"
+syft = "1.38.0"
 
 [env]
 CGO_ENABLED = "0"

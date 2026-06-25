@@ -35,7 +35,7 @@ git commit -m "bump version to 0.4.0"
 git push origin main
 ```
 
-That is enough. The release workflow will create the `v0.4.0` tag automatically and then run GoReleaser.
+That is enough. The tag workflow will create the `v0.4.0` tag automatically. The tag then triggers the release workflow, which runs GoReleaser.
 
 The `version` file must contain a semantic version without the leading `v`:
 
@@ -49,25 +49,23 @@ The generated Git tag will include the leading `v`:
 v0.4.0
 ```
 
-## Release workflow
+## Workflows
 
-The workflow lives at:
+There are two release-related workflows:
 
 ```text
-.github/workflows/release.yml
+.github/workflows/tag.yml      # creates vX.Y.Z when version changes on main
+.github/workflows/release.yml  # publishes releases from v* tags
 ```
 
-It runs when `version` changes on `main`.
+Before publishing, the release workflow checks that:
 
-Before publishing, it checks that:
+1. The tag matches the `version` file.
+2. `go mod tidy` does not change `go.mod` or `go.sum`.
+3. `go vet ./...` passes.
+4. `go test ./...` passes.
 
-1. The version is valid.
-2. The generated tag does not already point to a different commit.
-3. `go mod tidy` does not change `go.mod` or `go.sum`.
-4. `go vet ./...` passes.
-5. `go test ./...` passes.
-
-If those checks pass, GoReleaser creates the GitHub Release and publishes Docker images.
+If those checks pass, GoReleaser creates the GitHub Release, publishes Docker images, generates SBOMs, and creates artifact attestations.
 
 ## Manual tag releases
 

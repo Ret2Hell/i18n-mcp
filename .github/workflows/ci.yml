@@ -29,26 +29,32 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
-        with:
-          go-version-file: go.mod
-          cache: true
+      - uses: ./.github/actions/setup-go
 
-      - name: verify go mod tidy
+      - name: Verify go mod tidy
         run: |
           go mod tidy
           git diff --exit-code go.mod go.sum
 
-      - name: go vet
+      - name: Go vet
         run: go vet ./...
 
-      - name: go build
+      - name: Go build
         run: go build ./...
 
-      - name: go test
+      - name: Go test
         env:
           CGO_ENABLED: 1
         run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+
+      - name: Coverage summary
+        run: |
+          total="$(go tool cover -func=coverage.out | awk '/^total:/ { print $3 }')"
+          {
+            echo "## Coverage"
+            echo
+            echo "Total coverage: **${total}**"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
@@ -66,10 +72,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
-        with:
-          go-version-file: go.mod
-          cache: true
+      - uses: ./.github/actions/setup-go
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee  # v9.2.1
@@ -85,16 +88,18 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
-        with:
-          go-version-file: go.mod
-          cache: true
+      - uses: ./.github/actions/setup-go
+
+      - name: Install Go security tools
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
 
       - name: govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+        run: govulncheck ./...
 
       - name: actionlint
-        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+        run: actionlint
 
       - name: zizmor
         run: |
@@ -102,11 +107,39 @@ jobs:
           .venv-zizmor/bin/pip install zizmor==1.25.2
           .venv-zizmor/bin/zizmor .
 
+  goreleaser:
+    name: GoReleaser Snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-go
+
+      - name: Install release tools
+        run: |
+          go install github.com/goreleaser/goreleaser/v2@v2.16.0
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b "${HOME}/.local/bin" v1.38.0
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+
+      - name: GoReleaser check
+        env:
+          DOCKER_IMAGE: ret2hell/i18n-mcp
+        run: goreleaser check .goreleaser.yaml
+
+      - name: GoReleaser snapshot
+        env:
+          DOCKER_IMAGE: ret2hell/i18n-mcp
+        run: goreleaser release --snapshot --clean --skip=docker,publish
+
   docker-build:
     runs-on: ubuntu-latest
     name: Docker Build
     timeout-minutes: 20
-    needs: [test, lint, security]
+    needs: [test, lint, security, goreleaser]
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:

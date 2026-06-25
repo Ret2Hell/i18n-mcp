@@ -2,15 +2,11 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
-    paths:
-      - version
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,18 +17,21 @@ jobs:
     name: GoReleaser
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           persist-credentials: false
           fetch-depth: 0
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
+      - uses: ./.github/actions/setup-go
         with:
-          go-version-file: go.mod
           cache: false
 
-      - name: Determine release tag
+      - name: Validate release tag
         run: |
           version="$(tr -d '[:space:]' < version)"
           if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
@@ -40,38 +39,16 @@ jobs:
             exit 1
           fi
 
-          tag="v$version"
-          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "$tag" ]; then
+          expected_tag="v$version"
+          echo "Version file: $version"
+          echo "Expected tag: $expected_tag"
+          echo "Current ref type: ${GITHUB_REF_TYPE}"
+          echo "Current ref name: ${GITHUB_REF_NAME}"
+
+          if [ "${GITHUB_REF_NAME}" != "$expected_tag" ]; then
             echo "Tag ${GITHUB_REF_NAME} does not match version file $version" >&2
             exit 1
           fi
-
-          echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
-          echo "RELEASE_TAG=$tag" >> "$GITHUB_ENV"
-
-      - name: Create release tag
-        if: github.ref_type == 'branch'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          authenticated_remote="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git fetch --tags "$authenticated_remote"
-
-          if git rev-parse -q --verify "refs/tags/${RELEASE_TAG}" >/dev/null; then
-            tagged_commit="$(git rev-list -n 1 "${RELEASE_TAG}")"
-            current_commit="$(git rev-parse HEAD)"
-            if [ "$tagged_commit" != "$current_commit" ]; then
-              echo "Tag ${RELEASE_TAG} already exists on a different commit" >&2
-              exit 1
-            fi
-            echo "Tag ${RELEASE_TAG} already exists on this commit; continuing"
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "${RELEASE_TAG}" -m "${RELEASE_TAG}"
-          git push "$authenticated_remote" "refs/tags/${RELEASE_TAG}"
 
       - name: Verify go mod tidy
         run: |
@@ -87,6 +64,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
 
+      - name: Install release tools
+        run: |
+          go install github.com/goreleaser/goreleaser/v2@v2.16.0
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b "${HOME}/.local/bin" v1.38.0
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+
       - name: Validate Docker Hub secrets
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -101,11 +84,17 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Install GoReleaser
-        run: go install github.com/goreleaser/goreleaser/v2@v2.16.0
-
       - name: Run GoReleaser
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/i18n-mcp
         run: goreleaser release --clean
+
+      - name: Attest release artifacts
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a  # v3.0.0
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHASUMS256.txt
+            dist/i18n-mcp_*/i18n-mcp*
