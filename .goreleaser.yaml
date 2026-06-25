@@ -1,0 +1,167 @@
+version: 2
+
+project_name: i18n-mcp
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: i18n-mcp
+    main: ./cmd/i18n-mcp
+    binary: i18n-mcp
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - >-
+        -s -w
+        -X github.com/Ret2Hell/i18n-mcp/internal/version.Version={{ .Version }}
+        -X github.com/Ret2Hell/i18n-mcp/internal/version.Commit={{ .Commit }}
+        -X github.com/Ret2Hell/i18n-mcp/internal/version.Date={{ .Date }}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "7"
+    ignore:
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
+
+archives:
+  - id: raw-binaries
+    formats:
+      - binary
+    name_template: >-
+      {{ .ProjectName }}-v{{ .Version }}-
+      {{- if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}-
+      {{- if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+  - id: compressed
+    formats:
+      - tar.gz
+    name_template: >-
+      {{ .ProjectName }}-v{{ .Version }}-
+      {{- if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}-
+      {{- if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - LICENSE
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: SHASUMS256.txt
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^chore:'
+      - '^ci:'
+      - '^build:'
+      - '^test:'
+      - '^refactor:'
+      - '^style:'
+      - '^Merge pull request'
+      - '^Merge branch'
+  groups:
+    - title: Added
+      regexp: '^(feat(\(.+\))?!?:|add(ed)?[[:space:]:]|implement(ed)?[[:space:]:]|expose(d)?[[:space:]:]).+'
+      order: 0
+    - title: Fixed
+      regexp: '^(fix(\(.+\))?!?:|fixed[[:space:]:]|bugfix[[:space:]:]).+'
+      order: 1
+    - title: Documentation
+      regexp: '^(docs?(\(.+\))?:|document(ed)?[[:space:]:]).+'
+      order: 2
+    - title: Other
+      order: 999
+
+release:
+  github:
+    owner: Ret2Hell
+    name: i18n-mcp
+  name_template: "{{ .Tag }}"
+  make_latest: true
+  footer: |
+    ---
+
+    Docker images are published as `{{ .Env.DOCKER_IMAGE }}:{{ .Version }}` and `{{ .Env.DOCKER_IMAGE }}:latest`.
+
+dockers:
+  - id: linux-amd64
+    ids:
+      - i18n-mcp
+    goos: linux
+    goarch: amd64
+    use: buildx
+    dockerfile: Dockerfile.goreleaser
+    image_templates:
+      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+  - id: linux-arm64
+    ids:
+      - i18n-mcp
+    goos: linux
+    goarch: arm64
+    use: buildx
+    dockerfile: Dockerfile.goreleaser
+    image_templates:
+      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-arm64"
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+  - id: linux-armv7
+    ids:
+      - i18n-mcp
+    goos: linux
+    goarch: arm
+    goarm: "7"
+    use: buildx
+    dockerfile: Dockerfile.goreleaser
+    image_templates:
+      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-armv7"
+    build_flag_templates:
+      - "--platform=linux/arm/v7"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.source={{ .GitURL }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+
+docker_manifests:
+  - name_template: "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}"
+    image_templates:
+      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-amd64"
+      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-arm64"
+      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-armv7"
+  - name_template: "{{ .Env.DOCKER_IMAGE }}:latest"
+    image_templates:
+      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-amd64"
+      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-arm64"
+      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-armv7"

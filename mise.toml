@@ -18,6 +18,10 @@ run = "./bin/i18n-mcp"
 run = "VERSION=$(tr -d '[:space:]' < version); COMMIT=$(git rev-parse --short=12 HEAD); DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ'); docker build --build-arg VERSION=$VERSION --build-arg COMMIT=$COMMIT --build-arg DATE=$DATE -t i18n-mcp:$VERSION -t i18n-mcp:latest ."
 description = "Build Docker image"
 
+[tasks.release-snapshot]
+run = "DOCKER_IMAGE=${DOCKER_IMAGE:-ret2hell/i18n-mcp} goreleaser release --snapshot --clean --skip=docker,publish"
+description = "Build a local GoReleaser snapshot into dist/"
+
 [tasks.docker-run]
 run = "docker run --rm -i --env-file .env i18n-mcp"
 description = "Run Docker image"
