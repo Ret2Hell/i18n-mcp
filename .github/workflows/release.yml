@@ -19,8 +19,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
-      id-token: write
-      attestations: write
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
@@ -90,11 +88,15 @@ jobs:
           DOCKER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/i18n-mcp
         run: goreleaser release --clean
 
-      - name: Attest release artifacts
-        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a  # v3.0.0
-        with:
-          subject-path: |
-            dist/*.tar.gz
-            dist/*.zip
-            dist/SHASUMS256.txt
-            dist/i18n-mcp_*/i18n-mcp*
+      # Artifact attestations are disabled while this repository is private.
+      # GitHub currently does not support persisting attestations for
+      # user-owned private repositories.
+      #
+      # - name: Attest release artifacts
+      #   uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a  # v3.0.0
+      #   with:
+      #     subject-path: |
+      #       dist/*.tar.gz
+      #       dist/*.zip
+      #       dist/SHASUMS256.txt
+      #       dist/i18n-mcp_*/i18n-mcp*
