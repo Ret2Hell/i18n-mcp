@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
+	"github.com/Ret2Hell/i18n-mcp/internal/deadkey"
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
@@ -31,6 +32,7 @@ type App struct {
 	Diff        *diff.Service
 	Translation *translate.Service
 	Scanner     *scanner.Service
+	DeadKeys    *deadkey.Service
 }
 
 func New(ctx context.Context, opts Options) (*App, error) {
@@ -56,6 +58,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	diffService := diff.NewService(localeService, stateService, validatorService)
 	translationService := translate.NewService(configService, guard, localeService, stateService, diffService, validatorService)
 	scannerService := scanner.NewService(guard, configService)
+	deadKeyService := deadkey.NewService(configService, localeService, scannerService)
 
 	return &App{
 		Options:     opts,
@@ -70,6 +73,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		Diff:        diffService,
 		Translation: translationService,
 		Scanner:     scannerService,
+		DeadKeys:    deadKeyService,
 	}, nil
 }
 
