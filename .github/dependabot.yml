@@ -17,3 +17,21 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      go-modules:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /.github/tools
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

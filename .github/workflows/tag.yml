@@ -1,14 +1,14 @@
 name: Tag Release
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - version
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    shell: bash
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,11 +16,12 @@ concurrency:
 
 jobs:
   tag:
-    name: Create release tag
-    runs-on: ubuntu-latest
+    name: Create release tag manually
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
+    environment: release
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
@@ -28,15 +29,8 @@ jobs:
           fetch-depth: 0
 
       - name: Determine release tag
-        run: |
-          version="$(tr -d '[:space:]' < version)"
-          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Invalid version: $version" >&2
-            exit 1
-          fi
-
-          echo "RELEASE_VERSION=$version" >> "$GITHUB_ENV"
-          echo "RELEASE_TAG=v$version" >> "$GITHUB_ENV"
+        id: version
+        run: scripts/read-version.sh github-output
 
       - name: Validate release token
         env:
@@ -51,6 +45,7 @@ jobs:
       - name: Create release tag
         env:
           RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: |
           authenticated_remote="https://x-access-token:${RELEASE_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git fetch --tags "$authenticated_remote"
@@ -58,7 +53,7 @@ jobs:
           if git rev-parse -q --verify "refs/tags/${RELEASE_TAG}" >/dev/null; then
             tagged_commit="$(git rev-list -n 1 "${RELEASE_TAG}")"
             current_commit="$(git rev-parse HEAD)"
-            if [ "$tagged_commit" != "$current_commit" ]; then
+            if [[ "$tagged_commit" != "$current_commit" ]]; then
               echo "Tag ${RELEASE_TAG} already exists on a different commit" >&2
               exit 1
             fi

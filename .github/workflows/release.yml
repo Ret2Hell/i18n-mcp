@@ -8,6 +8,14 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  GORELEASER_VERSION: v2.16.0
+  SYFT_VERSION: v1.38.0
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -15,8 +23,9 @@ concurrency:
 jobs:
   goreleaser:
     name: GoReleaser
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
+    environment: release
     permissions:
       contents: write
     steps:
@@ -31,19 +40,14 @@ jobs:
 
       - name: Validate release tag
         run: |
-          version="$(tr -d '[:space:]' < version)"
-          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Invalid version: $version" >&2
-            exit 1
-          fi
-
-          expected_tag="v$version"
+          version="$(scripts/read-version.sh)"
+          expected_tag="$(scripts/read-version.sh tag)"
           echo "Version file: $version"
           echo "Expected tag: $expected_tag"
           echo "Current ref type: ${GITHUB_REF_TYPE}"
           echo "Current ref name: ${GITHUB_REF_NAME}"
 
-          if [ "${GITHUB_REF_NAME}" != "$expected_tag" ]; then
+          if [[ "${GITHUB_REF_NAME}" != "$expected_tag" ]]; then
             echo "Tag ${GITHUB_REF_NAME} does not match version file $version" >&2
             exit 1
           fi
@@ -59,13 +63,21 @@ jobs:
       - name: Go test
         run: go test ./...
 
+      - name: Release-like no-CGO test
+        env:
+          CGO_ENABLED: 0
+        run: go test ./...
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
 
       - name: Install release tools
         run: |
-          go install github.com/goreleaser/goreleaser/v2@v2.16.0
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b "${HOME}/.local/bin" v1.38.0
+          go install "github.com/goreleaser/goreleaser/v2@${GORELEASER_VERSION}"
+          mkdir -p "${HOME}/.local/bin"
+          curl -sSfL "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VERSION#v}_linux_amd64.tar.gz" -o syft.tar.gz
+          tar -xzf syft.tar.gz -C "${HOME}/.local/bin" syft
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
           echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
 
       - name: Validate Docker Hub secrets

@@ -11,9 +11,22 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  ACTIONLINT_VERSION: v1.7.7
+  GORELEASER_VERSION: v2.16.0
+  GOVULNCHECK_VERSION: v1.1.4
+  SYFT_VERSION: v1.38.0
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,7 +35,7 @@ concurrency:
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
@@ -47,6 +60,13 @@ jobs:
           CGO_ENABLED: 1
         run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
 
+      - name: Release-like no-CGO test
+        env:
+          CGO_ENABLED: 0
+        run: |
+          go test ./...
+          go build -trimpath ./cmd/i18n-mcp
+
       - name: Coverage summary
         run: |
           total="$(go tool cover -func=coverage.out | awk '/^total:/ { print $3 }')"
@@ -62,10 +82,11 @@ jobs:
           name: coverage
           path: coverage.out
           if-no-files-found: error
+          retention-days: 14
 
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
@@ -81,7 +102,7 @@ jobs:
 
   security:
     name: Security
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
@@ -92,8 +113,9 @@ jobs:
 
       - name: Install Go security tools
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
-          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
+          go install "github.com/rhysd/actionlint/cmd/actionlint@${ACTIONLINT_VERSION}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: govulncheck
         run: govulncheck ./...
@@ -104,12 +126,12 @@ jobs:
       - name: zizmor
         run: |
           python -m venv .venv-zizmor
-          .venv-zizmor/bin/pip install zizmor==1.25.2
+          .venv-zizmor/bin/pip install -r .github/tools/requirements.txt
           .venv-zizmor/bin/zizmor .
 
   goreleaser:
     name: GoReleaser Snapshot
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
@@ -121,8 +143,11 @@ jobs:
 
       - name: Install release tools
         run: |
-          go install github.com/goreleaser/goreleaser/v2@v2.16.0
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b "${HOME}/.local/bin" v1.38.0
+          go install "github.com/goreleaser/goreleaser/v2@${GORELEASER_VERSION}"
+          mkdir -p "${HOME}/.local/bin"
+          curl -sSfL "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VERSION#v}_linux_amd64.tar.gz" -o syft.tar.gz
+          tar -xzf syft.tar.gz -C "${HOME}/.local/bin" syft
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
           echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
 
       - name: GoReleaser check
@@ -136,29 +161,24 @@ jobs:
         run: goreleaser release --snapshot --clean --skip=docker,publish
 
   docker-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: Docker Build
     timeout-minutes: 20
     needs: [test, lint, security, goreleaser]
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
         with:
           persist-credentials: false
-          fetch-depth: 0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
 
       - name: Read version
         id: version
-        run: |
-          version="$(tr -d '[:space:]' < version)"
-          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Invalid version: $version" >&2
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "date=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+        run: scripts/read-version.sh github-output
 
       - name: Build Docker image
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
@@ -183,3 +203,126 @@ jobs:
           format: table
           exit-code: '1'
           severity: CRITICAL,HIGH
+
+      - name: Generate Trivy SARIF
+        if: always() && github.event_name != 'pull_request'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # 0.36.0
+        with:
+          image-ref: i18n-mcp:${{ steps.version.outputs.version }}
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: '0'
+          severity: CRITICAL,HIGH
+
+      - name: Upload Trivy SARIF
+        if: always() && github.event_name != 'pull_request' && hashFiles('trivy-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@f116a11b3d2ec2f382b4a6530d51b8f4cf136fee  # v4.32.1
+        with:
+          sarif_file: trivy-results.sarif
+
+  prepare-release-tag:
+    name: Check release tag
+    needs: docker-build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      release_tag: ${{ steps.prepare.outputs.release_tag }}
+      should_create: ${{ steps.prepare.outputs.should_create }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Determine whether a release tag is needed
+        id: prepare
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          release_tag="$(scripts/read-version.sh tag)"
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+
+          version_changed=true
+          if [[ -n "$BEFORE_SHA" && ! "$BEFORE_SHA" =~ ^0+$ ]]; then
+            git fetch --no-tags origin "$BEFORE_SHA" --depth=1 || true
+            if git rev-parse --verify "$BEFORE_SHA" >/dev/null 2>&1; then
+              if git diff --quiet "$BEFORE_SHA" HEAD -- version; then
+                version_changed=false
+              fi
+            fi
+          elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            if git diff --quiet HEAD^ HEAD -- version; then
+              version_changed=false
+            fi
+          fi
+
+          if [[ "$version_changed" != true ]]; then
+            echo "version did not change in the CI head commit; skipping tag creation"
+            echo "should_create=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git fetch --tags origin "+refs/tags/${release_tag}:refs/tags/${release_tag}" || true
+          if git rev-parse -q --verify "refs/tags/${release_tag}" >/dev/null; then
+            tagged_commit="$(git rev-list -n 1 "${release_tag}")"
+            current_commit="$(git rev-parse HEAD)"
+            if [[ "$tagged_commit" != "$current_commit" ]]; then
+              echo "Tag ${release_tag} already exists on a different commit" >&2
+              exit 1
+            fi
+            echo "Tag ${release_tag} already exists on this commit; nothing to do"
+            echo "should_create=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "should_create=true" >> "$GITHUB_OUTPUT"
+
+  create-release-tag:
+    name: Create release tag
+    needs: prepare-release-tag
+    if: needs.prepare-release-tag.outputs.should_create == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Validate release token
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          test -n "$RELEASE_TOKEN" || {
+            echo "Missing RELEASE_TOKEN secret." >&2
+            echo "A PAT or GitHub App token is required because tags pushed with GITHUB_TOKEN do not trigger workflows." >&2
+            exit 1
+          }
+
+      - name: Create release tag
+        env:
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          RELEASE_TAG: ${{ needs.prepare-release-tag.outputs.release_tag }}
+        run: |
+          authenticated_remote="https://x-access-token:${RELEASE_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --tags "$authenticated_remote"
+
+          if git rev-parse -q --verify "refs/tags/${RELEASE_TAG}" >/dev/null; then
+            tagged_commit="$(git rev-list -n 1 "${RELEASE_TAG}")"
+            current_commit="$(git rev-parse HEAD)"
+            if [[ "$tagged_commit" != "$current_commit" ]]; then
+              echo "Tag ${RELEASE_TAG} already exists on a different commit" >&2
+              exit 1
+            fi
+            echo "Tag ${RELEASE_TAG} already exists on this commit; nothing to do"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${RELEASE_TAG}" -m "${RELEASE_TAG}"
+          git push "$authenticated_remote" "refs/tags/${RELEASE_TAG}"
