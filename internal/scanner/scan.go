@@ -31,8 +31,12 @@ func (s *Service) Scan(ctx context.Context, in ScanInput) (Report, error) {
 		for _, ev := range scanNamespaceUsages(file.Path, data) {
 			addEvidence(usageByID, ev, "namespace_bound_call")
 		}
+		report.DynamicHints = append(report.DynamicHints, scanDynamicHints(file.Path, data)...)
 	}
 	report.Usages = sortedUsages(usageByID)
+	sort.Slice(report.DynamicHints, func(i, j int) bool {
+		return lessDynamicHint(report.DynamicHints[i], report.DynamicHints[j])
+	})
 	s.storeLatest(report)
 	return report, nil
 }
@@ -73,6 +77,19 @@ func sortedUsages(usageByID map[string]*Usage) []Usage {
 }
 
 func lessEvidence(a Evidence, b Evidence) bool {
+	if a.FilePath != b.FilePath {
+		return a.FilePath < b.FilePath
+	}
+	if a.Line != b.Line {
+		return a.Line < b.Line
+	}
+	if a.Column != b.Column {
+		return a.Column < b.Column
+	}
+	return a.Pattern < b.Pattern
+}
+
+func lessDynamicHint(a DynamicHint, b DynamicHint) bool {
 	if a.FilePath != b.FilePath {
 		return a.FilePath < b.FilePath
 	}
