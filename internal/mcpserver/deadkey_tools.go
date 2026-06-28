@@ -22,3 +22,17 @@ func deadReportTool(a *app.App) func(context.Context, *mcp.CallToolRequest, dead
 		return nil, DeadReportOutput{Report: report}, nil
 	}
 }
+
+func keysPruneTool(a *app.App) func(context.Context, *mcp.CallToolRequest, deadkey.PruneInput) (*mcp.CallToolResult, deadkey.PruneOutput, error) {
+	return func(ctx context.Context, req *mcp.CallToolRequest, in deadkey.PruneInput) (*mcp.CallToolResult, deadkey.PruneOutput, error) {
+		_ = req
+		out, err := a.DeadKeys.Prune(ctx, in)
+		if err != nil {
+			return nil, deadkey.PruneOutput{}, err
+		}
+		if len(out.Rejected) > 0 {
+			return &mcp.CallToolResult{IsError: true}, out, nil
+		}
+		return nil, out, nil
+	}
+}

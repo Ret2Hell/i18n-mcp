@@ -21,6 +21,23 @@ type pruneEdit struct {
 	After  []byte
 }
 
+func (s *Service) Prune(ctx context.Context, in PruneInput) (PruneOutput, error) {
+	dryRun := in.DryRunValue()
+	edits, rejected, err := s.BuildPruneEdits(ctx, in)
+	if err != nil {
+		return PruneOutput{}, err
+	}
+	out := PruneOutput{DryRun: dryRun, Rejected: rejected}
+	if len(rejected) > 0 {
+		return out, nil
+	}
+	out.ChangedFiles = previewPruneEdits(edits)
+	if dryRun {
+		return out, nil
+	}
+	return out, errors.New("prune write mode is not enabled until KAN-093")
+}
+
 func (s *Service) BuildPruneEdits(ctx context.Context, in PruneInput) ([]pruneEdit, []PruneReject, error) {
 	if len(in.Keys) == 0 {
 		return nil, []PruneReject{{Reason: "at least one exact namespace and key is required"}}, nil

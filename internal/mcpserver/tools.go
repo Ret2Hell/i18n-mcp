@@ -63,6 +63,13 @@ func registerTools(s *mcp.Server, a *app.App) {
 	}, deadReportTool(a))
 
 	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.keys.prune",
+		Title:       "Prune Dead i18n Keys",
+		Description: "Preview removal of exact dead keys from locale JSON files. Dry-run by default; write mode requires apply true.",
+		Annotations: writeOp("Prune Dead i18n Keys", true, true),
+	}, keysPruneTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.translation.plan",
 		Title:       "Plan Translations",
 		Description: "Build a deterministic translation batch from missing and stale locale keys. Does not generate translations.",
