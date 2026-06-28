@@ -25,6 +25,9 @@ func (s *Service) Scan(ctx context.Context, in ScanInput) (Report, error) {
 		for _, ev := range scanLiteralCalls(file.Path, data) {
 			addEvidence(usageByID, ev, "literal_call")
 		}
+		for _, ev := range scanJSXI18nKeys(file.Path, data) {
+			addEvidence(usageByID, ev, "jsx_i18n_key")
+		}
 	}
 	report.Usages = sortedUsages(usageByID)
 	s.storeLatest(report)

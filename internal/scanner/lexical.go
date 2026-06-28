@@ -19,6 +19,13 @@ var literalPatterns = []literalPattern{
 	{name: "i18n.t-single", re: regexp.MustCompile(`\bi18n\.t\s*\(\s*'([^']+)'`), keyGroup: 1},
 }
 
+var jsxI18nKeyPatterns = []literalPattern{
+	{name: "jsx-i18nkey-double", re: regexp.MustCompile(`\bi18nKey\s*=\s*"([^"]+)"`), keyGroup: 1},
+	{name: "jsx-i18nkey-single", re: regexp.MustCompile(`\bi18nKey\s*=\s*'([^']+)'`), keyGroup: 1},
+	{name: "jsx-i18nkey-brace-double", re: regexp.MustCompile(`\bi18nKey\s*=\s*\{\s*"([^"]+)"\s*\}`), keyGroup: 1},
+	{name: "jsx-i18nkey-brace-single", re: regexp.MustCompile(`\bi18nKey\s*=\s*\{\s*'([^']+)'\s*\}`), keyGroup: 1},
+}
+
 func scanLiteralCalls(path string, data []byte) []Evidence {
 	var evidence []Evidence
 	for _, pattern := range literalPatterns {
@@ -42,6 +49,35 @@ func scanLiteralCalls(path string, data []byte) []Evidence {
 				Snippet:    snippet,
 				Pattern:    pattern.name,
 				Confidence: ConfidenceMedium,
+			})
+		}
+	}
+	return evidence
+}
+
+func scanJSXI18nKeys(path string, data []byte) []Evidence {
+	var evidence []Evidence
+	for _, pattern := range jsxI18nKeyPatterns {
+		matches := pattern.re.FindAllSubmatchIndex(data, -1)
+		for _, match := range matches {
+			groupStart := pattern.keyGroup * 2
+			if groupStart+1 >= len(match) || match[groupStart] < 0 {
+				continue
+			}
+			key := CleanLiteralKey(string(data[match[groupStart]:match[groupStart+1]]))
+			if key == "" {
+				continue
+			}
+			line, column, snippet := location(data, match[0])
+			evidence = append(evidence, Evidence{
+				Key:        key,
+				FullKey:    FullKey("", key),
+				FilePath:   path,
+				Line:       line,
+				Column:     column,
+				Snippet:    snippet,
+				Pattern:    pattern.name,
+				Confidence: ConfidenceHigh,
 			})
 		}
 	}
