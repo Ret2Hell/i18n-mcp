@@ -1,8 +1,10 @@
 package translate
 
 import (
+	"cmp"
 	"context"
-	"sort"
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
@@ -74,9 +76,7 @@ func planItems(report diff.Report, in PlanInput) []Item {
 			TargetFilePath: record.TargetFilePath,
 		})
 	}
-	sort.Slice(items, func(i, j int) bool {
-		return lessItem(items[i], items[j])
-	})
+	slices.SortFunc(items, compareItem)
 	if in.MaxItems > 0 && len(items) > in.MaxItems {
 		items = items[:in.MaxItems]
 	}
@@ -106,29 +106,21 @@ func planNotes(record diff.KeyDiff) []string {
 }
 
 func targetLocalesFromItems(items []Item) []string {
-	seen := map[string]bool{}
-	var out []string
+	seen := map[string]struct{}{}
 	for _, item := range items {
-		if seen[item.Locale] {
-			continue
-		}
-		seen[item.Locale] = true
-		out = append(out, item.Locale)
+		seen[item.Locale] = struct{}{}
 	}
-	sort.Strings(out)
-	return out
+	return slices.Sorted(maps.Keys(seen))
 }
 
 func itemID(localeCode string, namespace string, key string) string {
 	return localeCode + ":" + namespace + ":" + key
 }
 
-func lessItem(a Item, b Item) bool {
-	if a.Locale != b.Locale {
-		return a.Locale < b.Locale
-	}
-	if a.Namespace != b.Namespace {
-		return a.Namespace < b.Namespace
-	}
-	return a.Key < b.Key
+func compareItem(a, b Item) int {
+	return cmp.Or(
+		cmp.Compare(a.Locale, b.Locale),
+		cmp.Compare(a.Namespace, b.Namespace),
+		cmp.Compare(a.Key, b.Key),
+	)
 }

@@ -1,6 +1,9 @@
 package validate
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 func (s *Service) ValidatePair(pair Pair) Result {
 	issues := validatePairIssues(pair)
@@ -28,12 +31,14 @@ func validatePairIssues(pair Pair) []Issue {
 		})
 	}
 
-	issues = append(issues, comparePlaceholders(pair.Source, pair.Target)...)
-	issues = append(issues, compareTags(pair.Source, pair.Target)...)
-	issues = append(issues, validateICUShape(pair.Source, pair.Target)...)
-	issues = append(issues, compareICUArguments(pair.Source, pair.Target)...)
-	issues = append(issues, compareMarkdownLinks(pair.Source, pair.Target)...)
-	return issues
+	return slices.Concat(
+		issues,
+		comparePlaceholders(pair.Source, pair.Target),
+		compareTags(pair.Source, pair.Target),
+		validateICUShape(pair.Source, pair.Target),
+		compareICUArguments(pair.Source, pair.Target),
+		compareMarkdownLinks(pair.Source, pair.Target),
+	)
 }
 
 func classify(pair Pair, issues []Issue) Result {

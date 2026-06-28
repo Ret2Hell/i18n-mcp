@@ -1,6 +1,7 @@
 package config
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
@@ -135,10 +136,10 @@ func TestValidateFormatIndentBoundaries(t *testing.T) {
 
 func requireDiagnostic(t *testing.T, diagnostics []Diagnostic, code string, field string) {
 	t.Helper()
-	for _, diagnostic := range diagnostics {
-		if diagnostic.Code == code && diagnostic.Field == field {
-			return
-		}
+	if slices.ContainsFunc(diagnostics, func(diagnostic Diagnostic) bool {
+		return diagnostic.Code == code && diagnostic.Field == field
+	}) {
+		return
 	}
 	require.Failf(t, "missing diagnostic", "code %q field %q not found in %#v", code, field, diagnostics)
 }

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"testing"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
@@ -231,10 +232,8 @@ func writeLocaleTestFile(t *testing.T, root string, name string, data string) {
 
 func requireWarningCode(t *testing.T, warnings []Warning, code string) {
 	t.Helper()
-	for _, warning := range warnings {
-		if warning.Code == code {
-			return
-		}
+	if slices.ContainsFunc(warnings, func(warning Warning) bool { return warning.Code == code }) {
+		return
 	}
 	require.Failf(t, "missing warning", "expected warning code %q in %#v", code, warnings)
 }

@@ -16,7 +16,7 @@ func DetectFormat(data []byte, fallbackIndent int, sortKeys bool) Format {
 		TrailingNewline: bytes.HasSuffix(data, []byte("\n")),
 		SortKeys:        sortKeys,
 	}
-	for _, line := range bytes.Split(data, []byte("\n")) {
+	for line := range bytes.SplitSeq(data, []byte("\n")) {
 		trimmed := bytes.TrimLeft(line, " \t")
 		if len(trimmed) == len(line) || len(trimmed) == 0 {
 			continue

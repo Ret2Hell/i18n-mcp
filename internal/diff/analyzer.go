@@ -191,8 +191,7 @@ func (s *Service) classifyExisting(sourceLocale string, sourceUnit locale.Unit, 
 		Source:       sourceUnit.Value,
 		Target:       targetUnit.Value,
 	})
-	validationIssues := slices.Clone(validation.Issues)
-	validationIssues = append(validationIssues, validation.Warnings...)
+	validationIssues := slices.Concat(validation.Issues, validation.Warnings)
 	if !validation.OK {
 		status = Invalid
 	}

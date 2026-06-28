@@ -1,7 +1,6 @@
 package translate
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -20,7 +19,7 @@ func TestApplyDryRunDoesNotWriteFilesOrState(t *testing.T) {
 	root := setupApplyProject(t, `{"hello":"Hello"}`)
 	svc, _ := newApplyTestService(t, root)
 
-	out, err := svc.Apply(context.Background(), ApplyInput{
+	out, err := svc.Apply(t.Context(), ApplyInput{
 		Apply: false,
 		Translations: []ProposedTranslation{{
 			Locale: "fr", Namespace: "common", Key: "hello", SourceValue: "Hello", Value: "Bonjour",
@@ -78,7 +77,7 @@ func TestApplyInputContract(t *testing.T) {
 			root := setupApplyProject(t, `{"hello":"Hello"}`)
 			svc, _ := newApplyTestService(t, root)
 
-			out, err := svc.Apply(context.Background(), ApplyInput{
+			out, err := svc.Apply(t.Context(), ApplyInput{
 				DryRun: tt.dryRun,
 				Apply:  tt.apply,
 				Translations: []ProposedTranslation{{
@@ -107,7 +106,7 @@ func TestApplyWriteUpdatesLocaleThenState(t *testing.T) {
 	root := setupApplyProject(t, `{"hello":"Hello"}`)
 	svc, stateSvc := newApplyTestService(t, root)
 
-	out, err := svc.Apply(context.Background(), ApplyInput{
+	out, err := svc.Apply(t.Context(), ApplyInput{
 		Apply: true,
 		Translations: []ProposedTranslation{{
 			Locale: "fr", Namespace: "common", Key: "hello", SourceValue: "Hello", Value: "Bonjour",
@@ -123,7 +122,7 @@ func TestApplyWriteUpdatesLocaleThenState(t *testing.T) {
 	require.True(t, out.ChangedFiles[0].Written)
 	assertFileContent(t, filepath.Join(root, "locales", "fr.json"), "{\n  \"hello\": \"Bonjour\"\n}\n")
 
-	stateFile, err := stateSvc.Load(context.Background())
+	stateFile, err := stateSvc.Load(t.Context())
 	require.NoError(t, err)
 	entry := stateFile.Entries[state.EntryKey("fr", "common", "hello")]
 	require.Equal(t, state.SourceHash("Hello"), entry.SourceHash)
@@ -138,7 +137,7 @@ func TestApplyRejectsInvalidTranslationsBeforeWrites(t *testing.T) {
 	root := setupApplyProject(t, `{"hello":"Hello {name}"}`)
 	svc, _ := newApplyTestService(t, root)
 
-	out, err := svc.Apply(context.Background(), ApplyInput{
+	out, err := svc.Apply(t.Context(), ApplyInput{
 		Apply: true,
 		Translations: []ProposedTranslation{{
 			Locale: "fr", Namespace: "common", Key: "hello", SourceValue: "Hello {name}", Value: "Bonjour",
@@ -158,7 +157,7 @@ func TestApplyRejectsSourceDriftBeforeWrites(t *testing.T) {
 	root := setupApplyProject(t, `{"hello":"Hello"}`)
 	svc, _ := newApplyTestService(t, root)
 
-	out, err := svc.Apply(context.Background(), ApplyInput{
+	out, err := svc.Apply(t.Context(), ApplyInput{
 		Apply: true,
 		Translations: []ProposedTranslation{{
 			Locale: "fr", Namespace: "common", Key: "hello", SourceValue: "Old hello", Value: "Bonjour",
@@ -175,7 +174,7 @@ func TestApplyRejectsSourceDriftBeforeWrites(t *testing.T) {
 }
 
 func boolPtr(v bool) *bool {
-	return &v
+	return new(v)
 }
 
 func setupApplyProject(t *testing.T, sourceJSON string) string {

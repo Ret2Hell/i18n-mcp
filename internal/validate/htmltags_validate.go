@@ -8,18 +8,19 @@ import (
 func compareTags(source string, target string) []Issue {
 	sourceTokens := ExtractTagTokens(source)
 	targetTokens := ExtractTagTokens(target)
-	issues := compareTokenCounts(
-		tagCounts(sourceTokens),
-		tagCounts(targetTokens),
-		"tag",
-		"tag_missing",
-		"tag_extra",
-		"tag_count_changed",
-		SeverityError,
+	return slices.Concat(
+		compareTokenCounts(
+			tagCounts(sourceTokens),
+			tagCounts(targetTokens),
+			"tag",
+			"tag_missing",
+			"tag_extra",
+			"tag_count_changed",
+			SeverityError,
+		),
+		validateTagBalance("source", sourceTokens),
+		validateTagBalance("target", targetTokens),
 	)
-	issues = append(issues, validateTagBalance("source", sourceTokens)...)
-	issues = append(issues, validateTagBalance("target", targetTokens)...)
-	return issues
 }
 
 func tagCounts(tokens []TagToken) map[string]int {

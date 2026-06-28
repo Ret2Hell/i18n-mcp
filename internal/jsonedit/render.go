@@ -1,8 +1,9 @@
 package jsonedit
 
 import (
+	"cmp"
 	"encoding/json"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -34,9 +35,9 @@ func renderObject(b *strings.Builder, value *Value, depth int, format Format) {
 	}
 	members := value.Object
 	if format.SortKeys {
-		members = append([]Member(nil), value.Object...)
-		sort.SliceStable(members, func(i, j int) bool {
-			return members[i].Key < members[j].Key
+		members = slices.Clone(value.Object)
+		slices.SortStableFunc(members, func(a, b Member) int {
+			return cmp.Compare(a.Key, b.Key)
 		})
 	}
 	b.WriteByte('{')

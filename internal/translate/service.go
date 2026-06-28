@@ -1,6 +1,7 @@
 package translate
 
 import (
+	"slices"
 	"sync"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
@@ -51,18 +52,18 @@ func (s *Service) storeLatest(batch Batch) {
 }
 
 func cloneBatch(batch Batch) Batch {
-	batch.TargetLocales = append([]string(nil), batch.TargetLocales...)
-	batch.Items = append([]Item(nil), batch.Items...)
-	batch.Glossary = append([]GlossaryEntry(nil), batch.Glossary...)
-	batch.GlossaryReferences = append([]string(nil), batch.GlossaryReferences...)
-	batch.ContextFiles = append([]ContextFileRef(nil), batch.ContextFiles...)
-	batch.ValidationRules = append([]string(nil), batch.ValidationRules...)
-	batch.ResourceLinks = append([]string(nil), batch.ResourceLinks...)
-	batch.Warnings = append([]string(nil), batch.Warnings...)
+	batch.TargetLocales = slices.Clone(batch.TargetLocales)
+	batch.Items = slices.Clone(batch.Items)
+	batch.Glossary = slices.Clone(batch.Glossary)
+	batch.GlossaryReferences = slices.Clone(batch.GlossaryReferences)
+	batch.ContextFiles = slices.Clone(batch.ContextFiles)
+	batch.ValidationRules = slices.Clone(batch.ValidationRules)
+	batch.ResourceLinks = slices.Clone(batch.ResourceLinks)
+	batch.Warnings = slices.Clone(batch.Warnings)
 	for i := range batch.Items {
-		batch.Items[i].Placeholders = append([]string(nil), batch.Items[i].Placeholders...)
-		batch.Items[i].Tags = append([]string(nil), batch.Items[i].Tags...)
-		batch.Items[i].Notes = append([]string(nil), batch.Items[i].Notes...)
+		batch.Items[i].Placeholders = slices.Clone(batch.Items[i].Placeholders)
+		batch.Items[i].Tags = slices.Clone(batch.Items[i].Tags)
+		batch.Items[i].Notes = slices.Clone(batch.Items[i].Notes)
 	}
 	return batch
 }

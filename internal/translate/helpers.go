@@ -1,9 +1,10 @@
 package translate
 
 import (
+	"cmp"
 	"encoding/json"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
@@ -21,15 +22,16 @@ func buildBatchID(projectRoot string, batch Batch) string {
 	payload := batchIDPayload{
 		ProjectRoot:   projectRoot,
 		SourceLocale:  batch.SourceLocale,
-		TargetLocales: append([]string(nil), batch.TargetLocales...),
-		Items:         append([]Item(nil), batch.Items...),
+		TargetLocales: slices.Clone(batch.TargetLocales),
+		Items:         slices.Clone(batch.Items),
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {
 		panic(err)
 	}
 	sum := state.SourceHash(string(data))
-	return "batch_" + strings.TrimPrefix(sum, "sha256:")[:16]
+	hash, _ := strings.CutPrefix(sum, "sha256:")
+	return "batch_" + hash[:16]
 }
 
 func defaultValidationRules() []string {
@@ -61,14 +63,14 @@ func (s *Service) loadPlanContext(cfg config.Resolved) (string, []string, []Cont
 		glossaryRefs = append(glossaryRefs, cfg.Translation.GlossaryPath)
 		contextFiles = append(contextFiles, ContextFileRef{Kind: "glossary", Path: cfg.Translation.GlossaryPath})
 	}
-	sort.Strings(glossaryRefs)
-	sort.Slice(contextFiles, func(i, j int) bool {
-		if contextFiles[i].Kind != contextFiles[j].Kind {
-			return contextFiles[i].Kind < contextFiles[j].Kind
-		}
-		return contextFiles[i].Path < contextFiles[j].Path
+	slices.Sort(glossaryRefs)
+	slices.SortFunc(contextFiles, func(a, b ContextFileRef) int {
+		return cmp.Or(
+			cmp.Compare(a.Kind, b.Kind),
+			cmp.Compare(a.Path, b.Path),
+		)
 	})
-	sort.Strings(warnings)
+	slices.Sort(warnings)
 	return styleGuide, glossaryRefs, contextFiles, warnings
 }
 

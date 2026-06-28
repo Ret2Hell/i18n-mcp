@@ -1,7 +1,6 @@
 package translate
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -17,7 +16,7 @@ func TestWriteEditsWritesChangedFilesAtomically(t *testing.T) {
 	require.NoError(t, err)
 	svc := &Service{guard: guard}
 
-	report, err := svc.WriteEdits(context.Background(), []FileEdit{
+	report, err := svc.WriteEdits(t.Context(), []FileEdit{
 		{Path: "locales/en.json", Before: []byte(`{"hello":"old"}`), After: []byte(`{"hello":"world"}`)},
 		{Path: "locales/fr.json", Before: []byte(`{"hello":"old"}`), After: []byte(`{"hello":"bonjour"}`)},
 	})
@@ -42,7 +41,7 @@ func TestWriteEditsPreservesExistingPermissions(t *testing.T) {
 	require.NoError(t, err)
 	svc := &Service{guard: guard}
 
-	report, err := svc.WriteEdits(context.Background(), []FileEdit{
+	report, err := svc.WriteEdits(t.Context(), []FileEdit{
 		{Path: "locales/en.json", Before: []byte("old"), After: []byte("new")},
 	})
 	require.NoError(t, err)
@@ -68,7 +67,7 @@ func TestWriteEditsRejectsSymlinkTarget(t *testing.T) {
 	require.NoError(t, err)
 	svc := &Service{guard: guard}
 
-	report, err := svc.WriteEdits(context.Background(), []FileEdit{
+	report, err := svc.WriteEdits(t.Context(), []FileEdit{
 		{Path: "locales/en.json", Before: []byte("old"), After: []byte("new")},
 	})
 	require.Error(t, err)
@@ -92,7 +91,7 @@ func TestWriteEditsReportsSkippedFilesAfterFailure(t *testing.T) {
 	require.NoError(t, err)
 	svc := &Service{guard: guard}
 
-	report, err := svc.WriteEdits(context.Background(), []FileEdit{
+	report, err := svc.WriteEdits(t.Context(), []FileEdit{
 		{Path: "locales/written.json", Before: []byte("old"), After: []byte("new")},
 		{Path: "locales/unchanged.json", Before: []byte("same"), After: []byte("same")},
 		{Path: "locales/fail.json", Before: []byte("old"), After: []byte("new")},

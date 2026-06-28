@@ -1,10 +1,10 @@
 package translate_test
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -16,7 +16,7 @@ import (
 )
 
 func TestTranslationPlanIncludesMissingAndStale(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	a := newTranslationFixtureApp(t)
 
 	batch, err := a.Translation.Plan(ctx, translate.PlanInput{})
@@ -28,7 +28,7 @@ func TestTranslationPlanIncludesMissingAndStale(t *testing.T) {
 }
 
 func TestTranslationValidateRejectsSourceDrift(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	a := newTranslationFixtureApp(t)
 	batch, err := a.Translation.Plan(ctx, translate.PlanInput{})
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ func TestTranslationValidateRejectsSourceDrift(t *testing.T) {
 }
 
 func TestTranslationApplyDryRunDoesNotWrite(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	a := newTranslationFixtureApp(t)
 	before := readFixtureFile(t, a.ProjectRoot, "messages/fr/auth.json")
 	stateBefore := readFixtureFile(t, a.ProjectRoot, state.DefaultStatePath)
@@ -69,7 +69,7 @@ func TestTranslationApplyDryRunDoesNotWrite(t *testing.T) {
 }
 
 func TestTranslationApplyWriteUpdatesLocaleAndState(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	a := newTranslationFixtureApp(t)
 
 	out, err := a.Translation.Apply(ctx, translate.ApplyInput{Apply: true, Translations: []translate.ProposedTranslation{{
@@ -129,7 +129,7 @@ func newTranslationFixtureApp(t *testing.T) *app.App {
 	require.NoError(t, err)
 	writeFixtureFile(t, root, state.DefaultStatePath, string(data)+"\n")
 
-	a, err := app.New(context.Background(), app.Options{ProjectRoot: root, LogLevel: "error"})
+	a, err := app.New(t.Context(), app.Options{ProjectRoot: root, LogLevel: "error"})
 	require.NoError(t, err)
 	return a
 }
@@ -154,10 +154,8 @@ func testTime() time.Time {
 
 func requireIssueCode(t *testing.T, issues []validate.Issue, code string) {
 	t.Helper()
-	for _, issue := range issues {
-		if issue.Code == code {
-			return
-		}
+	if slices.ContainsFunc(issues, func(issue validate.Issue) bool { return issue.Code == code }) {
+		return
 	}
 	require.Failf(t, "missing issue code", "expected %s in %#v", code, issues)
 }

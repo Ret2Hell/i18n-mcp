@@ -1,11 +1,13 @@
 package translate
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
@@ -42,17 +44,16 @@ func (s *Service) BuildEdits(ctx context.Context, accepted []ValidatedTranslatio
 		byPath[path] = append(byPath[path], tr)
 	}
 
-	paths := make([]string, 0, len(byPath))
-	for path := range byPath {
-		paths = append(paths, path)
-	}
-	sort.Strings(paths)
+	paths := slices.Sorted(maps.Keys(byPath))
 
 	var edits []FileEdit
 	for _, path := range paths {
 		translations := byPath[path]
-		sort.Slice(translations, func(i, j int) bool {
-			return proposalIdentity(translations[i].Locale, translations[i].Namespace, translations[i].Key) < proposalIdentity(translations[j].Locale, translations[j].Namespace, translations[j].Key)
+		slices.SortFunc(translations, func(a, b ValidatedTranslation) int {
+			return cmp.Compare(
+				proposalIdentity(a.Locale, a.Namespace, a.Key),
+				proposalIdentity(b.Locale, b.Namespace, b.Key),
+			)
 		})
 
 		before, doc, err := s.readEditableJSON(path, cfg)

@@ -1,9 +1,10 @@
 package translate
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
@@ -78,7 +79,7 @@ func (s *Service) validateProposal(sourceLocale string, sources map[string]local
 		Target:       proposal.Value,
 	})
 	if !result.OK {
-		rejected.Issues = append(rejected.Issues, result.Issues...)
+		rejected.Issues = slices.Clone(result.Issues)
 		return ValidatedTranslation{}, rejected
 	}
 
@@ -138,10 +139,16 @@ func targetFileIdentity(localeCode string, namespace string) string {
 }
 
 func sortValidationOutput(out *ValidationOutput) {
-	sort.Slice(out.Accepted, func(i, j int) bool {
-		return proposalIdentity(out.Accepted[i].Locale, out.Accepted[i].Namespace, out.Accepted[i].Key) < proposalIdentity(out.Accepted[j].Locale, out.Accepted[j].Namespace, out.Accepted[j].Key)
+	slices.SortFunc(out.Accepted, func(a, b ValidatedTranslation) int {
+		return cmp.Compare(
+			proposalIdentity(a.Locale, a.Namespace, a.Key),
+			proposalIdentity(b.Locale, b.Namespace, b.Key),
+		)
 	})
-	sort.Slice(out.Rejected, func(i, j int) bool {
-		return proposalIdentity(out.Rejected[i].Locale, out.Rejected[i].Namespace, out.Rejected[i].Key) < proposalIdentity(out.Rejected[j].Locale, out.Rejected[j].Namespace, out.Rejected[j].Key)
+	slices.SortFunc(out.Rejected, func(a, b RejectedTranslation) int {
+		return cmp.Compare(
+			proposalIdentity(a.Locale, a.Namespace, a.Key),
+			proposalIdentity(b.Locale, b.Namespace, b.Key),
+		)
 	})
 }
