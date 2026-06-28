@@ -28,6 +28,9 @@ func (s *Service) Scan(ctx context.Context, in ScanInput) (Report, error) {
 		for _, ev := range scanJSXI18nKeys(file.Path, data) {
 			addEvidence(usageByID, ev, "jsx_i18n_key")
 		}
+		for _, ev := range scanNamespaceUsages(file.Path, data) {
+			addEvidence(usageByID, ev, "namespace_bound_call")
+		}
 	}
 	report.Usages = sortedUsages(usageByID)
 	s.storeLatest(report)
