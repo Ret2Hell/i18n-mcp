@@ -20,11 +20,32 @@ else
   range="$tag"
 fi
 
+repo_url=""
+if [ -n "${GITHUB_SERVER_URL:-}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
+  repo_url="${GITHUB_SERVER_URL%/}/${GITHUB_REPOSITORY}"
+else
+  remote_url=$(git config --get remote.origin.url 2>/dev/null || true)
+  case "$remote_url" in
+    git@github.com:*) repo_url="https://github.com/${remote_url#git@github.com:}" ;;
+    https://github.com/*) repo_url="$remote_url" ;;
+  esac
+  repo_url=${repo_url%.git}
+fi
+commit_url_prefix="${repo_url%/}/commit/"
+
 printf '%s (%s)\n\n' "$version" "$date"
 
-git log --reverse --format='%H%x1f%s' "$range" | awk -F '\037' '
+git log --reverse --format='%H%x1f%s' "$range" | awk -F '\037' -v commit_url_prefix="$commit_url_prefix" '
 function short(hash) {
   return substr(hash, 1, 7)
+}
+
+function commit_ref(hash) {
+  if (commit_url_prefix == "/commit/") {
+    return short(hash)
+  }
+
+  return "[" short(hash) "](" commit_url_prefix hash ")"
 }
 
 function clean(message, prefix, rest, scope) {
@@ -69,7 +90,7 @@ function category(message) {
 }
 
 function add(section, message, hash) {
-  entries[section] = entries[section] "- " clean(message) " (" short(hash) ")\n"
+  entries[section] = entries[section] "- " clean(message) " (" commit_ref(hash) ")\n"
 }
 
 $2 ~ /^Merge / { next }
