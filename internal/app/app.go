@@ -58,7 +58,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	diffService := diff.NewService(localeService, stateService, validatorService)
 	translationService := translate.NewService(configService, guard, localeService, stateService, diffService, validatorService)
 	scannerService := scanner.NewService(guard, configService)
-	deadKeyService := deadkey.NewService(configService, localeService, scannerService)
+	deadKeyService := deadkey.NewService(configService, guard, localeService, scannerService)
 
 	return &App{
 		Options:     opts,

@@ -59,3 +59,26 @@ func TestJSONEditPreservesRawScalars(t *testing.T) {
 
 	require.Equal(t, "{\n  \"n\": 1.2300,\n  \"ok\": true,\n  \"items\": [\n    null,\n    2\n  ]\n}\n", string(after))
 }
+
+func TestJSONEditDeletePrunesEmptyParents(t *testing.T) {
+	doc, err := Parse([]byte("{\n  \"keep\": \"yes\",\n  \"nested\": {\n    \"remove\": {\n      \"me\": \"bye\"\n    }\n  }\n}\n"), 2, false)
+	require.NoError(t, err)
+
+	deleted, err := doc.Delete([]string{"nested", "remove", "me"})
+	require.NoError(t, err)
+	require.True(t, deleted)
+	after, err := doc.Render()
+	require.NoError(t, err)
+
+	require.Equal(t, "{\n  \"keep\": \"yes\"\n}\n", string(after))
+}
+
+func TestJSONEditDeleteErrorsOnNonObjectParent(t *testing.T) {
+	doc, err := Parse([]byte("{\n  \"items\": []\n}\n"), 2, false)
+	require.NoError(t, err)
+
+	deleted, err := doc.Delete([]string{"items", "name"})
+
+	require.Error(t, err)
+	require.False(t, deleted)
+}
