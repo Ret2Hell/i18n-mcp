@@ -27,37 +27,16 @@ var jsxI18nKeyPatterns = []literalPattern{
 }
 
 func scanLiteralCalls(path string, data []byte) []Evidence {
-	var evidence []Evidence
-	for _, pattern := range literalPatterns {
-		matches := pattern.re.FindAllSubmatchIndex(data, -1)
-		for _, match := range matches {
-			groupStart := pattern.keyGroup * 2
-			if groupStart+1 >= len(match) || match[groupStart] < 0 {
-				continue
-			}
-			key := CleanLiteralKey(string(data[match[groupStart]:match[groupStart+1]]))
-			if key == "" {
-				continue
-			}
-			line, column, snippet := location(data, match[0])
-			evidence = append(evidence, Evidence{
-				Key:        key,
-				FullKey:    FullKey("", key),
-				FilePath:   path,
-				Line:       line,
-				Column:     column,
-				Snippet:    snippet,
-				Pattern:    pattern.name,
-				Confidence: ConfidenceMedium,
-			})
-		}
-	}
-	return evidence
+	return scanLiteralPatterns(path, data, literalPatterns, ConfidenceMedium)
 }
 
 func scanJSXI18nKeys(path string, data []byte) []Evidence {
+	return scanLiteralPatterns(path, data, jsxI18nKeyPatterns, ConfidenceHigh)
+}
+
+func scanLiteralPatterns(path string, data []byte, patterns []literalPattern, confidence Confidence) []Evidence {
 	var evidence []Evidence
-	for _, pattern := range jsxI18nKeyPatterns {
+	for _, pattern := range patterns {
 		matches := pattern.re.FindAllSubmatchIndex(data, -1)
 		for _, match := range matches {
 			groupStart := pattern.keyGroup * 2
@@ -77,7 +56,7 @@ func scanJSXI18nKeys(path string, data []byte) []Evidence {
 				Column:     column,
 				Snippet:    snippet,
 				Pattern:    pattern.name,
-				Confidence: ConfidenceHigh,
+				Confidence: confidence,
 			})
 		}
 	}

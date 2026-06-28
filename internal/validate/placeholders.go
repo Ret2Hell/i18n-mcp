@@ -58,11 +58,10 @@ func collectPlaceholderSpans(s string) []placeholderSpan {
 			match := s[loc[0]:loc[1]]
 			_, hasPercentPrefix := strings.CutPrefix(match, "%")
 			if hasPercentPrefix && loc[0] > 0 && s[loc[0]-1] == '%' {
+				markOccupied(occupied, loc[0], loc[1])
 				continue
 			}
-			for i := loc[0]; i < loc[1]; i++ {
-				occupied[i] = true
-			}
+			markOccupied(occupied, loc[0], loc[1])
 			spans = append(spans, placeholderSpan{start: loc[0], end: loc[1], value: pattern.normalize(match)})
 		}
 	}
@@ -86,6 +85,12 @@ func placeholderCounts(s string) map[string]int {
 
 func overlapsOccupied(occupied []bool, start int, end int) bool {
 	return slices.Contains(occupied[start:end], true)
+}
+
+func markOccupied(occupied []bool, start int, end int) {
+	for i := range end - start {
+		occupied[start+i] = true
+	}
 }
 
 func normalizeDoubleBracePlaceholder(match string) string {

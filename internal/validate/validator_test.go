@@ -12,6 +12,60 @@ func TestExtractPlaceholders(t *testing.T) {
 	require.Equal(t, []string{"%02d", "%{count}", "{name}", "{{user}}"}, got)
 }
 
+func TestCollectPlaceholderSpansRecordsExactOffsets(t *testing.T) {
+	spans := collectPlaceholderSpans("x {name} %{count}")
+
+	require.Equal(t, []placeholderSpan{
+		{start: 2, end: 8, value: "{name}"},
+		{start: 9, end: 17, value: "%{count}"},
+	}, spans)
+}
+
+func TestExtractPlaceholdersBoundariesAndOverlaps(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want []string
+	}{
+		{
+			name: "escaped percent placeholder ignored",
+			in:   "Discount %%{count} and real %{total}",
+			want: []string{"%{total}"},
+		},
+		{
+			name: "escaped percent placeholder ignored at start",
+			in:   "%%{count} and real %{total}",
+			want: []string{"%{total}"},
+		},
+		{
+			name: "percent placeholder masks brace placeholder",
+			in:   "%{count} {count}",
+			want: []string{"%{count}", "{count}"},
+		},
+		{
+			name: "printf placeholder beside brace placeholder",
+			in:   "%02d{name}",
+			want: []string{"%02d", "{name}"},
+		},
+		{
+			name: "double brace normalized and not also single brace",
+			in:   "{{ user }}",
+			want: []string{"{{user}}"},
+		},
+		{
+			name: "duplicates deduplicated",
+			in:   "{name} {name} %{count} %{count}",
+			want: []string{"%{count}", "{name}"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, ExtractPlaceholders(tt.in))
+		})
+	}
+}
+
 func TestExtractTags(t *testing.T) {
 	got := ExtractTags("Click <Link href=\"/x\"><strong>here</strong></Link><br />")
 	require.Equal(t, []string{"</link>", "</strong>", "<br/>", "<link>", "<strong>"}, got)

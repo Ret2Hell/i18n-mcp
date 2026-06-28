@@ -47,6 +47,31 @@ func TestAnalyzeIsDeterministicallySorted(t *testing.T) {
 	}
 }
 
+func TestSummarizeEmptyItemsHasNilByLocale(t *testing.T) {
+	for _, items := range [][]KeyDiff{nil, []KeyDiff{}} {
+		summary := Summarize(items)
+
+		require.Zero(t, summary.Total)
+		require.Nil(t, summary.ByLocale)
+	}
+}
+
+func TestSummarizeCountsByStatusAndLocale(t *testing.T) {
+	summary := Summarize([]KeyDiff{
+		{Locale: "fr", Status: Current},
+		{Locale: "fr", Status: Missing},
+		{Locale: "de", Status: Missing},
+		{Locale: "de", Status: Invalid},
+	})
+
+	require.Equal(t, 4, summary.Total)
+	require.Equal(t, 1, summary.Current)
+	require.Equal(t, 2, summary.Missing)
+	require.Equal(t, 1, summary.Invalid)
+	require.Equal(t, StatusCounts{Current: 1, Missing: 1}, summary.ByLocale["fr"])
+	require.Equal(t, StatusCounts{Missing: 1, Invalid: 1}, summary.ByLocale["de"])
+}
+
 func analyzeFixture(t *testing.T, root string) Report {
 	t.Helper()
 	guard, err := fsutil.NewGuard(root)

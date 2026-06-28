@@ -82,13 +82,15 @@ func (s *Service) discoverAll(ctx context.Context) ([]SourceFile, error) {
 }
 
 func (s *Service) discoverRequested(ctx context.Context, requested []string) ([]SourceFile, error) {
-	_ = ctx
 	files := make([]SourceFile, 0, len(requested))
 	for _, relPath := range requested {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		if !sourceExtensions[strings.ToLower(filepath.Ext(relPath))] {
 			continue
 		}
-		absPath, err := s.guard.ResolveExisting(relPath)
+		absPath, err := s.guard.Resolve(relPath)
 		if err != nil {
 			return nil, err
 		}
