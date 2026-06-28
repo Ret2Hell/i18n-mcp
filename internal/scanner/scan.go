@@ -1,9 +1,11 @@
 package scanner
 
 import (
+	"cmp"
 	"context"
+	"maps"
 	"os"
-	"sort"
+	"slices"
 	"time"
 )
 
@@ -34,9 +36,7 @@ func (s *Service) Scan(ctx context.Context, in ScanInput) (Report, error) {
 		report.DynamicHints = append(report.DynamicHints, scanDynamicHints(file.Path, data)...)
 	}
 	report.Usages = sortedUsages(usageByID)
-	sort.Slice(report.DynamicHints, func(i, j int) bool {
-		return lessDynamicHint(report.DynamicHints[i], report.DynamicHints[j])
-	})
+	slices.SortFunc(report.DynamicHints, compareDynamicHint)
 	s.storeLatest(report)
 	return report, nil
 }
@@ -60,44 +60,30 @@ func addEvidence(usageByID map[string]*Usage, ev Evidence, kind string) {
 }
 
 func sortedUsages(usageByID map[string]*Usage) []Usage {
-	ids := make([]string, 0, len(usageByID))
-	for id := range usageByID {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
+	ids := slices.Sorted(maps.Keys(usageByID))
 	out := make([]Usage, 0, len(ids))
 	for _, id := range ids {
 		usage := *usageByID[id]
-		sort.Slice(usage.Evidence, func(i, j int) bool {
-			return lessEvidence(usage.Evidence[i], usage.Evidence[j])
-		})
+		slices.SortFunc(usage.Evidence, compareEvidence)
 		out = append(out, usage)
 	}
 	return out
 }
 
-func lessEvidence(a Evidence, b Evidence) bool {
-	if a.FilePath != b.FilePath {
-		return a.FilePath < b.FilePath
-	}
-	if a.Line != b.Line {
-		return a.Line < b.Line
-	}
-	if a.Column != b.Column {
-		return a.Column < b.Column
-	}
-	return a.Pattern < b.Pattern
+func compareEvidence(a Evidence, b Evidence) int {
+	return cmp.Or(
+		cmp.Compare(a.FilePath, b.FilePath),
+		cmp.Compare(a.Line, b.Line),
+		cmp.Compare(a.Column, b.Column),
+		cmp.Compare(a.Pattern, b.Pattern),
+	)
 }
 
-func lessDynamicHint(a DynamicHint, b DynamicHint) bool {
-	if a.FilePath != b.FilePath {
-		return a.FilePath < b.FilePath
-	}
-	if a.Line != b.Line {
-		return a.Line < b.Line
-	}
-	if a.Column != b.Column {
-		return a.Column < b.Column
-	}
-	return a.Pattern < b.Pattern
+func compareDynamicHint(a DynamicHint, b DynamicHint) int {
+	return cmp.Or(
+		cmp.Compare(a.FilePath, b.FilePath),
+		cmp.Compare(a.Line, b.Line),
+		cmp.Compare(a.Column, b.Column),
+		cmp.Compare(a.Pattern, b.Pattern),
+	)
 }

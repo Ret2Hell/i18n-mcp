@@ -16,8 +16,8 @@ type PruneOutput struct {
 	DryRun       bool          `json:"dryRun"`
 	Pruned       int           `json:"pruned"`
 	ChangedFiles []ChangedFile `json:"changedFiles"`
-	Rejected     []PruneReject `json:"rejected,omitempty"`
-	Warnings     []string      `json:"warnings,omitempty"`
+	Rejected     []PruneReject `json:"rejected,omitzero"`
+	Warnings     []string      `json:"warnings,omitzero"`
 }
 
 type PruneReject struct {

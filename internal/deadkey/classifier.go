@@ -1,9 +1,10 @@
 package deadkey
 
 import (
+	"cmp"
 	"context"
 	"path"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -112,7 +113,7 @@ func matchingEvidence(index usageIndex, namespace string, key string) []scanner.
 	out = append(out, index[scanner.UsageIdentity(namespace, key)]...)
 	out = append(out, index[scanner.UsageIdentity("", key)]...)
 	out = append(out, index[scanner.UsageIdentity("", scanner.FullKey(namespace, key))]...)
-	sort.Slice(out, func(i, j int) bool { return lessEvidence(out[i], out[j]) })
+	slices.SortFunc(out, compareEvidence)
 	return out
 }
 
@@ -207,25 +208,18 @@ func stringSet(values []string) map[string]bool {
 }
 
 func sortItems(items []Item) {
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].Namespace != items[j].Namespace {
-			return items[i].Namespace < items[j].Namespace
-		}
-		return items[i].Key < items[j].Key
+	slices.SortFunc(items, func(a, b Item) int {
+		return cmp.Or(cmp.Compare(a.Namespace, b.Namespace), cmp.Compare(a.Key, b.Key))
 	})
 }
 
-func lessEvidence(a scanner.Evidence, b scanner.Evidence) bool {
-	if a.FilePath != b.FilePath {
-		return a.FilePath < b.FilePath
-	}
-	if a.Line != b.Line {
-		return a.Line < b.Line
-	}
-	if a.Column != b.Column {
-		return a.Column < b.Column
-	}
-	return a.Pattern < b.Pattern
+func compareEvidence(a scanner.Evidence, b scanner.Evidence) int {
+	return cmp.Or(
+		cmp.Compare(a.FilePath, b.FilePath),
+		cmp.Compare(a.Line, b.Line),
+		cmp.Compare(a.Column, b.Column),
+		cmp.Compare(a.Pattern, b.Pattern),
+	)
 }
 
 func summarize(items []Item) Summary {
@@ -249,19 +243,19 @@ func summarize(items []Item) Summary {
 }
 
 func cloneReport(report Report) Report {
-	report.Items = append([]Item(nil), report.Items...)
-	report.Warnings = append([]string(nil), report.Warnings...)
-	report.Usage.Files = append([]scanner.SourceFile(nil), report.Usage.Files...)
-	report.Usage.Usages = append([]scanner.Usage(nil), report.Usage.Usages...)
-	report.Usage.DynamicHints = append([]scanner.DynamicHint(nil), report.Usage.DynamicHints...)
-	report.Usage.Warnings = append([]string(nil), report.Usage.Warnings...)
+	report.Items = slices.Clone(report.Items)
+	report.Warnings = slices.Clone(report.Warnings)
+	report.Usage.Files = slices.Clone(report.Usage.Files)
+	report.Usage.Usages = slices.Clone(report.Usage.Usages)
+	report.Usage.DynamicHints = slices.Clone(report.Usage.DynamicHints)
+	report.Usage.Warnings = slices.Clone(report.Usage.Warnings)
 	for i := range report.Items {
-		report.Items[i].Evidence = append([]scanner.Evidence(nil), report.Items[i].Evidence...)
-		report.Items[i].DynamicHints = append([]scanner.DynamicHint(nil), report.Items[i].DynamicHints...)
-		report.Items[i].Reasons = append([]string(nil), report.Items[i].Reasons...)
+		report.Items[i].Evidence = slices.Clone(report.Items[i].Evidence)
+		report.Items[i].DynamicHints = slices.Clone(report.Items[i].DynamicHints)
+		report.Items[i].Reasons = slices.Clone(report.Items[i].Reasons)
 	}
 	for i := range report.Usage.Usages {
-		report.Usage.Usages[i].Evidence = append([]scanner.Evidence(nil), report.Usage.Usages[i].Evidence...)
+		report.Usage.Usages[i].Evidence = slices.Clone(report.Usage.Usages[i].Evidence)
 	}
 	return report
 }

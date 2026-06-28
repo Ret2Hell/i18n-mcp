@@ -18,8 +18,8 @@ const (
 
 type ReportInput struct {
 	RefreshUsage bool     `json:"refreshUsage,omitempty" jsonschema:"rerun usage scan before classifying keys"`
-	Namespaces   []string `json:"namespaces,omitempty" jsonschema:"namespaces to include"`
-	Keys         []string `json:"keys,omitempty" jsonschema:"keys to include"`
+	Namespaces   []string `json:"namespaces,omitzero" jsonschema:"namespaces to include"`
+	Keys         []string `json:"keys,omitzero" jsonschema:"keys to include"`
 	IncludeUsed  bool     `json:"includeUsed,omitempty" jsonschema:"include keys classified as used"`
 }
 
@@ -28,7 +28,7 @@ type Report struct {
 	Items        []Item         `json:"items"`
 	Summary      Summary        `json:"summary"`
 	Usage        scanner.Report `json:"usage"`
-	Warnings     []string       `json:"warnings,omitempty"`
+	Warnings     []string       `json:"warnings,omitzero"`
 	GeneratedAt  time.Time      `json:"generatedAt"`
 }
 
@@ -40,9 +40,9 @@ type Item struct {
 	SourceFilePath string                `json:"sourceFilePath,omitempty"`
 	Status         Status                `json:"status"`
 	Confidence     scanner.Confidence    `json:"confidence"`
-	Evidence       []scanner.Evidence    `json:"evidence,omitempty"`
-	DynamicHints   []scanner.DynamicHint `json:"dynamicHints,omitempty"`
-	Reasons        []string              `json:"reasons,omitempty"`
+	Evidence       []scanner.Evidence    `json:"evidence,omitzero"`
+	DynamicHints   []scanner.DynamicHint `json:"dynamicHints,omitzero"`
+	Reasons        []string              `json:"reasons,omitzero"`
 }
 
 type Summary struct {

@@ -1,11 +1,12 @@
 package scanner
 
 import (
+	"cmp"
 	"context"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -109,7 +110,7 @@ func (s *Service) discoverRequested(ctx context.Context, requested []string) ([]
 }
 
 func sortSourceFiles(files []SourceFile) {
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Path < files[j].Path
+	slices.SortFunc(files, func(a, b SourceFile) int {
+		return cmp.Compare(a.Path, b.Path)
 	})
 }

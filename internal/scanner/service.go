@@ -31,6 +31,5 @@ func (s *Service) Latest() (Report, bool) {
 func (s *Service) storeLatest(report Report) {
 	s.latestMu.Lock()
 	defer s.latestMu.Unlock()
-	copy := cloneReport(report)
-	s.latest = &copy
+	s.latest = new(cloneReport(report))
 }

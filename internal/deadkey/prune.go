@@ -2,11 +2,12 @@ package deadkey
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
@@ -77,8 +78,8 @@ func (s *Service) buildPruneEditsForInventory(ctx context.Context, inv locale.In
 		keysByNamespace[key.Namespace] = append(keysByNamespace[key.Namespace], key)
 	}
 	for namespace := range keysByNamespace {
-		sort.Slice(keysByNamespace[namespace], func(i, j int) bool {
-			return keysByNamespace[namespace][i].Key < keysByNamespace[namespace][j].Key
+		slices.SortFunc(keysByNamespace[namespace], func(a, b PruneKey) int {
+			return cmp.Compare(a.Key, b.Key)
 		})
 	}
 
@@ -105,7 +106,7 @@ func (s *Service) buildPruneEditsForInventory(ctx context.Context, inv locale.In
 			edits = append(edits, pruneEdit{Path: file.Path, Before: before, After: after})
 		}
 	}
-	sort.Slice(edits, func(i, j int) bool { return edits[i].Path < edits[j].Path })
+	slices.SortFunc(edits, func(a, b pruneEdit) int { return cmp.Compare(a.Path, b.Path) })
 	return edits, nil, nil
 }
 

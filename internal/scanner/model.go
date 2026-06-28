@@ -12,15 +12,15 @@ const (
 )
 
 type ScanInput struct {
-	Files []string `json:"files,omitempty" jsonschema:"optional project-relative source files to scan"`
+	Files []string `json:"files,omitzero" jsonschema:"optional project-relative source files to scan"`
 }
 
 type Report struct {
 	FilesScanned int           `json:"filesScanned"`
 	Files        []SourceFile  `json:"files"`
 	Usages       []Usage       `json:"usages"`
-	DynamicHints []DynamicHint `json:"dynamicHints,omitempty"`
-	Warnings     []string      `json:"warnings,omitempty"`
+	DynamicHints []DynamicHint `json:"dynamicHints,omitzero"`
+	Warnings     []string      `json:"warnings,omitzero"`
 	GeneratedAt  time.Time     `json:"generatedAt"`
 }
 
