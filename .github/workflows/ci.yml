@@ -166,6 +166,7 @@ jobs:
     timeout-minutes: 20
     needs: [test, lint, security, goreleaser]
     permissions:
+      actions: read
       contents: read
       security-events: write
     steps:
