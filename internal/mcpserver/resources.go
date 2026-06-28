@@ -41,6 +41,24 @@ func registerResources(s *mcp.Server, a *app.App) {
 	}, readDiffResource(a))
 
 	s.AddResource(&mcp.Resource{
+		URI:         "i18n://analysis/usage",
+		Name:        "analysis_usage",
+		Title:       "i18n Usage Analysis",
+		Description: "Latest static translation key usage scan with evidence and dynamic hints.",
+		MIMEType:    "application/json",
+		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.8},
+	}, readUsageResource(a))
+
+	s.AddResource(&mcp.Resource{
+		URI:         "i18n://analysis/dead-keys",
+		Name:        "analysis_dead_keys",
+		Title:       "i18n Dead-Key Analysis",
+		Description: "Latest dead-key classification report with confidence and evidence.",
+		MIMEType:    "application/json",
+		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.8},
+	}, readDeadKeysResource(a))
+
+	s.AddResource(&mcp.Resource{
 		URI:         "i18n://translation/plan/latest",
 		Name:        "translation_plan_latest",
 		Title:       "Latest i18n Translation Plan",
@@ -131,6 +149,34 @@ func readDiffResource(a *app.App) mcp.ResourceHandler {
 		report, err := a.Diff.Analyze(ctx)
 		if err != nil {
 			return nil, err
+		}
+		return jsonResource(req.Params.URI, report)
+	}
+}
+
+func readUsageResource(a *app.App) mcp.ResourceHandler {
+	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+		_ = ctx
+		if req.Params.URI != "i18n://analysis/usage" {
+			return nil, mcp.ResourceNotFoundError(req.Params.URI)
+		}
+		report, ok := a.Scanner.Latest()
+		if !ok {
+			return jsonResource(req.Params.URI, map[string]any{"report": nil, "message": "no usage scan has been run yet"})
+		}
+		return jsonResource(req.Params.URI, report)
+	}
+}
+
+func readDeadKeysResource(a *app.App) mcp.ResourceHandler {
+	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+		_ = ctx
+		if req.Params.URI != "i18n://analysis/dead-keys" {
+			return nil, mcp.ResourceNotFoundError(req.Params.URI)
+		}
+		report, ok := a.DeadKeys.Latest()
+		if !ok {
+			return jsonResource(req.Params.URI, map[string]any{"report": nil, "message": "no dead-key report has been run yet"})
 		}
 		return jsonResource(req.Params.URI, report)
 	}

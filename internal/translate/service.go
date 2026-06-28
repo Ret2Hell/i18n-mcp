@@ -47,8 +47,7 @@ func (s *Service) LatestPlan() (Batch, bool) {
 func (s *Service) storeLatest(batch Batch) {
 	s.latestMu.Lock()
 	defer s.latestMu.Unlock()
-	copy := cloneBatch(batch)
-	s.latest = &copy
+	s.latest = new(cloneBatch(batch))
 }
 
 func cloneBatch(batch Batch) Batch {

@@ -81,6 +81,17 @@ func (d *Document) SetString(path []string, text string) error {
 	return setString(d.Root, path, text)
 }
 
+// Delete removes a nested value and prunes empty parent objects created by deletion.
+func (d *Document) Delete(path []string) (bool, error) {
+	if len(path) == 0 {
+		return false, fmt.Errorf("empty JSON path")
+	}
+	if d.Root == nil || d.Root.Kind != KindObject {
+		return false, fmt.Errorf("document root is not an object")
+	}
+	return deletePath(d.Root, path)
+}
+
 // Render serializes the document with its configured formatting.
 func (d *Document) Render() ([]byte, error) {
 	var b strings.Builder
@@ -115,6 +126,32 @@ func setString(value *Value, path []string, text string) error {
 		return fmt.Errorf("path segment %q is not an object", key)
 	}
 	return setString(member.Value, path[1:], text)
+}
+
+func deletePath(value *Value, path []string) (bool, error) {
+	if value.Kind != KindObject {
+		return false, fmt.Errorf("path parent is not an object")
+	}
+	key := path[0]
+	for i := range value.Object {
+		member := &value.Object[i]
+		if member.Key != key {
+			continue
+		}
+		if len(path) == 1 {
+			value.Object = append(value.Object[:i], value.Object[i+1:]...)
+			return true, nil
+		}
+		deleted, err := deletePath(member.Value, path[1:])
+		if err != nil || !deleted {
+			return deleted, err
+		}
+		if member.Value.Kind == KindObject && len(member.Value.Object) == 0 {
+			value.Object = append(value.Object[:i], value.Object[i+1:]...)
+		}
+		return true, nil
+	}
+	return false, nil
 }
 
 func findMember(value *Value, key string) *Member {

@@ -49,6 +49,27 @@ func registerTools(s *mcp.Server, a *app.App) {
 	}, keysDiffTool(a))
 
 	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.keys.usage_scan",
+		Title:       "Scan i18n Key Usage",
+		Description: "Scan TS, TSX, JS, JSX, MJS, and CJS source files for translation key usage evidence and dynamic key hints.",
+		Annotations: readOnly("Scan i18n Key Usage"),
+	}, usageScanTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.keys.dead_report",
+		Title:       "Report Dead i18n Keys",
+		Description: "Classify source locale keys as used, probably unused, maybe dynamic, ignored, or kept using static usage evidence.",
+		Annotations: readOnly("Report Dead i18n Keys"),
+	}, deadReportTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.keys.prune",
+		Title:       "Prune Dead i18n Keys",
+		Description: "Remove exact selected dead keys from locale JSON files. Dry-run by default; writes only with apply true.",
+		Annotations: writeOp("Prune Dead i18n Keys", true, true),
+	}, keysPruneTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.translation.plan",
 		Title:       "Plan Translations",
 		Description: "Build a deterministic translation batch from missing and stale locale keys. Does not generate translations.",

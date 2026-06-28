@@ -7,10 +7,12 @@ import (
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
+	"github.com/Ret2Hell/i18n-mcp/internal/deadkey"
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/project"
+	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
 	"github.com/Ret2Hell/i18n-mcp/internal/translate"
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
@@ -29,6 +31,8 @@ type App struct {
 	Validator   *validate.Service
 	Diff        *diff.Service
 	Translation *translate.Service
+	Scanner     *scanner.Service
+	DeadKeys    *deadkey.Service
 }
 
 func New(ctx context.Context, opts Options) (*App, error) {
@@ -53,6 +57,8 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	validatorService := validate.NewService()
 	diffService := diff.NewService(localeService, stateService, validatorService)
 	translationService := translate.NewService(configService, guard, localeService, stateService, diffService, validatorService)
+	scannerService := scanner.NewService(guard, configService)
+	deadKeyService := deadkey.NewService(configService, guard, localeService, scannerService)
 
 	return &App{
 		Options:     opts,
@@ -66,6 +72,8 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		Validator:   validatorService,
 		Diff:        diffService,
 		Translation: translationService,
+		Scanner:     scannerService,
+		DeadKeys:    deadKeyService,
 	}, nil
 }
 
