@@ -56,6 +56,13 @@ func registerTools(s *mcp.Server, a *app.App) {
 	}, usageScanTool(a))
 
 	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.keys.dead_report",
+		Title:       "Report Dead i18n Keys",
+		Description: "Classify source locale keys as used, probably unused, maybe dynamic, ignored, or kept using static usage evidence.",
+		Annotations: readOnly("Report Dead i18n Keys"),
+	}, deadReportTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.translation.plan",
 		Title:       "Plan Translations",
 		Description: "Build a deterministic translation batch from missing and stale locale keys. Does not generate translations.",
