@@ -35,7 +35,70 @@ func (s *Service) Prune(ctx context.Context, in PruneInput) (PruneOutput, error)
 	if dryRun {
 		return out, nil
 	}
-	return out, errors.New("prune write mode is not enabled until KAN-093")
+	report, err := s.writePruneEdits(ctx, edits)
+	out.ChangedFiles = markPruneWritten(out.ChangedFiles, report.Written)
+	if err != nil {
+		out.Warnings = append(out.Warnings, fmt.Sprintf("prune write failed after writing %d file(s); skipped %d file(s) %v: %v", len(report.Written), len(report.Skipped), report.Skipped, err))
+		return out, err
+	}
+	out.Pruned = len(in.Keys)
+	return out, nil
+}
+
+func markPruneWritten(files []ChangedFile, written []string) []ChangedFile {
+	set := make(map[string]bool, len(written))
+	for _, path := range written {
+		set[path] = true
+	}
+	for i := range files {
+		files[i].Written = set[files[i].Path]
+	}
+	return files
+}
+
+type pruneWriteReport struct {
+	Written   []string
+	Unchanged []string
+	Skipped   []string
+}
+
+func (s *Service) writePruneEdits(ctx context.Context, edits []pruneEdit) (pruneWriteReport, error) {
+	_ = ctx
+	var report pruneWriteReport
+	for _, edit := range edits {
+		if bytes.Equal(edit.Before, edit.After) {
+			report.Unchanged = append(report.Unchanged, edit.Path)
+			continue
+		}
+		perm := os.FileMode(0o600)
+		absPath, err := s.guard.Resolve(edit.Path)
+		if err != nil {
+			report.Skipped = appendRemainingPruneEdits(report.Skipped, edits, edit.Path)
+			return report, err
+		}
+		if info, err := os.Stat(absPath); err == nil {
+			perm = info.Mode().Perm()
+		}
+		if err := fsutil.AtomicWriteFile(s.guard, edit.Path, edit.After, perm); err != nil {
+			report.Skipped = appendRemainingPruneEdits(report.Skipped, edits, edit.Path)
+			return report, err
+		}
+		report.Written = append(report.Written, edit.Path)
+	}
+	return report, nil
+}
+
+func appendRemainingPruneEdits(out []string, edits []pruneEdit, failedPath string) []string {
+	failed := slices.IndexFunc(edits, func(edit pruneEdit) bool {
+		return edit.Path == failedPath
+	})
+	if failed == -1 {
+		return out
+	}
+	for _, edit := range edits[failed:] {
+		out = append(out, edit.Path)
+	}
+	return out
 }
 
 func (s *Service) BuildPruneEdits(ctx context.Context, in PruneInput) ([]pruneEdit, []PruneReject, error) {
