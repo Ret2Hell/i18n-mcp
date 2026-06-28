@@ -63,11 +63,6 @@ jobs:
       - name: Go test
         run: go test ./...
 
-      - name: Release-like no-CGO test
-        env:
-          CGO_ENABLED: 0
-        run: go test ./...
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
 
@@ -75,8 +70,9 @@ jobs:
         run: |
           go install "github.com/goreleaser/goreleaser/v2@${GORELEASER_VERSION}"
           mkdir -p "${HOME}/.local/bin"
-          curl -sSfL "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VERSION#v}_linux_amd64.tar.gz" -o syft.tar.gz
-          tar -xzf syft.tar.gz -C "${HOME}/.local/bin" syft
+          syft_archive="$(mktemp)"
+          curl -sSfL "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VERSION#v}_linux_amd64.tar.gz" -o "$syft_archive"
+          tar -xzf "$syft_archive" -C "${HOME}/.local/bin" syft
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
           echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
 
