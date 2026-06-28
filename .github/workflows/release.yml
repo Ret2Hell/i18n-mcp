@@ -35,8 +35,6 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/setup-go
-        with:
-          cache: false
 
       - name: Validate release tag
         run: |
@@ -51,17 +49,6 @@ jobs:
             echo "Tag ${GITHUB_REF_NAME} does not match version file $version" >&2
             exit 1
           fi
-
-      - name: Verify go mod tidy
-        run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum
-
-      - name: Go vet
-        run: go vet ./...
-
-      - name: Go test
-        run: go test ./...
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0

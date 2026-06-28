@@ -26,7 +26,6 @@ env:
   ACTIONLINT_VERSION: v1.7.7
   GORELEASER_VERSION: v2.16.0
   GOVULNCHECK_VERSION: v1.1.4
-  SYFT_VERSION: v1.38.0
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -56,9 +55,15 @@ jobs:
         run: go build ./...
 
       - name: Go test
-        run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            go test ./...
+          else
+            go test -race -covermode=atomic -coverprofile=coverage.out ./...
+          fi
 
       - name: Coverage summary
+        if: github.event_name != 'pull_request'
         run: |
           total="$(go tool cover -func=coverage.out | awk '/^total:/ { print $3 }')"
           {
@@ -68,6 +73,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: coverage
@@ -109,6 +115,7 @@ jobs:
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: govulncheck
+        if: github.event_name != 'pull_request'
         run: govulncheck ./...
 
       - name: actionlint
@@ -121,7 +128,7 @@ jobs:
           .venv-zizmor/bin/zizmor .
 
   goreleaser:
-    name: GoReleaser Snapshot
+    name: GoReleaser Check
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -132,31 +139,28 @@ jobs:
 
       - uses: ./.github/actions/setup-go
 
-      - name: Install release tools
+      - name: Install GoReleaser
         run: |
           go install "github.com/goreleaser/goreleaser/v2@${GORELEASER_VERSION}"
-          mkdir -p "${HOME}/.local/bin"
-          syft_archive="$(mktemp)"
-          curl -sSfL "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${SYFT_VERSION#v}_linux_amd64.tar.gz" -o "$syft_archive"
-          tar -xzf "$syft_archive" -C "${HOME}/.local/bin" syft
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
 
       - name: GoReleaser check
         env:
           DOCKER_IMAGE: ret2hell/i18n-mcp
         run: goreleaser check .goreleaser.yaml
 
-      - name: GoReleaser snapshot
+      - name: GoReleaser smoke build
         env:
           DOCKER_IMAGE: ret2hell/i18n-mcp
-        run: goreleaser release --snapshot --clean --skip=docker,publish
+          GOOS: linux
+          GOARCH: amd64
+        run: goreleaser build --snapshot --clean --single-target
 
   docker-build:
     runs-on: ubuntu-24.04
     name: Docker Build
     timeout-minutes: 20
-    needs: [test, lint, security, goreleaser]
+    needs: [test, lint, security]
     permissions:
       actions: read
       contents: read
@@ -190,6 +194,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Scan Docker image
+        if: github.event_name != 'pull_request'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # 0.36.0
         with:
           image-ref: i18n-mcp:${{ steps.version.outputs.version }}
@@ -225,7 +230,7 @@ jobs:
 
   prepare-release-tag:
     name: Check release tag
-    needs: docker-build
+    needs: [docker-build, goreleaser]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
