@@ -71,6 +71,33 @@ func TestExtractTags(t *testing.T) {
 	require.Equal(t, []string{"</link>", "</strong>", "<br/>", "<link>", "<strong>"}, got)
 }
 
+func TestExtractMarkdownLinks(t *testing.T) {
+	links := ExtractMarkdownLinks("Read [docs](/docs) and [API](https://example.test/api).")
+
+	require.Equal(t, []MarkdownLink{
+		{Raw: "[docs](/docs)", Text: "docs", Destination: "/docs"},
+		{Raw: "[API](https://example.test/api)", Text: "API", Destination: "https://example.test/api"},
+	}, links)
+}
+
+func TestExtractMarkdownLinksIgnoresMalformedLinks(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+	}{
+		{name: "empty destination", in: "Read [docs]()"},
+		{name: "empty text", in: "Read [](/docs)"},
+		{name: "newline in text", in: "Read [do\ncs](/docs)"},
+		{name: "newline in destination", in: "Read [docs](/do\ncs)"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Empty(t, ExtractMarkdownLinks(tt.in))
+		})
+	}
+}
+
 func TestValidationIssueAndWarningCodes(t *testing.T) {
 	tests := []struct {
 		name         string

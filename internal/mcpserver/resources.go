@@ -155,43 +155,38 @@ func readDiffResource(a *app.App) mcp.ResourceHandler {
 }
 
 func readUsageResource(a *app.App) mcp.ResourceHandler {
-	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
-		_ = ctx
-		if req.Params.URI != "i18n://analysis/usage" {
-			return nil, mcp.ResourceNotFoundError(req.Params.URI)
-		}
-		report, ok := a.Scanner.Latest()
-		if !ok {
-			return jsonResource(req.Params.URI, map[string]any{"report": nil, "message": "no usage scan has been run yet"})
-		}
-		return jsonResource(req.Params.URI, report)
-	}
+	return latestJSONResource(
+		"i18n://analysis/usage",
+		func() (any, bool) { return a.Scanner.Latest() },
+		map[string]any{"report": nil, "message": "no usage scan has been run yet"},
+	)
 }
 
 func readDeadKeysResource(a *app.App) mcp.ResourceHandler {
-	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
-		_ = ctx
-		if req.Params.URI != "i18n://analysis/dead-keys" {
-			return nil, mcp.ResourceNotFoundError(req.Params.URI)
-		}
-		report, ok := a.DeadKeys.Latest()
-		if !ok {
-			return jsonResource(req.Params.URI, map[string]any{"report": nil, "message": "no dead-key report has been run yet"})
-		}
-		return jsonResource(req.Params.URI, report)
-	}
+	return latestJSONResource(
+		"i18n://analysis/dead-keys",
+		func() (any, bool) { return a.DeadKeys.Latest() },
+		map[string]any{"report": nil, "message": "no dead-key report has been run yet"},
+	)
 }
 
 func readTranslationPlanResource(a *app.App) mcp.ResourceHandler {
-	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
-		_ = ctx
-		if req.Params.URI != "i18n://translation/plan/latest" {
+	return latestJSONResource(
+		"i18n://translation/plan/latest",
+		func() (any, bool) { return a.Translation.LatestPlan() },
+		map[string]any{"batch": nil, "message": "no translation plan has been created yet"},
+	)
+}
+
+func latestJSONResource(uri string, latest func() (any, bool), empty any) mcp.ResourceHandler {
+	return func(_ context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+		if req.Params.URI != uri {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
-		batch, ok := a.Translation.LatestPlan()
+		value, ok := latest()
 		if !ok {
-			return jsonResource(req.Params.URI, map[string]any{"batch": nil, "message": "no translation plan has been created yet"})
+			value = empty
 		}
-		return jsonResource(req.Params.URI, batch)
+		return jsonResource(req.Params.URI, value)
 	}
 }

@@ -34,9 +34,26 @@ func TestPruneDryRunDoesNotWrite(t *testing.T) {
 
 func TestPruneRejectsUnsafeKeysByDefault(t *testing.T) {
 	a := newDeadKeyFixtureApp(t)
-	out, err := a.DeadKeys.Prune(t.Context(), deadkey.PruneInput{Keys: []deadkey.PruneKey{{Namespace: "common", Key: "kept"}}})
+	out, err := a.DeadKeys.Prune(t.Context(), deadkey.PruneInput{Apply: true, Keys: []deadkey.PruneKey{{Namespace: "common", Key: "kept"}}})
 	require.NoError(t, err)
+	require.False(t, out.DryRun)
 	require.Len(t, out.Rejected, 1)
+	require.Empty(t, out.ChangedFiles)
+	require.Zero(t, out.Pruned)
+}
+
+func TestPruneRejectsMissingNamespaceOrKey(t *testing.T) {
+	a := newDeadKeyFixtureApp(t)
+
+	out, err := a.DeadKeys.Prune(t.Context(), deadkey.PruneInput{Keys: []deadkey.PruneKey{
+		{Namespace: "", Key: "unused"},
+		{Namespace: "common", Key: ""},
+	}})
+
+	require.NoError(t, err)
+	require.Len(t, out.Rejected, 2)
+	require.Equal(t, "namespace and key are required", out.Rejected[0].Reason)
+	require.Equal(t, "namespace and key are required", out.Rejected[1].Reason)
 }
 
 func TestPruneWriteRemovesExactKeys(t *testing.T) {
@@ -44,6 +61,13 @@ func TestPruneWriteRemovesExactKeys(t *testing.T) {
 	out, err := a.DeadKeys.Prune(t.Context(), deadkey.PruneInput{Apply: true, Keys: []deadkey.PruneKey{{Namespace: "common", Key: "unused"}}})
 	require.NoError(t, err)
 	require.False(t, out.DryRun)
+	require.Equal(t, 1, out.Pruned)
+	require.NotEmpty(t, out.ChangedFiles)
+	for _, file := range out.ChangedFiles {
+		require.True(t, file.Written, file.Path)
+		require.True(t, file.Changed, file.Path)
+		require.NotEmpty(t, file.Diff, file.Path)
+	}
 	require.Contains(t, readDeadKeyFile(t, a.ProjectRoot, "messages/en/common.json"), "used")
 	require.NotContains(t, readDeadKeyFile(t, a.ProjectRoot, "messages/en/common.json"), "unused")
 }
