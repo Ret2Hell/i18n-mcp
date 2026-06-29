@@ -72,7 +72,7 @@ func registerTools(s *mcp.Server, a *app.App) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.keys.rename",
 		Title:       "Rename i18n Keys",
-		Description: "Preview renaming or moving exact locale keys across locale JSON files. Dry-run by default; write mode requires apply true.",
+		Description: "Rename or move exact locale keys across locale JSON files and update state. Dry-run by default; writes only with apply true.",
 		Annotations: writeOp("Rename i18n Keys", true, true),
 	}, keysRenameTool(a))
 

@@ -2,7 +2,7 @@ package keyops
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
@@ -22,13 +22,22 @@ func (s *Service) Rename(ctx context.Context, in RenameInput) (RenameOutput, err
 		Conflicts:    slices.Clone(plan.Conflicts),
 		Warnings:     slices.Clone(plan.Warnings),
 	}
-	if len(out.Conflicts) > 0 {
+	if len(out.Conflicts) > 0 || dryRun {
 		return out, nil
 	}
-	if dryRun {
-		return out, nil
+
+	writeReport, err := s.writeEdits(ctx, plan.Edits)
+	out.ChangedFiles = markWritten(out.ChangedFiles, writeReport.Written)
+	if err != nil {
+		out.Warnings = append(out.Warnings, fmt.Sprintf("rename write failed after writing %d file(s): %v", len(writeReport.Written), err))
+		return out, err
 	}
-	return out, errors.New("rename write mode is not enabled until KAN-098")
+	if err := s.applyStateUpdates(ctx, plan.StateUpdates); err != nil {
+		out.Warnings = append(out.Warnings, "locale files were written but state update failed: "+err.Error())
+		return out, err
+	}
+	out.Renamed = len(plan.Edits)
+	return out, nil
 }
 
 func previewEdits(edits []fileEdit) []ChangedFile {
