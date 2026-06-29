@@ -70,6 +70,13 @@ func registerTools(s *mcp.Server, a *app.App) {
 	}, keysPruneTool(a))
 
 	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.keys.rename",
+		Title:       "Rename i18n Keys",
+		Description: "Rename or move exact locale keys across locale JSON files and update state. Dry-run by default; writes only with apply true.",
+		Annotations: writeOp("Rename i18n Keys", true, true),
+	}, keysRenameTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.translation.plan",
 		Title:       "Plan Translations",
 		Description: "Build a deterministic translation batch from missing and stale locale keys. Does not generate translations.",
