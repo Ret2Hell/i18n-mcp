@@ -1,7 +1,9 @@
 package jsonedit
 
 import (
+	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -20,6 +22,8 @@ const (
 	KindString
 	KindRaw
 )
+
+var ErrPathExists = errors.New("json path already exists")
 
 // Value represents an ordered JSON value. Non-string scalar values are kept as raw JSON.
 type Value struct {
@@ -81,6 +85,51 @@ func (d *Document) SetString(path []string, text string) error {
 	return setString(d.Root, path, text)
 }
 
+// String returns the string value at a nested path.
+func (d *Document) String(path []string) (string, bool, error) {
+	value, ok, err := valueAt(d.Root, path)
+	if err != nil || !ok {
+		return "", false, err
+	}
+	if value.Kind != KindString {
+		return "", false, nil
+	}
+	return value.String, true, nil
+}
+
+// Exists reports whether any JSON value exists at a nested path.
+func (d *Document) Exists(path []string) (bool, error) {
+	_, ok, err := valueAt(d.Root, path)
+	return ok, err
+}
+
+// RenameString moves a string value from one nested path to another.
+func (d *Document) RenameString(from []string, to []string, overwrite bool) (bool, error) {
+	if samePath(from, to) {
+		return false, nil
+	}
+	if pathPrefix(from, to) || pathPrefix(to, from) {
+		return false, fmt.Errorf("cannot rename between ancestor and descendant paths")
+	}
+	oldValue, ok, err := d.String(from)
+	if err != nil || !ok {
+		return false, err
+	}
+	if exists, err := d.Exists(to); err != nil {
+		return false, err
+	} else if exists && !overwrite {
+		return false, ErrPathExists
+	}
+	if err := d.SetString(to, oldValue); err != nil {
+		return false, err
+	}
+	deleted, err := d.Delete(from)
+	if err != nil {
+		return false, err
+	}
+	return deleted, nil
+}
+
 // Delete removes a nested value and prunes empty parent objects created by deletion.
 func (d *Document) Delete(path []string) (bool, error) {
 	if len(path) == 0 {
@@ -100,6 +149,28 @@ func (d *Document) Render() ([]byte, error) {
 		b.WriteByte('\n')
 	}
 	return []byte(b.String()), nil
+}
+
+func valueAt(value *Value, path []string) (*Value, bool, error) {
+	if value == nil || len(path) == 0 {
+		return value, value != nil, nil
+	}
+	if value.Kind != KindObject {
+		return nil, false, nil
+	}
+	member := findMember(value, path[0])
+	if member == nil {
+		return nil, false, nil
+	}
+	return valueAt(member.Value, path[1:])
+}
+
+func samePath(a []string, b []string) bool {
+	return slices.Equal(a, b)
+}
+
+func pathPrefix(prefix []string, path []string) bool {
+	return len(prefix) < len(path) && slices.Equal(prefix, path[:len(prefix)])
 }
 
 func setString(value *Value, path []string, text string) error {
