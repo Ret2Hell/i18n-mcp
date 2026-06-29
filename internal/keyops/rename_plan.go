@@ -70,6 +70,10 @@ func (s *Service) PlanRename(ctx context.Context, in RenameInput) (Plan, error) 
 				plan.Conflicts = append(plan.Conflicts, Conflict{Locale: localeCode, Namespace: in.Namespace, FromKey: in.FromKey, ToKey: in.ToKey, FilePath: file.Path, Reason: "destination path already exists"})
 				continue
 			}
+			if errors.Is(err, jsonedit.ErrAncestorDescendantPath) {
+				plan.Conflicts = append(plan.Conflicts, Conflict{Locale: localeCode, Namespace: in.Namespace, FromKey: in.FromKey, ToKey: in.ToKey, FilePath: file.Path, Reason: err.Error()})
+				continue
+			}
 			return Plan{}, err
 		}
 		if changed {

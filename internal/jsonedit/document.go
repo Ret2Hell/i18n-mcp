@@ -23,7 +23,10 @@ const (
 	KindRaw
 )
 
-var ErrPathExists = errors.New("json path already exists")
+var (
+	ErrPathExists             = errors.New("json path already exists")
+	ErrAncestorDescendantPath = errors.New("cannot rename between ancestor and descendant paths")
+)
 
 // Value represents an ordered JSON value. Non-string scalar values are kept as raw JSON.
 type Value struct {
@@ -109,7 +112,7 @@ func (d *Document) RenameString(from []string, to []string, overwrite bool) (boo
 		return false, nil
 	}
 	if pathPrefix(from, to) || pathPrefix(to, from) {
-		return false, fmt.Errorf("cannot rename between ancestor and descendant paths")
+		return false, ErrAncestorDescendantPath
 	}
 	oldValue, ok, err := d.String(from)
 	if err != nil || !ok {
