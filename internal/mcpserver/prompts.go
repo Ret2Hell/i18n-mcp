@@ -51,6 +51,17 @@ func registerPrompts(s *mcp.Server, a *app.App) {
 			{Name: "includeDynamic", Title: "Include Dynamic", Description: "whether maybe_dynamic keys should be included in review"},
 		},
 	}, auditDeadKeysPrompt(a))
+
+	s.AddPrompt(&mcp.Prompt{
+		Name:        "i18n_add_feature_keys",
+		Title:       "Add Feature i18n Keys",
+		Description: "Plan source keys and translations for a new feature while preserving locale conventions.",
+		Arguments: []*mcp.PromptArgument{
+			{Name: "namespace", Title: "Namespace", Description: "namespace for the feature keys", Required: true},
+			{Name: "featureDescription", Title: "Feature Description", Description: "short description of the feature", Required: true},
+			{Name: "locales", Title: "Locales", Description: "comma-separated target locales to consider"},
+		},
+	}, addFeatureKeysPrompt(a))
 }
 
 func promptArg(req *mcp.GetPromptRequest, name string) string {
@@ -95,6 +106,34 @@ Safety rules:
 - Explain any detection ambiguity before choosing sourceLocale or localeFiles patterns.`, projectPath)
 
 		return textPrompt("Bootstrap project configuration and state safely.", text)
+	}
+}
+
+func addFeatureKeysPrompt(_ *app.App) mcp.PromptHandler {
+	return func(_ context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		namespace := promptArg(req, "namespace")
+		featureDescription := promptArg(req, "featureDescription")
+		locales := optionalText(promptArg(req, "locales"), "configured target locales")
+
+		text := fmt.Sprintf(`Plan i18n keys for a new feature.
+
+Namespace: %s
+Feature: %s
+Target locales: %s
+
+Workflow:
+- Read i18n://locales and the namespace resource for existing naming conventions.
+- Propose concise source keys with stable semantic names, not UI copy as keys.
+- Group keys by screen or component when useful.
+- Avoid duplicating existing keys; call i18n.locales.list and inspect existing namespace keys first.
+- If source keys need to be added, describe the exact source locale JSON changes for user review.
+- For target translations, prepare proposals in the same shape used by i18n.translation.validate.
+- Validate target proposals with i18n.translation.validate before any apply.
+- Use i18n.translation.apply dry-run before write mode.
+
+Return a plan with source key additions, target translation proposals, and any open questions about product terminology.`, namespace, featureDescription, locales)
+
+		return textPrompt("Plan new feature keys and translations.", text)
 	}
 }
 
