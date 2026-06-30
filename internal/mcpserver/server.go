@@ -11,12 +11,14 @@ import (
 
 func New(a *app.App) *mcp.Server {
 	opts := &mcp.ServerOptions{
-		Instructions: "Use this server to inspect, validate, translate, and safely update JSON i18n locale files in the configured project. Prefer dry-run tools before write tools.",
+		Instructions: "Use this server to inspect, validate, translate, and safely update JSON i18n locale files in the configured Next.js project. Prefer dry-run tools before write tools.",
 		Logger:       a.Logger,
 		PageSize:     100,
 		Capabilities: &mcp.ServerCapabilities{
-			Logging: &mcp.LoggingCapabilities{},
+			Logging:     &mcp.LoggingCapabilities{},
+			Completions: &mcp.CompletionCapabilities{},
 		},
+		CompletionHandler: complete(a),
 		InitializedHandler: func(_ context.Context, req *mcp.InitializedRequest) {
 			a.Logger.Info("mcp session initialized", slog.String("session", req.Session.ID()))
 		},
