@@ -66,11 +66,10 @@ func completeKeys(ctx context.Context, a *app.App, prefix string, contextArgs ma
 		return nil, err
 	}
 
-	localeCode := contextArgs["locale"]
-	namespace := contextArgs["namespace"]
+	namespace := strings.TrimSpace(contextArgs["namespace"])
 	values := make([]string, 0, len(inv.Units))
 	for _, unit := range inv.Units {
-		if localeCode != "" && unit.Locale != localeCode {
+		if unit.Locale != inv.SourceLocale {
 			continue
 		}
 		if namespace != "" && unit.Namespace != namespace {
