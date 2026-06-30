@@ -32,6 +32,16 @@ func registerPrompts(s *mcp.Server, a *app.App) {
 			{Name: "strictness", Title: "Strictness", Description: "review strictness: normal, strict, or blocking"},
 		},
 	}, reviewTranslationsPrompt(a))
+
+	s.AddPrompt(&mcp.Prompt{
+		Name:        "i18n_audit_dead_keys",
+		Title:       "Audit Dead i18n Keys",
+		Description: "Review dead-key candidates and dynamic hints before creating a prune preview.",
+		Arguments: []*mcp.PromptArgument{
+			{Name: "confidenceThreshold", Title: "Confidence Threshold", Description: "minimum confidence to consider, such as medium or high"},
+			{Name: "includeDynamic", Title: "Include Dynamic", Description: "whether maybe_dynamic keys should be included in review"},
+		},
+	}, auditDeadKeysPrompt(a))
 }
 
 func promptArg(req *mcp.GetPromptRequest, name string) string {
@@ -49,6 +59,34 @@ func textPrompt(description string, text string) (*mcp.GetPromptResult, error) {
 			Content: &mcp.TextContent{Text: strings.TrimSpace(text)},
 		}},
 	}, nil
+}
+
+func auditDeadKeysPrompt(_ *app.App) mcp.PromptHandler {
+	return func(_ context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		threshold := optionalText(promptArg(req, "confidenceThreshold"), "medium")
+		includeDynamic := optionalText(promptArg(req, "includeDynamic"), "false")
+
+		text := fmt.Sprintf(`Audit likely dead i18n keys before pruning.
+
+Inputs:
+- Confidence threshold: %s
+- Include maybe_dynamic keys in review: %s
+- Usage resource: i18n://analysis/usage
+- Dead-key resource: i18n://analysis/dead-keys
+
+Workflow:
+- If no recent usage report exists, call i18n.keys.usage_scan.
+- Call i18n.keys.dead_report with includeUsed false unless the user asks for a full audit.
+- Treat probably_unused keys as candidates, not proof.
+- Treat maybe_dynamic, ignored, and kept keys as unsafe for pruning by default.
+- Inspect dynamic hints before recommending prune.
+- For any prune recommendation, call i18n.keys.prune with dry-run first and exact namespace/key pairs only.
+- Ask the user to review the patch preview before apply true.
+
+Return a concise audit summary with candidate keys grouped by namespace, confidence, reasons, and recommended next tool call.`, threshold, includeDynamic)
+
+		return textPrompt("Audit dead-key candidates before prune.", text)
+	}
 }
 
 func reviewTranslationsPrompt(_ *app.App) mcp.PromptHandler {
