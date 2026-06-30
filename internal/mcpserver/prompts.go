@@ -21,6 +21,17 @@ func registerPrompts(s *mcp.Server, a *app.App) {
 			{Name: "domain", Title: "Domain", Description: "optional product or business domain"},
 		},
 	}, translateBatchPrompt(a))
+
+	s.AddPrompt(&mcp.Prompt{
+		Name:        "i18n_review_translations",
+		Title:       "Review i18n Translations",
+		Description: "Review proposed translations for accuracy, consistency, placeholders, tags, ICU shape, and source drift.",
+		Arguments: []*mcp.PromptArgument{
+			{Name: "locale", Title: "Locale", Description: "target locale to review", Required: true},
+			{Name: "namespace", Title: "Namespace", Description: "namespace to focus on"},
+			{Name: "strictness", Title: "Strictness", Description: "review strictness: normal, strict, or blocking"},
+		},
+	}, reviewTranslationsPrompt(a))
 }
 
 func promptArg(req *mcp.GetPromptRequest, name string) string {
@@ -38,6 +49,37 @@ func textPrompt(description string, text string) (*mcp.GetPromptResult, error) {
 			Content: &mcp.TextContent{Text: strings.TrimSpace(text)},
 		}},
 	}, nil
+}
+
+func reviewTranslationsPrompt(_ *app.App) mcp.PromptHandler {
+	return func(_ context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		localeCode := promptArg(req, "locale")
+		namespace := promptArg(req, "namespace")
+		strictness := optionalText(promptArg(req, "strictness"), "normal")
+
+		text := fmt.Sprintf(`Review proposed i18n translations for locale %s.
+
+Focus:
+- Namespace: %s
+- Strictness: %s
+- Locale inventory: i18n://locales
+- Locale namespace resource pattern: i18n://locales/{locale}/{namespace}
+- Latest translation plan: i18n://translation/plan/latest
+
+Review checklist:
+- Validate every proposal with i18n.translation.validate before apply.
+- Reject source drift unless the user explicitly accepts it.
+- Check placeholder parity, including repeated placeholders.
+- Check HTML-like tag preservation and nesting.
+- Check ICU argument names and plural or select shape.
+- Check that translations are natural for the locale and not merely copied from source.
+- Check glossary and style-guide guidance from the latest batch when present.
+- Report risky items separately from stylistic suggestions.
+
+If the proposals pass review, return the same JSON proposal shape expected by i18n.translation.validate. Do not write files.`, localeCode, optionalText(namespace, "all namespaces"), strictness)
+
+		return textPrompt("Review proposed translations before validation and apply.", text)
+	}
 }
 
 func translateBatchPrompt(a *app.App) mcp.PromptHandler {
