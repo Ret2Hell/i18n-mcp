@@ -11,6 +11,15 @@ import (
 
 func registerPrompts(s *mcp.Server, a *app.App) {
 	s.AddPrompt(&mcp.Prompt{
+		Name:        "i18n_project_bootstrap",
+		Title:       "Bootstrap i18n MCP Project",
+		Description: "Guide project detection, config creation, and state bootstrap for an existing Next.js i18n project.",
+		Arguments: []*mcp.PromptArgument{
+			{Name: "projectPath", Title: "Project Path", Description: "project root path or current workspace root"},
+		},
+	}, projectBootstrapPrompt(a))
+
+	s.AddPrompt(&mcp.Prompt{
 		Name:        "i18n_translate_batch",
 		Title:       "Translate i18n Batch",
 		Description: "Translate a prepared i18n batch while preserving placeholders, tags, ICU arguments, and glossary terms.",
@@ -59,6 +68,34 @@ func textPrompt(description string, text string) (*mcp.GetPromptResult, error) {
 			Content: &mcp.TextContent{Text: strings.TrimSpace(text)},
 		}},
 	}, nil
+}
+
+func projectBootstrapPrompt(a *app.App) mcp.PromptHandler {
+	return func(_ context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		projectPath := optionalText(promptArg(req, "projectPath"), a.ProjectRoot)
+
+		text := fmt.Sprintf(`Bootstrap this project for i18n MCP management.
+
+Project path: %s
+
+Workflow:
+- Call i18n.project.detect and inspect locale layout, source locale candidates, target locale candidates, and framework hints.
+- Call i18n.config.get to see resolved defaults and whether .i18n-mcp.json exists.
+- If config is missing or wrong, call i18n.config.write with dryRun true first.
+- Ask the user to review the config patch before applying it.
+- After config is correct, call i18n.config.validate.
+- Call i18n.locales.list to verify files, namespaces, and key counts.
+- Call i18n.state.rebuild with dry-run first to preview sidecar state entries.
+- Apply state rebuild only after the user agrees.
+- Finish by calling i18n.keys.diff and summarizing missing, stale, invalid, unknown, and extra keys.
+
+Safety rules:
+- Do not write config or state without explicit user confirmation.
+- Do not modify locale JSON files during bootstrap.
+- Explain any detection ambiguity before choosing sourceLocale or localeFiles patterns.`, projectPath)
+
+		return textPrompt("Bootstrap project configuration and state safely.", text)
+	}
 }
 
 func auditDeadKeysPrompt(_ *app.App) mcp.PromptHandler {
