@@ -42,6 +42,35 @@ func TestPruneRejectsUnsafeKeysByDefault(t *testing.T) {
 	require.Zero(t, out.Pruned)
 }
 
+func TestBuildPruneEditsCanSelectUsedKeysWhenUnsafeAllowed(t *testing.T) {
+	a := newDeadKeyFixtureApp(t)
+
+	edits, rejected, err := a.DeadKeys.BuildPruneEdits(t.Context(), deadkey.PruneInput{
+		AllowUnsafe: true,
+		Keys:        []deadkey.PruneKey{{Namespace: "common", Key: "used"}},
+	})
+
+	require.NoError(t, err)
+	require.Empty(t, rejected)
+	require.NotEmpty(t, edits)
+}
+
+func TestBuildPruneEditsUsesCachedUsageReport(t *testing.T) {
+	a := newDeadKeyFixtureApp(t)
+	_, err := a.DeadKeys.Report(t.Context(), deadkey.ReportInput{RefreshUsage: true, IncludeUsed: true})
+	require.NoError(t, err)
+	require.NoError(t, os.Remove(filepath.Join(a.ProjectRoot, "app/page.tsx")))
+
+	edits, rejected, err := a.DeadKeys.BuildPruneEdits(t.Context(), deadkey.PruneInput{
+		Keys: []deadkey.PruneKey{{Namespace: "common", Key: "used"}},
+	})
+
+	require.NoError(t, err)
+	require.Empty(t, edits)
+	require.Len(t, rejected, 1)
+	require.Equal(t, deadkey.StatusUsed, rejected[0].Status)
+}
+
 func TestPruneRejectsMissingNamespaceOrKey(t *testing.T) {
 	a := newDeadKeyFixtureApp(t)
 

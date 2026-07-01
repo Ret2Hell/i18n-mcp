@@ -59,6 +59,25 @@ func TestAtomicWriteFileRejectsTraversal(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestAtomicWriteFileReportsParentCreationFailure(t *testing.T) {
+	root := t.TempDir()
+	guard, err := NewGuard(root)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(root, "messages"), []byte("not a directory"), 0o600))
+
+	err = AtomicWriteFile(guard, "messages/en.json", []byte("new"), 0o600)
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "create parent directory")
+}
+
+func TestRejectSymlinkAncestorsAllowsRootAndMissingDescendant(t *testing.T) {
+	root := t.TempDir()
+
+	require.NoError(t, rejectSymlinkAncestors(root, root))
+	require.NoError(t, rejectSymlinkAncestors(root, filepath.Join(root, "missing", "child")))
+}
+
 func TestRejectSymlinkAncestorsRejectsRootParent(t *testing.T) {
 	root := t.TempDir()
 
