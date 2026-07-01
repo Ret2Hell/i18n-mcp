@@ -13,6 +13,7 @@ type File struct {
 	DynamicKeyHints      []string          `json:"dynamicKeyHints,omitzero" jsonschema:"patterns that may be used dynamically"`
 	Format               FormatConfig      `json:"format" jsonschema:"locale JSON formatting preferences"`
 	Translation          TranslationConfig `json:"translation" jsonschema:"translation mode and optional context files"`
+	CI                   CIConfig          `json:"ci" jsonschema:"CI audit failure policy"`
 }
 
 type FormatConfig struct {
@@ -26,6 +27,13 @@ type TranslationConfig struct {
 	Provider       string `json:"provider,omitzero" jsonschema:"optional provider name for provider mode"`
 	StyleGuidePath string `json:"styleGuidePath,omitzero" jsonschema:"optional project-relative style guide path"`
 	GlossaryPath   string `json:"glossaryPath,omitzero" jsonschema:"optional project-relative glossary path"`
+}
+
+type CIConfig struct {
+	FailOnMissing  bool `json:"failOnMissing" jsonschema:"fail audit when missing translations are detected"`
+	FailOnStale    bool `json:"failOnStale" jsonschema:"fail audit when stale translations are detected"`
+	FailOnInvalid  bool `json:"failOnInvalid" jsonschema:"fail audit when invalid translations are detected"`
+	FailOnDeadKeys bool `json:"failOnDeadKeys" jsonschema:"fail audit when probably unused keys are detected"`
 }
 
 type Resolved struct {
