@@ -52,6 +52,16 @@ func registerPrompts(s *mcp.Server, a *app.App) {
 		},
 	}, auditDeadKeysPrompt(a))
 
+	s.AddPrompt(new(mcp.Prompt{
+		Name:        "i18n_ci_report_summary",
+		Title:       "Summarize i18n CI Report",
+		Description: "Summarize an i18n audit report for CI, pull requests, or release review.",
+		Arguments: []*mcp.PromptArgument{
+			{Name: "reportUri", Title: "Report URI", Description: "report resource URI, defaults to i18n://reports/latest"},
+			{Name: "audience", Title: "Audience", Description: "summary audience: developer, reviewer, manager, or ci"},
+		},
+	}), ciReportSummaryPrompt(a))
+
 	s.AddPrompt(&mcp.Prompt{
 		Name:        "i18n_add_feature_keys",
 		Title:       "Add Feature i18n Keys",
@@ -134,6 +144,29 @@ Workflow:
 Return a plan with source key additions, target translation proposals, and any open questions about product terminology.`, namespace, featureDescription, locales)
 
 		return textPrompt("Plan new feature keys and translations.", text)
+	}
+}
+
+func ciReportSummaryPrompt(_ *app.App) mcp.PromptHandler {
+	return func(_ context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+		reportURI := optionalText(promptArg(req, "reportUri"), "i18n://reports/latest")
+		audience := optionalText(promptArg(req, "audience"), "developer")
+
+		text := fmt.Sprintf(`Summarize the i18n audit report for audience: %s.
+
+Report resource: %s
+
+Summary requirements:
+- Lead with blocking issues that should fail CI.
+- Include counts for missing, stale, invalid, extra, and probably unused keys.
+- Separate warnings from errors.
+- Mention affected locales and namespaces.
+- Include exact tool or command suggestions for remediation.
+- Keep the summary concise enough for a pull request comment.
+
+If the report resource is missing, call i18n.report.generate or run the audit command first.`, audience, reportURI)
+
+		return textPrompt("Summarize an i18n audit report.", text)
 	}
 }
 
