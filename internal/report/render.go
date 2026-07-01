@@ -2,17 +2,8 @@ package report
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 )
-
-func RenderJSON(report Report) (string, error) {
-	data, err := json.MarshalIndent(report, "", "  ")
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
-}
 
 func RenderMarkdown(report Report) (string, error) {
 	var buf bytes.Buffer
