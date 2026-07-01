@@ -103,4 +103,11 @@ func registerTools(s *mcp.Server, a *app.App) {
 		Description: "Rebuild .i18n-mcp/state.json from existing locale files. Dry-run by default; writes only with apply true.",
 		Annotations: writeOp("Rebuild i18n State", false, true),
 	}, stateRebuildTool(a))
+
+	mcp.AddTool(s, &mcp.Tool{
+		Name:        "i18n.report.generate",
+		Title:       "Generate i18n Audit Report",
+		Description: "Generate a deterministic JSON or Markdown i18n audit report from config, inventory, diff, usage, and dead-key analysis.",
+		Annotations: readOnly("Generate i18n Audit Report"),
+	}, reportGenerateTool(a))
 }
