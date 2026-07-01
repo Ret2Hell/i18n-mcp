@@ -66,6 +66,15 @@ func registerResources(s *mcp.Server, a *app.App) {
 		MIMEType:    "application/json",
 		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.9},
 	}, readTranslationPlanResource(a))
+
+	s.AddResource(&mcp.Resource{
+		URI:         "i18n://reports/latest",
+		Name:        "reports_latest",
+		Title:       "Latest i18n Audit Report",
+		Description: "Latest generated i18n audit report with rendered text and structured data.",
+		MIMEType:    "application/json",
+		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.8},
+	}, readLatestReportResource(a))
 }
 
 func readLocalesResource(a *app.App) mcp.ResourceHandler {
@@ -175,6 +184,14 @@ func readTranslationPlanResource(a *app.App) mcp.ResourceHandler {
 		"i18n://translation/plan/latest",
 		func() (any, bool) { return a.Translation.LatestPlan() },
 		map[string]any{"batch": nil, "message": "no translation plan has been created yet"},
+	)
+}
+
+func readLatestReportResource(a *app.App) mcp.ResourceHandler {
+	return latestJSONResource(
+		"i18n://reports/latest",
+		func() (any, bool) { return a.Reports.Latest() },
+		map[string]any{"report": nil, "message": "no report has been generated yet"},
 	)
 }
 

@@ -16,5 +16,11 @@ func Defaults() File {
 			TrailingNewline: true,
 		},
 		Translation: TranslationConfig{Mode: "agent"},
+		CI: CIConfig{
+			FailOnMissing:  true,
+			FailOnStale:    false,
+			FailOnInvalid:  true,
+			FailOnDeadKeys: false,
+		},
 	}
 }

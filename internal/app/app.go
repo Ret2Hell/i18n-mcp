@@ -13,6 +13,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/keyops"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/project"
+	"github.com/Ret2Hell/i18n-mcp/internal/report"
 	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
 	"github.com/Ret2Hell/i18n-mcp/internal/translate"
@@ -34,6 +35,7 @@ type App struct {
 	Translation *translate.Service
 	Scanner     *scanner.Service
 	DeadKeys    *deadkey.Service
+	Reports     *report.Service
 	KeyOps      *keyops.Service
 }
 
@@ -61,6 +63,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	translationService := translate.NewService(configService, guard, localeService, stateService, diffService, validatorService)
 	scannerService := scanner.NewService(guard, configService)
 	deadKeyService := deadkey.NewService(configService, guard, localeService, scannerService)
+	reportService := report.NewService(guard.Root(), configService, localeService, diffService, scannerService, deadKeyService)
 	keyOpsService := keyops.NewService(configService, guard, localeService, stateService)
 
 	return &App{
@@ -77,6 +80,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		Translation: translationService,
 		Scanner:     scannerService,
 		DeadKeys:    deadKeyService,
+		Reports:     reportService,
 		KeyOps:      keyOpsService,
 	}, nil
 }

@@ -1,0 +1,61 @@
+# i18n Audit Report
+
+Generated: 2026-01-02T03:04:05Z
+
+## Summary
+
+| Metric | Count |
+| --- | ---: |
+| Locales | 2 |
+| Namespaces | 1 |
+| Source keys | 2 |
+| Missing | 1 |
+| Stale | 0 |
+| Invalid | 0 |
+| Extra | 0 |
+| Probably unused | 1 |
+| Maybe dynamic | 0 |
+| Warnings | 1 |
+
+## Locale Inventory
+
+Source locale: `en`
+
+Target locales: `fr`
+
+| Locale | Keys |
+| --- | ---: |
+| `en` | 2 |
+| `fr` | 1 |
+
+## Missing Keys
+
+| Locale | Namespace | Key | Detail |
+| --- | --- | --- | --- |
+| `fr` | `common` | `bye` | Bye |
+
+## Stale Keys
+
+None.
+
+## Invalid Translations
+
+None.
+
+## Extra Keys
+
+None.
+
+## Dead-Key Candidates
+
+| Namespace | Key | Status | Confidence | Reasons |
+| --- | --- | --- | --- | --- |
+| `common` | `unused` | `probably_unused` | `high` | not referenced |
+
+## Changed Files
+
+No file changes are produced by report generation.
+
+## Warnings
+
+- fixture warning

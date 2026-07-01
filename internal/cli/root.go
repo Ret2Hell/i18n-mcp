@@ -54,6 +54,7 @@ func newRootCommand(opts *RootOptions) *cobra.Command {
 	mustBind(v.BindPFlag("log-level", cmd.PersistentFlags().Lookup("log-level")))
 	mustBind(v.BindPFlag("output", cmd.PersistentFlags().Lookup("output")))
 
+	cmd.AddCommand(newAuditCommand(opts))
 	cmd.AddCommand(newServeCommand(opts))
 	cmd.AddCommand(newVersionCommand(opts))
 	cmd.AddCommand(newSchemaCommand(opts))
@@ -92,6 +93,9 @@ func mustBind(err error) {
 func ExitCode(err error) int {
 	if err == nil {
 		return 0
+	}
+	if IsAuditError(err) {
+		return 1
 	}
 	return 1
 }
