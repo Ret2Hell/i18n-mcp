@@ -1,0 +1,123 @@
+{
+  "generatedAt": "2026-01-02T03:04:05Z",
+  "projectRoot": "/repo",
+  "config": {
+    "sourceLocale": "",
+    "targetLocales": null,
+    "localeFiles": null,
+    "format": {
+      "sortKeys": false,
+      "indent": 0,
+      "trailingNewline": false
+    },
+    "translation": {
+      "mode": ""
+    },
+    "ci": {
+      "failOnMissing": false,
+      "failOnStale": false,
+      "failOnInvalid": false,
+      "failOnDeadKeys": false
+    },
+    "projectRoot": "",
+    "exists": false
+  },
+  "inventory": {
+    "sourceLocale": "en",
+    "targetLocales": [
+      "fr"
+    ],
+    "locales": [
+      "en",
+      "fr"
+    ],
+    "namespaces": [
+      "common"
+    ],
+    "files": null,
+    "countsByLocale": {
+      "en": 2,
+      "fr": 1
+    },
+    "countsByNamespace": {
+      "common": 3
+    }
+  },
+  "diff": {
+    "sourceLocale": "en",
+    "targetLocales": [
+      "fr"
+    ],
+    "summary": {
+      "total": 2,
+      "current": 1,
+      "missing": 1,
+      "stale": 0,
+      "extra": 0,
+      "invalid": 0,
+      "unknown": 0
+    },
+    "items": [
+      {
+        "locale": "fr",
+        "namespace": "common",
+        "key": "bye",
+        "status": "missing",
+        "sourceValue": "Bye"
+      }
+    ]
+  },
+  "usage": {
+    "filesScanned": 0,
+    "files": null,
+    "usages": null,
+    "generatedAt": "2026-01-02T03:04:05Z"
+  },
+  "deadKeys": {
+    "sourceLocale": "en",
+    "items": [
+      {
+        "namespace": "common",
+        "key": "unused",
+        "fullKey": "common:unused",
+        "status": "probably_unused",
+        "confidence": "high",
+        "reasons": [
+          "not referenced"
+        ]
+      }
+    ],
+    "summary": {
+      "total": 1,
+      "used": 0,
+      "probablyUnused": 1,
+      "maybeDynamic": 0,
+      "ignored": 0,
+      "kept": 0
+    },
+    "usage": {
+      "filesScanned": 0,
+      "files": null,
+      "usages": null,
+      "generatedAt": "0001-01-01T00:00:00Z"
+    },
+    "generatedAt": "2026-01-02T03:04:05Z"
+  },
+  "summary": {
+    "locales": 2,
+    "namespaces": 1,
+    "sourceKeys": 2,
+    "targetKeys": 1,
+    "missing": 1,
+    "stale": 0,
+    "invalid": 0,
+    "extra": 0,
+    "unknown": 0,
+    "probablyUnused": 1,
+    "maybeDynamic": 0,
+    "warnings": 1
+  },
+  "warnings": [
+    "fixture warning"
+  ]
+}
