@@ -79,7 +79,19 @@ func (s *Service) Write(ctx context.Context, in WriteInput) (WriteOutput, error)
 	if dryRun {
 		return out, nil
 	}
-	return out, errors.New("config write apply mode is not enabled until KAN-121")
+	if !out.ChangedFile.Changed {
+		return out, nil
+	}
+	perm := os.FileMode(0o600)
+	if resolvedInfo, err := os.Stat(resolvedPath); err == nil {
+		perm = resolvedInfo.Mode().Perm()
+	}
+	if err := fsutil.AtomicWriteFile(s.guard, path, after, perm); err != nil {
+		return out, err
+	}
+	out.Applied = true
+	out.ChangedFile.Written = true
+	return out, nil
 }
 
 func (s *Service) writePath() string {
