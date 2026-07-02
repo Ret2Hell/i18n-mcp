@@ -34,6 +34,13 @@ func registerTools(s *mcp.Server, a *app.App) {
 		Annotations: readOnly("Validate i18n MCP Config"),
 	}, configValidateTool(a))
 
+	mcp.AddTool(s, new(mcp.Tool{
+		Name:        "i18n.config.write",
+		Title:       "Write i18n MCP Config",
+		Description: "Preview or write .i18n-mcp.json from explicit config input. Dry-run by default; writes only with apply true.",
+		Annotations: writeOp("Write i18n MCP Config", false, true),
+	}), configWriteTool(a))
+
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.locales.list",
 		Title:       "List i18n Locales",

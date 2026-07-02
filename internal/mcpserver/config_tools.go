@@ -31,6 +31,10 @@ type ConfigValidateOutput struct {
 	Validation config.ValidationResult `json:"validation" jsonschema:"validation result with errors and warnings"`
 }
 
+type ConfigWriteOutput struct {
+	Result config.WriteOutput `json:"result" jsonschema:"config write preview or apply result"`
+}
+
 func configValidateTool(a *app.App) func(context.Context, *mcp.CallToolRequest, ConfigValidateInput) (*mcp.CallToolResult, ConfigValidateOutput, error) {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, _ ConfigValidateInput) (*mcp.CallToolResult, ConfigValidateOutput, error) {
 		cfg, err := a.Config.Resolve(ctx)
@@ -39,5 +43,19 @@ func configValidateTool(a *app.App) func(context.Context, *mcp.CallToolRequest, 
 		}
 		validation := a.Config.Validate(ctx, cfg)
 		return nil, ConfigValidateOutput{Config: cfg, Validation: validation}, nil
+	}
+}
+
+func configWriteTool(a *app.App) func(context.Context, *mcp.CallToolRequest, config.WriteInput) (*mcp.CallToolResult, ConfigWriteOutput, error) {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, in config.WriteInput) (*mcp.CallToolResult, ConfigWriteOutput, error) {
+		result, err := a.Config.Write(ctx, in)
+		if err != nil {
+			return nil, ConfigWriteOutput{}, err
+		}
+		out := ConfigWriteOutput{Result: result}
+		if !result.Validation.Valid {
+			return new(mcp.CallToolResult{IsError: true}), out, nil
+		}
+		return nil, out, nil
 	}
 }
