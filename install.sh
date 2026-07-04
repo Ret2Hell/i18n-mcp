@@ -7,6 +7,7 @@ set -euo pipefail
 #   curl -fsSL https://raw.githubusercontent.com/Ret2Hell/i18n-mcp/main/install.sh | bash
 #   curl -fsSL https://raw.githubusercontent.com/Ret2Hell/i18n-mcp/main/install.sh | bash -s -- --dir /path/to/bin
 #   curl -fsSL https://raw.githubusercontent.com/Ret2Hell/i18n-mcp/main/install.sh | bash -s -- --version v0.9.0
+#   curl -fsSL https://raw.githubusercontent.com/Ret2Hell/i18n-mcp/main/install.sh | bash -s -- --skip-config
 #
 # Environment:
 #   I18N_MCP_VERSION       Version to install, such as v0.9.0. Default: latest.
@@ -21,11 +22,13 @@ BINARY="i18n-mcp"
 INSTALL_DIR="${I18N_MCP_INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${I18N_MCP_VERSION:-latest}"
 DOWNLOAD_URL="${I18N_MCP_DOWNLOAD_URL:-}"
+SKIP_CONFIG=false
 
 usage() {
-    echo "Usage: install.sh [--dir PATH] [--version VERSION]"
+    echo "Usage: install.sh [--dir PATH] [--version VERSION] [--skip-config]"
     echo "  --dir PATH         Install directory (default: ~/.local/bin)"
     echo "  --version VERSION  Version to install, such as v0.9.0 (default: latest)"
+    echo "  --skip-config      Install the binary only; do not configure agents"
     echo "  --help, -h         Show this help"
 }
 
@@ -47,6 +50,10 @@ while [ "$#" -gt 0 ]; do
             ;;
         --version=*)
             VERSION="${1#--version=}"
+            shift
+            ;;
+        --skip-config)
+            SKIP_CONFIG=true
             shift
             ;;
         --help|-h)
@@ -86,6 +93,193 @@ download_file() {
     else
         wget -q --show-progress -O "$2" "$1"
     fi
+}
+
+configure_json_mcp_servers() {
+    local label="$1"
+    local config_file="$2"
+    local binary_path="$3"
+    local config_dir
+    config_dir="$(dirname "$config_file")"
+    mkdir -p "$config_dir"
+
+    if command -v python3 >/dev/null 2>&1; then
+        python3 - "$config_file" "$binary_path" <<'PY_JSON_MCP'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+binary = sys.argv[2]
+
+if path.exists():
+    try:
+        data = json.loads(path.read_text() or "{}")
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"{path} is not valid JSON: {exc}")
+else:
+    data = {}
+
+if not isinstance(data, dict):
+    raise SystemExit(f"{path} root must be a JSON object")
+
+servers = data.setdefault("mcpServers", {})
+if not isinstance(servers, dict):
+    raise SystemExit(f"{path} field 'mcpServers' must be a JSON object")
+
+servers["i18n-mcp"] = {
+    "command": binary,
+    "args": ["serve", "stdio", "--project", "."],
+}
+path.write_text(json.dumps(data, indent=2) + "\n")
+PY_JSON_MCP
+        echo "Configured $label: $config_file"
+        return 0
+    fi
+
+    if [ ! -f "$config_file" ]; then
+        cat > "$config_file" <<EOF_JSON_MCP
+{
+  "mcpServers": {
+    "i18n-mcp": {
+      "command": "$binary_path",
+      "args": ["serve", "stdio", "--project", "."]
+    }
+  }
+}
+EOF_JSON_MCP
+        echo "Configured $label: $config_file"
+        return 0
+    fi
+
+    echo "$label config exists but python3 is unavailable, so it was not modified."
+    echo "Add this MCP server to $config_file:"
+    echo "  i18n-mcp -> $binary_path serve stdio --project ."
+    return 1
+}
+
+configure_opencode() {
+    local binary_path="$1"
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/opencode"
+    local config_file="$config_dir/opencode.json"
+    mkdir -p "$config_dir"
+
+    if command -v python3 >/dev/null 2>&1; then
+        python3 - "$config_file" "$binary_path" <<'PY_OPENCODE'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+binary = sys.argv[2]
+
+if path.exists():
+    try:
+        data = json.loads(path.read_text() or "{}")
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"OpenCode config is not valid JSON: {exc}")
+else:
+    data = {}
+
+if not isinstance(data, dict):
+    raise SystemExit("OpenCode config root must be a JSON object")
+
+data.setdefault("$schema", "https://opencode.ai/config.json")
+mcp = data.setdefault("mcp", {})
+if not isinstance(mcp, dict):
+    raise SystemExit("OpenCode config field 'mcp' must be a JSON object")
+
+servers = mcp.setdefault("servers", {})
+if not isinstance(servers, dict):
+    raise SystemExit("OpenCode config field 'mcp.servers' must be a JSON object")
+
+servers["i18n-mcp"] = {
+    "type": "local",
+    "command": [binary, "serve", "stdio", "--project", "."],
+}
+path.write_text(json.dumps(data, indent=2) + "\n")
+PY_OPENCODE
+        echo "Configured OpenCode: $config_file"
+        return 0
+    fi
+
+    if [ ! -f "$config_file" ]; then
+        cat > "$config_file" <<EOF_OPENCODE
+{
+  "\$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "i18n-mcp": {
+        "type": "local",
+        "command": ["$binary_path", "serve", "stdio", "--project", "."]
+      }
+    }
+  }
+}
+EOF_OPENCODE
+        echo "Configured OpenCode: $config_file"
+        return 0
+    fi
+
+    echo "OpenCode config exists but python3 is unavailable, so it was not modified."
+    echo "Add this MCP server to $config_file:"
+    echo "  i18n-mcp -> $binary_path serve stdio --project ."
+    return 1
+}
+
+configure_codex() {
+    local binary_path="$1"
+    local config_dir="$HOME/.codex"
+    local config_file="$config_dir/config.toml"
+    mkdir -p "$config_dir"
+
+    if command -v python3 >/dev/null 2>&1; then
+        python3 - "$config_file" "$binary_path" <<'PY_CODEX'
+import json
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1])
+binary = sys.argv[2]
+content = path.read_text() if path.exists() else ""
+section = (
+    "[mcp_servers.i18n-mcp]\n"
+    f"command = {json.dumps(binary)}\n"
+    "args = [\"serve\", \"stdio\", \"--project\", \".\"]\n"
+)
+pattern = r"(?ms)^\[mcp_servers\.i18n-mcp\]\n.*?(?=^\[|\Z)"
+content = re.sub(pattern, "", content).rstrip()
+if content:
+    content += "\n\n"
+content += section
+path.write_text(content)
+PY_CODEX
+        echo "Configured Codex: $config_file"
+        return 0
+    fi
+
+    cat >> "$config_file" <<EOF_CODEX
+
+[mcp_servers.i18n-mcp]
+command = "$binary_path"
+args = ["serve", "stdio", "--project", "."]
+EOF_CODEX
+    echo "Configured Codex: $config_file"
+}
+
+configure_claude_code() {
+    local binary_path="$1"
+    local claude_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+    configure_json_mcp_servers "Claude Code" "$claude_dir/.mcp.json" "$binary_path" || return 1
+    configure_json_mcp_servers "Claude Code" "$HOME/.claude.json" "$binary_path" || true
+}
+
+configure_agents() {
+    local binary_path="$1"
+    configure_opencode "$binary_path" || true
+    configure_codex "$binary_path" || true
+    configure_claude_code "$binary_path" || true
 }
 
 detect_os() {
@@ -287,6 +481,13 @@ VERSION_OUT="$("$DEST" --version 2>&1)" || {
 }
 printf 'Installed: %s\n' "$VERSION_OUT"
 
+if [ "$SKIP_CONFIG" = true ]; then
+    printf '\nSkipping coding agent configuration (--skip-config).\n'
+else
+    printf '\nConfiguring coding agents...\n'
+    configure_agents "$DEST" || true
+fi
+
 if ! printf '%s' "$PATH" | tr ':' '\n' | grep -qx "$INSTALL_DIR"; then
     printf '\nNOTE: %s is not in your PATH.\n' "$INSTALL_DIR"
     printf 'Add it to your shell config, for example:\n\n'
@@ -298,13 +499,16 @@ cat <<EOF_DONE
 Done.
 
 Run the stdio server:
-  $DEST serve stdio --project /path/to/next-app
+  $DEST serve stdio --project /path/to/frontend-app
+
+Coding agents:
+  Restart or open OpenCode, Codex, or Claude Code in your frontend project. The i18n-mcp server is configured with --project .
 
 MCP client command:
   $DEST
 
 MCP client args:
-  ["serve", "stdio", "--project", "/absolute/path/to/next-app"]
+  ["serve", "stdio", "--project", "/absolute/path/to/frontend-app"]
 EOF_DONE
 
 } # end main()

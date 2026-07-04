@@ -34,13 +34,15 @@
 curl -fsSL https://raw.githubusercontent.com/Ret2Hell/i18n-mcp/main/install.sh | bash
 ```
 
-Run the stdio server against a frontend project:
+Open OpenCode, Codex, or Claude Code from your frontend project directory and start working. The installer configures supported agents automatically.
+
+Run the stdio server manually if needed:
 
 ```bash
 i18n-mcp serve stdio --project /path/to/frontend-app
 ```
 
-Add it to your MCP client, restart the client, then ask your agent to detect the i18n project. The first MCP tool call is:
+Ask your agent to detect the i18n project. The first MCP tool call is:
 
 ```json
 {
@@ -48,6 +50,24 @@ Add it to your MCP client, restart the client, then ask your agent to detect the
   "arguments": {}
 }
 ```
+
+## Coding Agent Support
+
+The one-line installer configures these agents by default:
+
+| Agent | Config written | Server project root |
+| --- | --- | --- |
+| OpenCode | `~/.config/opencode/opencode.json` | `.` from the OpenCode workspace |
+| Codex CLI | `~/.codex/config.toml` | `.` from the Codex workspace |
+| Claude Code | `~/.claude/.mcp.json` and `~/.claude.json` | `.` from the Claude workspace |
+
+After install, restart or open your coding agent from the frontend project directory. The MCP server is registered as `i18n-mcp` and starts as:
+
+```bash
+i18n-mcp serve stdio --project .
+```
+
+Use `--skip-config` if you want to install only the binary and configure agents yourself.
 
 ## Docker
 
@@ -70,6 +90,12 @@ docker run --rm -i -v "$PWD:/workspace" -w /workspace ret2hell/i18n-mcp:latest s
 ```
 
 ## Installation
+
+### One-Line Installer
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Ret2Hell/i18n-mcp/main/install.sh | bash
+```
 
 ### Go Run Without Installing
 
@@ -124,7 +150,7 @@ Do not remove `.i18n-mcp.json` unless you also want to remove project configurat
 
 ## MCP Client Configuration
 
-Add the server to any MCP client that supports stdio servers.
+The installer configures OpenCode, Codex CLI, and Claude Code automatically. For other MCP clients, add the server as a stdio server.
 
 ```json
 {
