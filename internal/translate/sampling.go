@@ -38,10 +38,10 @@ type SamplingRequest struct {
 
 // SamplingResponse contains validated sampled translation proposals.
 type SamplingResponse struct {
-	Proposals []ValidatedTranslation `json:"proposals"`
-	Rejected  []RejectedProposal     `json:"rejected,omitzero"`
-	Model     string                 `json:"model,omitempty"`
-	Warnings  []string               `json:"warnings,omitzero"`
+	Proposals []Proposal         `json:"proposals"`
+	Rejected  []RejectedProposal `json:"rejected,omitzero"`
+	Model     string             `json:"model,omitempty"`
+	Warnings  []string           `json:"warnings,omitzero"`
 }
 
 // Generate samples translation proposals from the MCP client and validates them.
@@ -88,7 +88,11 @@ func (s *SamplingService) Generate(ctx context.Context, session *mcp.ServerSessi
 	if err != nil {
 		return nil, err
 	}
-	return &SamplingResponse{Proposals: validated.Accepted, Rejected: validated.Rejected, Model: res.Model}, nil
+	acceptedProposals := make([]Proposal, 0, len(validated.Accepted))
+	for _, accepted := range validated.Accepted {
+		acceptedProposals = append(acceptedProposals, accepted.ProposedTranslation)
+	}
+	return new(SamplingResponse{Proposals: acceptedProposals, Rejected: validated.Rejected, Model: res.Model}), nil
 }
 
 func buildSamplingPrompt(req SamplingRequest) (string, error) {

@@ -48,6 +48,7 @@ func planItems(report diff.Report, in PlanInput) []Item {
 	statuses := planStatusSet(in.Statuses)
 	locales := stringSet(in.Locales)
 	namespaces := stringSet(in.Namespaces)
+	keys := stringSet(in.Keys)
 
 	var items []Item
 	for _, record := range report.Items {
@@ -58,6 +59,9 @@ func planItems(report diff.Report, in PlanInput) []Item {
 			continue
 		}
 		if len(namespaces) > 0 && !namespaces[record.Namespace] {
+			continue
+		}
+		if len(keys) > 0 && !keys[record.Key] {
 			continue
 		}
 		items = append(items, Item{

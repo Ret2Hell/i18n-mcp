@@ -34,6 +34,7 @@ type App struct {
 	Validator     *validate.Service
 	Diff          *diff.Service
 	Translation   *translate.Service
+	Sampling      *translate.SamplingService
 	Scanner       *scanner.Service
 	DeadKeys      *deadkey.Service
 	Reports       *report.Service
@@ -63,6 +64,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	validatorService := validate.NewService()
 	diffService := diff.NewService(localeService, stateService, validatorService)
 	translationService := translate.NewService(configService, guard, localeService, stateService, diffService, validatorService)
+	samplingService := new(translate.SamplingService{Validator: translationService})
 	scannerService := scanner.NewService(guard, configService)
 	deadKeyService := deadkey.NewService(configService, guard, localeService, scannerService)
 	reportService := report.NewService(guard.Root(), configService, localeService, diffService, scannerService, deadKeyService)
@@ -80,6 +82,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		Validator:   validatorService,
 		Diff:        diffService,
 		Translation: translationService,
+		Sampling:    samplingService,
 		Scanner:     scannerService,
 		DeadKeys:    deadKeyService,
 		Reports:     reportService,
