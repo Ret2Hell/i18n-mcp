@@ -1,12 +1,14 @@
 package deadkey_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/deadkey"
+	"github.com/Ret2Hell/i18n-mcp/internal/resources"
 	"github.com/stretchr/testify/require"
 )
 
@@ -83,6 +85,23 @@ func TestPruneRejectsMissingNamespaceOrKey(t *testing.T) {
 	require.Len(t, out.Rejected, 2)
 	require.Equal(t, "namespace and key are required", out.Rejected[0].Reason)
 	require.Equal(t, "namespace and key are required", out.Rejected[1].Reason)
+}
+
+func TestPruneNotifiesLocaleUsageDeadKeyAndDiffUpdates(t *testing.T) {
+	a := newDeadKeyFixtureApp(t)
+	notifier := &recordingNotifier{}
+	a.DeadKeys.Notifier = notifier
+
+	_, err := a.DeadKeys.Prune(t.Context(), deadkey.PruneInput{Apply: true, Keys: []deadkey.PruneKey{{Namespace: "common", Key: "unused"}}})
+
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{
+		resources.LocaleURI("en", "common"),
+		resources.LocaleURI("fr", "common"),
+		resources.UsageURI,
+		resources.DeadKeysURI,
+		resources.DiffURI,
+	}, notifier.uris)
 }
 
 func TestPruneWriteRemovesExactKeys(t *testing.T) {
@@ -171,6 +190,14 @@ func newDeadKeyFixtureApp(t *testing.T) *app.App {
 	a, err := app.New(t.Context(), app.Options{ProjectRoot: root})
 	require.NoError(t, err)
 	return a
+}
+
+type recordingNotifier struct {
+	uris []string
+}
+
+func (n *recordingNotifier) Updated(_ context.Context, uris ...string) {
+	n.uris = append(n.uris, uris...)
 }
 
 func statusesByKey(report deadkey.Report) map[string]deadkey.Status {

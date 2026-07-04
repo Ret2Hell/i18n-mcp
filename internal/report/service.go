@@ -12,8 +12,13 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/deadkey"
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
+	"github.com/Ret2Hell/i18n-mcp/internal/resources"
 	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
 )
+
+type Notifier interface {
+	Updated(ctx context.Context, uris ...string)
+}
 
 type Service struct {
 	projectRoot string
@@ -22,6 +27,7 @@ type Service struct {
 	diff        *diff.Service
 	scanner     *scanner.Service
 	deadKeys    *deadkey.Service
+	Notifier    Notifier
 
 	latestMu sync.RWMutex
 	latest   *GenerateOutput
@@ -89,6 +95,9 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 		return GenerateOutput{}, err
 	}
 	s.storeLatest(out)
+	if s.Notifier != nil {
+		s.Notifier.Updated(ctx, resources.LatestReportURI)
+	}
 	return out, nil
 }
 

@@ -1,6 +1,7 @@
 package translate
 
 import (
+	"context"
 	"slices"
 	"sync"
 
@@ -12,6 +13,10 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 )
 
+type Notifier interface {
+	Updated(ctx context.Context, uris ...string)
+}
+
 type Service struct {
 	config    *config.Service
 	guard     *fsutil.Guard
@@ -19,6 +24,7 @@ type Service struct {
 	state     *state.Service
 	diff      *diff.Service
 	validator *validate.Service
+	Notifier  Notifier
 
 	latestMu sync.RWMutex
 	latest   *Batch

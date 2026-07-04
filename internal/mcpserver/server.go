@@ -35,6 +35,11 @@ func New(a *app.App) *mcp.Server {
 		Title:   "i18n MCP Server",
 		Version: version.Version,
 	}, opts)
+	notifier := mcpadapter.ResourceNotifier{Server: server, Logger: a.Logger}
+	a.Translation.Notifier = notifier
+	a.DeadKeys.Notifier = notifier
+	a.KeyOps.Notifier = notifier
+	a.Reports.Notifier = notifier
 
 	registerTools(server, a)
 	registerResources(server, a)

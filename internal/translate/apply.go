@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Ret2Hell/i18n-mcp/internal/resources"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
 )
 
@@ -35,6 +36,7 @@ func (s *Service) Apply(ctx context.Context, in ApplyInput) (ApplyOutput, error)
 
 	writeReport, err := s.WriteEdits(ctx, edits)
 	out.ChangedFiles = markWritten(out.ChangedFiles, writeReport.Written)
+	s.notifyApplied(ctx, validation.Accepted, writeReport.Written)
 	if err != nil {
 		out.Warnings = append(out.Warnings, fmt.Sprintf("locale write failed after writing %d file(s): %v", len(writeReport.Written), err))
 		return out, err
@@ -48,6 +50,24 @@ func (s *Service) Apply(ctx context.Context, in ApplyInput) (ApplyOutput, error)
 	out.Applied = len(validation.Accepted)
 	out.StateUpdates = updates
 	return out, nil
+}
+
+func (s *Service) notifyApplied(ctx context.Context, accepted []ValidatedTranslation, written []string) {
+	if s.Notifier == nil || len(written) == 0 {
+		return
+	}
+	writtenSet := make(map[string]struct{}, len(written))
+	for _, path := range written {
+		writtenSet[path] = struct{}{}
+	}
+	uris := make([]string, 0, len(accepted)+1)
+	for _, tr := range accepted {
+		if _, ok := writtenSet[tr.TargetFilePath]; ok {
+			uris = append(uris, resources.LocaleURI(tr.Locale, tr.Namespace))
+		}
+	}
+	uris = append(uris, resources.DiffURI)
+	s.Notifier.Updated(ctx, uris...)
 }
 
 func markWritten(files []ChangedFile, written []string) []ChangedFile {

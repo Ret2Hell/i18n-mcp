@@ -13,12 +13,15 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/jsonedit"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
+	"github.com/Ret2Hell/i18n-mcp/internal/resources"
 )
 
 type pruneEdit struct {
-	Path   string
-	Before []byte
-	After  []byte
+	Path      string
+	Locale    string
+	Namespace string
+	Before    []byte
+	After     []byte
 }
 
 func (s *Service) Prune(ctx context.Context, in PruneInput) (PruneOutput, error) {
@@ -37,12 +40,31 @@ func (s *Service) Prune(ctx context.Context, in PruneInput) (PruneOutput, error)
 	}
 	report, err := s.writePruneEdits(ctx, edits)
 	out.ChangedFiles = markPruneWritten(out.ChangedFiles, report.Written)
+	s.notifyPruned(ctx, edits, report.Written)
 	if err != nil {
 		out.Warnings = append(out.Warnings, fmt.Sprintf("prune write failed after writing %d file(s); skipped %d file(s) %v: %v", len(report.Written), len(report.Skipped), report.Skipped, err))
 		return out, err
 	}
 	out.Pruned = len(in.Keys)
 	return out, nil
+}
+
+func (s *Service) notifyPruned(ctx context.Context, edits []pruneEdit, written []string) {
+	if s.Notifier == nil || len(written) == 0 {
+		return
+	}
+	writtenSet := make(map[string]struct{}, len(written))
+	for _, path := range written {
+		writtenSet[path] = struct{}{}
+	}
+	uris := make([]string, 0, len(written)+3)
+	for _, edit := range edits {
+		if _, ok := writtenSet[edit.Path]; ok {
+			uris = append(uris, resources.LocaleURI(edit.Locale, edit.Namespace))
+		}
+	}
+	uris = append(uris, resources.UsageURI, resources.DeadKeysURI, resources.DiffURI)
+	s.Notifier.Updated(ctx, uris...)
 }
 
 func markPruneWritten(files []ChangedFile, written []string) []ChangedFile {
@@ -183,7 +205,7 @@ func (s *Service) buildPruneEditsForInventory(ctx context.Context, inv locale.In
 			return nil, nil, err
 		}
 		if !bytes.Equal(before, after) {
-			edits = append(edits, pruneEdit{Path: file.Path, Before: before, After: after})
+			edits = append(edits, pruneEdit{Path: file.Path, Locale: file.Locale, Namespace: file.Namespace, Before: before, After: after})
 		}
 	}
 	slices.SortFunc(edits, func(a, b pruneEdit) int { return cmp.Compare(a.Path, b.Path) })
