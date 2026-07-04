@@ -33,22 +33,32 @@ func NewService(projectRoot string, configService *config.Service, localeService
 
 func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutput, error) {
 	format := cmp.Or(in.Format, FormatJSON)
+	progress := in.Progress
+	if progress == nil {
+		progress = noopProgress{}
+	}
+	const totalProgressSteps = 5
+
 	cfg, err := s.config.Resolve(ctx)
 	if err != nil {
 		return GenerateOutput{}, err
 	}
+	progress.Step(ctx, "loading locale inventory", 1, totalProgressSteps)
 	inv, err := s.locales.Inventory(ctx)
 	if err != nil {
 		return GenerateOutput{}, err
 	}
+	progress.Step(ctx, "computing translation diff", 2, totalProgressSteps)
 	diffReport, err := s.diff.Analyze(ctx)
 	if err != nil {
 		return GenerateOutput{}, err
 	}
+	progress.Step(ctx, "scanning source usage", 3, totalProgressSteps)
 	usageReport, err := s.usage(ctx, in.RefreshUsage)
 	if err != nil {
 		return GenerateOutput{}, err
 	}
+	progress.Step(ctx, "building dead-key report", 4, totalProgressSteps)
 	deadReport, err := s.deadKeys.Report(ctx, deadkey.ReportInput{RefreshUsage: in.RefreshUsage})
 	if err != nil {
 		return GenerateOutput{}, err
@@ -66,6 +76,7 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 	}
 	report.Summary = summarize(report)
 	out := GenerateOutput{Report: report, Format: format}
+	progress.Step(ctx, "rendering report", 5, totalProgressSteps)
 	switch format {
 	case FormatJSON:
 		out.Text, err = RenderJSON(report)
@@ -80,6 +91,10 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 	s.storeLatest(out)
 	return out, nil
 }
+
+type noopProgress struct{}
+
+func (noopProgress) Step(context.Context, string, int, int) {}
 
 func (s *Service) Latest() (GenerateOutput, bool) {
 	s.latestMu.RLock()
