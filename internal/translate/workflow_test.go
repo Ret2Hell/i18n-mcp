@@ -1,6 +1,7 @@
 package translate_test
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
+	"github.com/Ret2Hell/i18n-mcp/internal/resources"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
 	"github.com/Ret2Hell/i18n-mcp/internal/translate"
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
@@ -66,6 +68,42 @@ func TestTranslationApplyDryRunDoesNotWrite(t *testing.T) {
 	require.Len(t, out.ChangedFiles, 1)
 	require.Equal(t, before, readFixtureFile(t, a.ProjectRoot, "messages/fr/auth.json"))
 	require.Equal(t, stateBefore, readFixtureFile(t, a.ProjectRoot, state.DefaultStatePath))
+}
+
+func TestTranslationApplyNotifiesLocaleAndDiffUpdates(t *testing.T) {
+	ctx := t.Context()
+	a := newTranslationFixtureApp(t)
+	notifier := &recordingNotifier{}
+	a.Translation.Notifier = notifier
+
+	_, err := a.Translation.Apply(ctx, translate.ApplyInput{Apply: true, Translations: []translate.ProposedTranslation{{
+		Locale:      "fr",
+		Namespace:   "auth",
+		Key:         "login.title",
+		SourceValue: "Log in",
+		Value:       "Connexion",
+	}}})
+
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{resources.LocaleURI("fr", "auth"), resources.DiffURI}, notifier.uris)
+}
+
+func TestTranslationApplyDryRunDoesNotNotify(t *testing.T) {
+	ctx := t.Context()
+	a := newTranslationFixtureApp(t)
+	notifier := &recordingNotifier{}
+	a.Translation.Notifier = notifier
+
+	_, err := a.Translation.Apply(ctx, translate.ApplyInput{Translations: []translate.ProposedTranslation{{
+		Locale:      "fr",
+		Namespace:   "auth",
+		Key:         "login.title",
+		SourceValue: "Log in",
+		Value:       "Connexion",
+	}}})
+
+	require.NoError(t, err)
+	require.Empty(t, notifier.uris)
 }
 
 func TestTranslationApplyWriteUpdatesLocaleAndState(t *testing.T) {
@@ -150,6 +188,14 @@ func readFixtureFile(t *testing.T, root string, relPath string) string {
 
 func testTime() time.Time {
 	return time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+}
+
+type recordingNotifier struct {
+	uris []string
+}
+
+func (n *recordingNotifier) Updated(_ context.Context, uris ...string) {
+	n.uris = append(n.uris, uris...)
 }
 
 func requireIssueCode(t *testing.T, issues []validate.Issue, code string) {

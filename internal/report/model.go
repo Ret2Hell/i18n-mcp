@@ -1,6 +1,7 @@
 package report
 
 import (
+	"context"
 	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
@@ -17,9 +18,15 @@ const (
 	FormatMarkdown Format = "markdown"
 )
 
+// ProgressReporter reports coarse-grained progress for report generation.
+type ProgressReporter interface {
+	Step(ctx context.Context, message string, current int, total int)
+}
+
 type GenerateInput struct {
-	Format       Format `json:"format,omitempty" jsonschema:"report format: json or markdown"`
-	RefreshUsage bool   `json:"refreshUsage,omitempty" jsonschema:"rerun usage scan before report generation"`
+	Format       Format           `json:"format,omitempty" jsonschema:"report format: json or markdown"`
+	RefreshUsage bool             `json:"refreshUsage,omitempty" jsonschema:"rerun usage scan before report generation"`
+	Progress     ProgressReporter `json:"-"`
 }
 
 type GenerateOutput struct {

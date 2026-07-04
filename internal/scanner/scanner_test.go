@@ -196,6 +196,59 @@ func TestScannerDiscoverRequestedHonorsContextCancellation(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled)
 }
 
+func TestScannerProgressReachesTotalFileCount(t *testing.T) {
+	root := t.TempDir()
+	writeScannerFile(t, root, "app/a.ts", `t("a")`)
+	writeScannerFile(t, root, "app/b.ts", `t("b")`)
+	writeScannerFile(t, root, "app/c.ts", `t("c")`)
+	reporter := &fakeProgressReporter{}
+
+	_, err := newScannerService(t, root).Scan(t.Context(), ScanInput{Progress: reporter, BatchSize: 2})
+
+	require.NoError(t, err)
+	require.Equal(t, []progressStep{
+		{message: "discovered source files", current: 0, total: 3},
+		{message: "scanned source files", current: 2, total: 3},
+		{message: "scanned source files", current: 3, total: 3},
+	}, reporter.steps)
+}
+
+func TestScannerProgressHandlesZeroSourceFiles(t *testing.T) {
+	root := t.TempDir()
+	reporter := &fakeProgressReporter{}
+
+	report, err := newScannerService(t, root).Scan(t.Context(), ScanInput{Progress: reporter})
+
+	require.NoError(t, err)
+	require.Zero(t, report.FilesScanned)
+	require.Equal(t, []progressStep{{message: "discovered source files", current: 0, total: 0}}, reporter.steps)
+}
+
+func TestScannerScanHonorsContextCancellation(t *testing.T) {
+	root := t.TempDir()
+	writeScannerFile(t, root, "app/a.ts", `t("a")`)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	_, err := newScannerService(t, root).Scan(ctx, ScanInput{})
+
+	require.ErrorIs(t, err, context.Canceled)
+}
+
+type fakeProgressReporter struct {
+	steps []progressStep
+}
+
+type progressStep struct {
+	message string
+	current int
+	total   int
+}
+
+func (r *fakeProgressReporter) Step(_ context.Context, message string, current int, total int) {
+	r.steps = append(r.steps, progressStep{message: message, current: current, total: total})
+}
+
 func newScannerService(t *testing.T, root string) *Service {
 	t.Helper()
 	guard, err := fsutil.NewGuard(root)

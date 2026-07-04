@@ -1,10 +1,11 @@
 package deadkey
 
 type PruneInput struct {
-	Keys        []PruneKey `json:"keys" jsonschema:"exact namespace and key pairs to prune"`
-	DryRun      *bool      `json:"dryRun,omitempty" jsonschema:"when true, preview changes without writing"`
-	Apply       bool       `json:"apply,omitempty" jsonschema:"must be true to write locale files"`
-	AllowUnsafe bool       `json:"allowUnsafe,omitempty" jsonschema:"allow pruning used, maybe_dynamic, ignored, or kept keys"`
+	Keys              []PruneKey `json:"keys" jsonschema:"exact namespace and key pairs to prune"`
+	DryRun            *bool      `json:"dryRun,omitempty" jsonschema:"when true, preview changes without writing"`
+	Apply             bool       `json:"apply,omitempty" jsonschema:"must be true to write locale files"`
+	ConfirmWithClient bool       `json:"confirmWithClient,omitempty" jsonschema:"when true with apply, request MCP client confirmation before writing"`
+	AllowUnsafe       bool       `json:"allowUnsafe,omitempty" jsonschema:"allow pruning used, maybe_dynamic, ignored, or kept keys"`
 }
 
 type PruneKey struct {

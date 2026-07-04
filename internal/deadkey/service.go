@@ -1,6 +1,7 @@
 package deadkey
 
 import (
+	"context"
 	"sync"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
@@ -9,11 +10,16 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
 )
 
+type Notifier interface {
+	Updated(ctx context.Context, uris ...string)
+}
+
 type Service struct {
-	config  *config.Service
-	guard   *fsutil.Guard
-	locales *locale.Service
-	scanner *scanner.Service
+	config   *config.Service
+	guard    *fsutil.Guard
+	locales  *locale.Service
+	scanner  *scanner.Service
+	Notifier Notifier
 
 	latestMu sync.RWMutex
 	latest   *Report

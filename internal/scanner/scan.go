@@ -10,13 +10,24 @@ import (
 )
 
 func (s *Service) Scan(ctx context.Context, in ScanInput) (Report, error) {
+	progress := in.Progress
+	if progress == nil {
+		progress = noopProgress{}
+	}
 	files, err := s.DiscoverSourceFiles(ctx, in.Files)
 	if err != nil {
 		return Report{}, err
 	}
-	report := Report{FilesScanned: len(files), Files: files, GeneratedAt: time.Now().UTC()}
+	total := len(files)
+	progress.Step(ctx, "discovered source files", 0, total)
+
+	batchSize := in.BatchSize
+	if batchSize <= 0 {
+		batchSize = 25
+	}
+	report := Report{FilesScanned: total, Files: files, GeneratedAt: time.Now().UTC()}
 	usageByID := map[string]*Usage{}
-	for _, file := range files {
+	for i, file := range files {
 		if err := ctx.Err(); err != nil {
 			return Report{}, err
 		}
@@ -34,12 +45,19 @@ func (s *Service) Scan(ctx context.Context, in ScanInput) (Report, error) {
 			addEvidence(usageByID, ev, "namespace_bound_call")
 		}
 		report.DynamicHints = append(report.DynamicHints, scanDynamicHints(file.Path, data)...)
+		if (i+1)%batchSize == 0 || i+1 == total {
+			progress.Step(ctx, "scanned source files", i+1, total)
+		}
 	}
 	report.Usages = sortedUsages(usageByID)
 	slices.SortFunc(report.DynamicHints, compareDynamicHint)
 	s.storeLatest(report)
 	return report, nil
 }
+
+type noopProgress struct{}
+
+func (noopProgress) Step(context.Context, string, int, int) {}
 
 func (s *Service) readSourceFile(relPath string) ([]byte, error) {
 	absPath, err := s.guard.ResolveExisting(relPath)

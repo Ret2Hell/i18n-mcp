@@ -12,9 +12,14 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 )
 
+type ProgressReporter interface {
+	Step(ctx context.Context, message string, current int, total int)
+}
+
 type DetectOptions struct {
-	ProjectRoot string `json:"projectRoot,omitzero"`
-	MaxDepth    int    `json:"maxDepth,omitzero"`
+	ProjectRoot string           `json:"projectRoot,omitzero"`
+	MaxDepth    int              `json:"maxDepth,omitzero"`
+	Progress    ProgressReporter `json:"-"`
 }
 
 type Detection struct {
@@ -39,6 +44,12 @@ type packageJSON struct {
 }
 
 func (s *Service) Detect(ctx context.Context, opts DetectOptions) (Detection, error) {
+	progress := opts.Progress
+	if progress == nil {
+		progress = noopProgress{}
+	}
+
+	progress.Step(ctx, "checking project files", 1, 4)
 	guard, root, err := s.guardFor(ctx, opts.ProjectRoot)
 	if err != nil {
 		return Detection{}, err
@@ -53,6 +64,7 @@ func (s *Service) Detect(ctx context.Context, opts DetectOptions) (Detection, er
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		d.Warnings = append(d.Warnings, err.Error())
 	}
+	progress.Step(ctx, "checking i18n dependencies", 2, 4)
 	nextResult, err := detect4nextjs.Detect(ctx, detect4nextjs.Options{ProjectRoot: guard.Root()})
 	if err != nil {
 		return Detection{}, err
@@ -66,6 +78,7 @@ func (s *Service) Detect(ctx context.Context, opts DetectOptions) (Detection, er
 		d.Warnings = append(d.Warnings, "no supported i18n library dependency was detected")
 	}
 
+	progress.Step(ctx, "checking locale layouts", 3, 4)
 	layouts, layoutWarnings := detectLocaleLayouts(ctx, guard)
 	d.Layouts = layouts
 	d.Warnings = append(d.Warnings, layoutWarnings...)
@@ -86,6 +99,7 @@ func (s *Service) Detect(ctx context.Context, opts DetectOptions) (Detection, er
 		d.Warnings = append(d.Warnings, "no common JSON locale layout was detected")
 	}
 
+	progress.Step(ctx, "building proposed config", 4, 4)
 	d.ProposedConfig = proposeConfig(d)
 	if len(d.SourceCandidates) == 0 {
 		d.Warnings = append(d.Warnings, "could not infer source locale")
@@ -97,6 +111,10 @@ func (s *Service) Detect(ctx context.Context, opts DetectOptions) (Detection, er
 	slices.Sort(d.Warnings)
 	return d, nil
 }
+
+type noopProgress struct{}
+
+func (noopProgress) Step(context.Context, string, int, int) {}
 
 func readPackageJSON(guard *fsutil.Guard) (packageJSON, error) {
 	path, err := guard.Resolve("package.json")

@@ -60,11 +60,12 @@ type Plan struct {
 }
 
 type fileEdit struct {
-	Path    string
-	Before  []byte
-	After   []byte
-	Locale  string
-	Changed bool
+	Path      string
+	Before    []byte
+	After     []byte
+	Locale    string
+	Namespace string
+	Changed   bool
 }
 
 func (in RenameInput) DryRunValue() bool {

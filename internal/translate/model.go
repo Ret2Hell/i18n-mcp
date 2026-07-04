@@ -10,6 +10,7 @@ import (
 type PlanInput struct {
 	Locales        []string         `json:"locales,omitzero" jsonschema:"target locales; empty means all configured target locales"`
 	Namespaces     []string         `json:"namespaces,omitzero" jsonschema:"namespaces to include; empty means all namespaces"`
+	Keys           []string         `json:"keys,omitzero" jsonschema:"translation keys to include; empty means all keys"`
 	Statuses       []diff.KeyStatus `json:"statuses,omitzero" jsonschema:"diff statuses to include; defaults to missing and stale"`
 	MaxItems       int              `json:"maxItems,omitzero" jsonschema:"maximum translation units to include"`
 	IncludeContext bool             `json:"includeContext,omitzero" jsonschema:"include configured style guide and glossary references"`

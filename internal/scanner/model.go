@@ -1,6 +1,9 @@
 package scanner
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Confidence string
 
@@ -11,8 +14,14 @@ const (
 	ConfidenceLow    Confidence = "low"
 )
 
+type ProgressReporter interface {
+	Step(ctx context.Context, message string, current int, total int)
+}
+
 type ScanInput struct {
-	Files []string `json:"files,omitzero" jsonschema:"optional project-relative source files to scan"`
+	Files     []string         `json:"files,omitzero" jsonschema:"optional project-relative source files to scan"`
+	Progress  ProgressReporter `json:"-"`
+	BatchSize int              `json:"batchSize,omitzero" jsonschema:"optional progress notification batch size; defaults to 25"`
 }
 
 type Report struct {

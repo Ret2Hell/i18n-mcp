@@ -119,12 +119,17 @@ func requireValidationCode(t *testing.T, diagnostics []config.Diagnostic, code s
 
 func newInMemoryMCPClientSession(t *testing.T, ctx context.Context, projectRoot string) *mcp.ClientSession {
 	t.Helper()
+	return newInMemoryMCPClientSessionWithOptions(t, ctx, projectRoot, nil)
+}
+
+func newInMemoryMCPClientSessionWithOptions(t *testing.T, ctx context.Context, projectRoot string, clientOptions *mcp.ClientOptions) *mcp.ClientSession {
+	t.Helper()
 
 	application, err := app.New(ctx, app.Options{ProjectRoot: projectRoot, LogLevel: "error"})
 	require.NoError(t, err)
 
 	server := mcpserver.New(application)
-	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.0"}, nil)
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.0"}, clientOptions)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
 	serverSession, err := server.Connect(ctx, serverTransport, nil)

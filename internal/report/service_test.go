@@ -1,6 +1,7 @@
 package report_test
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -46,8 +47,26 @@ func TestGenerateMarkdownAndUnsupportedFormat(t *testing.T) {
 	require.Equal(t, report.FormatMarkdown, out.Format)
 	require.Contains(t, out.Text, "# i18n Audit Report")
 
-	_, err = a.Reports.Generate(t.Context(), report.GenerateInput{Format: report.Format("xml"), RefreshUsage: true})
+	progress := &recordingProgress{}
+	_, err = a.Reports.Generate(t.Context(), report.GenerateInput{Format: report.Format("xml"), RefreshUsage: true, Progress: progress})
 	require.ErrorContains(t, err, `unsupported report format "xml"`)
+	require.Equal(t, "rendering report", progress.lastMessage())
+}
+
+func TestGenerateEmitsStableProgressStages(t *testing.T) {
+	a := newReportFixtureApp(t)
+	progress := &recordingProgress{}
+
+	_, err := a.Reports.Generate(t.Context(), report.GenerateInput{Format: report.FormatJSON, RefreshUsage: true, Progress: progress})
+
+	require.NoError(t, err)
+	require.Equal(t, []progressStep{
+		{message: "loading locale inventory", current: 1, total: 5},
+		{message: "computing translation diff", current: 2, total: 5},
+		{message: "scanning source usage", current: 3, total: 5},
+		{message: "building dead-key report", current: 4, total: 5},
+		{message: "rendering report", current: 5, total: 5},
+	}, progress.steps)
 }
 
 func TestEvaluatePolicyReportsEnabledFailuresOnly(t *testing.T) {
@@ -70,6 +89,27 @@ func TestEvaluatePolicyIgnoresZeroCountsAndDisabledRules(t *testing.T) {
 	got := report.EvaluatePolicy(r, policy)
 
 	require.Empty(t, got)
+}
+
+type progressStep struct {
+	message string
+	current int
+	total   int
+}
+
+type recordingProgress struct {
+	steps []progressStep
+}
+
+func (r *recordingProgress) Step(_ context.Context, message string, current int, total int) {
+	r.steps = append(r.steps, progressStep{message: message, current: current, total: total})
+}
+
+func (r *recordingProgress) lastMessage() string {
+	if len(r.steps) == 0 {
+		return ""
+	}
+	return r.steps[len(r.steps)-1].message
 }
 
 func newReportFixtureApp(t *testing.T) *app.App {

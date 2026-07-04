@@ -78,6 +78,7 @@ func (s *Service) PlanRename(ctx context.Context, in RenameInput) (Plan, error) 
 		}
 		if changed {
 			edit.Locale = localeCode
+			edit.Namespace = in.Namespace
 			plan.Edits = append(plan.Edits, edit)
 		}
 	}
