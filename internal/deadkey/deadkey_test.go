@@ -104,6 +104,32 @@ func TestPruneNotifiesLocaleUsageDeadKeyAndDiffUpdates(t *testing.T) {
 	}, notifier.uris)
 }
 
+func TestPruneNotifiesWhenExactlyOneFileWasWritten(t *testing.T) {
+	a := newDeadKeyFixtureApp(t)
+	writeDeadKeyFile(t, a.ProjectRoot, ".i18n-mcp.json", `{
+  "sourceLocale": "en",
+  "targetLocales": [],
+  "localeFiles": ["messages/{locale}/{namespace}.json"],
+  "defaultNamespace": "common",
+  "format": {"sortKeys": false, "indent": 2, "trailingNewline": true},
+  "translation": {"mode": "agent"}
+}
+`)
+	require.NoError(t, os.Remove(filepath.Join(a.ProjectRoot, "messages/fr/common.json")))
+	notifier := &recordingNotifier{}
+	a.DeadKeys.Notifier = notifier
+
+	_, err := a.DeadKeys.Prune(t.Context(), deadkey.PruneInput{Apply: true, Keys: []deadkey.PruneKey{{Namespace: "common", Key: "unused"}}})
+
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{
+		resources.LocaleURI("en", "common"),
+		resources.UsageURI,
+		resources.DeadKeysURI,
+		resources.DiffURI,
+	}, notifier.uris)
+}
+
 func TestPruneWriteRemovesExactKeys(t *testing.T) {
 	a := newDeadKeyFixtureApp(t)
 	out, err := a.DeadKeys.Prune(t.Context(), deadkey.PruneInput{Apply: true, Keys: []deadkey.PruneKey{{Namespace: "common", Key: "unused"}}})
