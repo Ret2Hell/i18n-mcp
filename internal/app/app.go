@@ -12,6 +12,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/keyops"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
+	"github.com/Ret2Hell/i18n-mcp/internal/mcpadapter"
 	"github.com/Ret2Hell/i18n-mcp/internal/project"
 	"github.com/Ret2Hell/i18n-mcp/internal/report"
 	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
@@ -22,21 +23,22 @@ import (
 )
 
 type App struct {
-	Options     Options
-	Logger      *slog.Logger
-	ProjectRoot string
-	Guard       *fsutil.Guard
-	Config      *config.Service
-	Project     *project.Service
-	Locales     *locale.Service
-	State       *state.Service
-	Validator   *validate.Service
-	Diff        *diff.Service
-	Translation *translate.Service
-	Scanner     *scanner.Service
-	DeadKeys    *deadkey.Service
-	Reports     *report.Service
-	KeyOps      *keyops.Service
+	Options       Options
+	Logger        *slog.Logger
+	ProjectRoot   string
+	Guard         *fsutil.Guard
+	Config        *config.Service
+	Project       *project.Service
+	Locales       *locale.Service
+	State         *state.Service
+	Validator     *validate.Service
+	Diff          *diff.Service
+	Translation   *translate.Service
+	Scanner       *scanner.Service
+	DeadKeys      *deadkey.Service
+	Reports       *report.Service
+	KeyOps        *keyops.Service
+	Subscriptions *mcpadapter.SubscriptionRegistry
 }
 
 func New(ctx context.Context, opts Options) (*App, error) {
