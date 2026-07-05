@@ -72,6 +72,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	translationService.Providers = providerRegistry
 	samplingService := new(translate.SamplingService{Validator: translationService})
 	scannerService := scanner.NewService(guard, configService)
 	deadKeyService := deadkey.NewService(configService, guard, localeService, scannerService)

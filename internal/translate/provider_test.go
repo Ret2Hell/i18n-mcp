@@ -8,11 +8,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type testProvider struct{ name string }
+type testProvider struct {
+	name     string
+	generate func(context.Context, ProviderRequest) (*ProviderResponse, error)
+}
 
 func (p testProvider) Name() string { return p.name }
 
-func (p testProvider) Generate(context.Context, ProviderRequest) (*ProviderResponse, error) {
+func (p testProvider) Generate(ctx context.Context, req ProviderRequest) (*ProviderResponse, error) {
+	if p.generate != nil {
+		return p.generate(ctx, req)
+	}
 	return &ProviderResponse{}, nil
 }
 

@@ -26,6 +26,7 @@ type Service struct {
 	state     *state.Service
 	diff      *diff.Service
 	validator *validate.Service
+	Providers *ProviderRegistry
 	Notifier  Notifier
 
 	latestMu sync.RWMutex

@@ -80,22 +80,14 @@ func translationGenerateHandler(ctx context.Context, req *mcp.CallToolRequest, a
 		return nil, err
 	}
 	if mode == "provider" {
-		if a.Providers == nil {
-			return nil, fmt.Errorf("translation provider registry is not configured")
-		}
 		cfg, err := a.Config.Resolve(ctx)
 		if err != nil {
 			return nil, err
 		}
-		provider, err := a.Providers.Get(cfg.Translation.Provider)
-		if err != nil {
-			return nil, err
-		}
-		generated, err := provider.Generate(ctx, translate.ProviderRequest{
-			SourceLocale: plan.SourceLocale,
-			Items:        translate.ProviderItemsFromPlan(&plan),
+		generated, err := a.Translation.GenerateWithProvider(ctx, translate.ProviderGenerateInput{
+			ProviderName: cfg.Translation.Provider,
+			Plan:         &plan,
 			StyleGuide:   plan.StyleGuide,
-			MaxItems:     in.MaxItems,
 		})
 		if err != nil {
 			return nil, err
@@ -104,6 +96,7 @@ func translationGenerateHandler(ctx context.Context, req *mcp.CallToolRequest, a
 			Mode:      "provider",
 			Plan:      plan,
 			Proposals: generated.Proposals,
+			Rejected:  generated.Rejected,
 			Warnings:  generated.Warnings,
 		}), nil
 	}
