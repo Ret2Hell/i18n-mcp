@@ -9,6 +9,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// DeadReportOutput is the output for the dead-key report tool.
 type DeadReportOutput struct {
 	Report deadkey.Report `json:"report" jsonschema:"dead-key classification report with evidence and confidence"`
 }
@@ -51,6 +52,7 @@ func keysPruneTool(a *app.App) func(context.Context, *mcp.CallToolRequest, deadk
 	}
 }
 
+// PrunePlan summarizes a pending prune confirmation.
 type PrunePlan struct {
 	KeyCount int
 }

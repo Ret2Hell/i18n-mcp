@@ -1,5 +1,6 @@
 package config
 
+// File describes the on-disk i18n MCP configuration file.
 type File struct {
 	Schema               string            `json:"$schema,omitzero" jsonschema:"schema URL for editor support"`
 	SourceLocale         string            `json:"sourceLocale" jsonschema:"source locale used as translation source"`
@@ -16,12 +17,14 @@ type File struct {
 	CI                   CIConfig          `json:"ci" jsonschema:"CI audit failure policy"`
 }
 
+// FormatConfig controls locale JSON formatting.
 type FormatConfig struct {
 	SortKeys        bool `json:"sortKeys" jsonschema:"sort JSON object keys when writing locale files"`
 	Indent          int  `json:"indent" jsonschema:"number of spaces for JSON indentation"`
 	TrailingNewline bool `json:"trailingNewline" jsonschema:"write trailing newline at end of JSON files"`
 }
 
+// TranslationConfig controls translation behavior and context files.
 type TranslationConfig struct {
 	Mode           string `json:"mode" jsonschema:"translation mode: agent, provider, or sampling"`
 	Provider       string `json:"provider,omitzero" jsonschema:"optional provider name for provider mode"`
@@ -29,6 +32,7 @@ type TranslationConfig struct {
 	GlossaryPath   string `json:"glossaryPath,omitzero" jsonschema:"optional project-relative glossary path"`
 }
 
+// CIConfig controls audit failure policy for CI runs.
 type CIConfig struct {
 	FailOnMissing  bool `json:"failOnMissing" jsonschema:"fail audit when missing translations are detected"`
 	FailOnStale    bool `json:"failOnStale" jsonschema:"fail audit when stale translations are detected"`
@@ -36,6 +40,7 @@ type CIConfig struct {
 	FailOnDeadKeys bool `json:"failOnDeadKeys" jsonschema:"fail audit when probably unused keys are detected"`
 }
 
+// Resolved is a configuration file plus project-specific resolution metadata.
 type Resolved struct {
 	File
 	ProjectRoot string `json:"projectRoot"`

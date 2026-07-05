@@ -12,6 +12,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 )
 
+// JSONDocument is a parsed locale JSON file with raw and decoded contents.
 type JSONDocument struct {
 	Path  string          `json:"path"`
 	Bytes int             `json:"bytes"`
@@ -19,6 +20,7 @@ type JSONDocument struct {
 	Value any             `json:"-"`
 }
 
+// ParseError wraps JSON parsing errors with the source path.
 type ParseError struct {
 	Path string
 	Err  error
@@ -32,6 +34,7 @@ func (e *ParseError) Unwrap() error {
 	return e.Err
 }
 
+// ParseJSONFile reads and parses a locale JSON file under guard.
 func ParseJSONFile(ctx context.Context, guard *fsutil.Guard, relPath string) (JSONDocument, error) {
 	_ = ctx
 	resolved, err := guard.ResolveExisting(relPath)

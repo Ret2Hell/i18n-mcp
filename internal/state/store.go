@@ -12,23 +12,28 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 )
 
+// Store reads and writes the translation state file.
 type Store struct {
 	guard *fsutil.Guard
 	path  string
 }
 
+// NewStore creates a Store at the default state path.
 func NewStore(guard *fsutil.Guard) *Store {
 	return NewStoreAt(guard, DefaultStatePath)
 }
 
+// NewStoreAt creates a Store at path.
 func NewStoreAt(guard *fsutil.Guard, path string) *Store {
 	return &Store{guard: guard, path: cmp.Or(path, DefaultStatePath)}
 }
 
+// Path returns the configured state file path.
 func (s *Store) Path() string {
 	return s.path
 }
 
+// Load reads the state file from disk.
 func (s *Store) Load(ctx context.Context) (File, error) {
 	_ = ctx
 	resolved, err := s.guard.Resolve(s.path)
@@ -63,6 +68,7 @@ func (s *Store) Load(ctx context.Context) (File, error) {
 	return file, nil
 }
 
+// Save writes the state file to disk.
 func (s *Store) Save(ctx context.Context, file File) error {
 	_ = ctx
 	file.Normalize()

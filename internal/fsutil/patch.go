@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// UnifiedDiff returns a simple unified diff for before and after content.
 func UnifiedDiff(path string, before []byte, after []byte) string {
 	if bytes.Equal(before, after) {
 		return ""

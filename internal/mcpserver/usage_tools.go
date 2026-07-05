@@ -9,6 +9,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// UsageScanOutput is the output for the usage.scan tool.
 type UsageScanOutput struct {
 	Report scanner.Report `json:"report" jsonschema:"static translation key usage scan report"`
 }

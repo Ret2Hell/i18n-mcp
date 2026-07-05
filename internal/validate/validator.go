@@ -5,11 +5,13 @@ import (
 	"strings"
 )
 
+// ValidatePair validates a source and target translation pair.
 func (s *Service) ValidatePair(pair Pair) Result {
 	issues := validatePairIssues(pair)
 	return classify(pair, issues)
 }
 
+// ValidateStrings validates source and target translation strings.
 func (s *Service) ValidateStrings(source string, target string) Result {
 	return s.ValidatePair(Pair{Source: source, Target: target})
 }

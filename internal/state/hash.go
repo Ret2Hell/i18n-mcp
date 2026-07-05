@@ -10,10 +10,12 @@ const (
 	targetHashVersion = "i18n-mcp-target-v1"
 )
 
+// SourceHash returns a stable hash for source text.
 func SourceHash(value string) string {
 	return textHash(sourceHashVersion, value)
 }
 
+// TargetHash returns a stable hash for translated target text.
 func TargetHash(value string) string {
 	return textHash(targetHashVersion, value)
 }

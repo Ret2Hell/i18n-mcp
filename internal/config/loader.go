@@ -11,15 +11,18 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 )
 
+// Service loads, validates, and writes i18n MCP configuration.
 type Service struct {
 	guard      *fsutil.Guard
 	configPath string
 }
 
+// NewService creates a configuration service scoped by guard.
 func NewService(guard *fsutil.Guard, configPath string) *Service {
 	return &Service{guard: guard, configPath: configPath}
 }
 
+// Resolve loads configuration from disk and merges it with defaults.
 func (s *Service) Resolve(ctx context.Context) (Resolved, error) {
 	_ = ctx
 	cfg := Defaults()

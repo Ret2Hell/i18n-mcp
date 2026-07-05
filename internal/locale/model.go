@@ -2,6 +2,7 @@ package locale
 
 import "encoding/json"
 
+// FileRef identifies a locale file matched by a configured pattern.
 type FileRef struct {
 	Locale    string `json:"locale"`
 	Namespace string `json:"namespace,omitzero"`
@@ -9,6 +10,7 @@ type FileRef struct {
 	Pattern   string `json:"pattern"`
 }
 
+// Unit is one string translation unit from a locale file.
 type Unit struct {
 	Locale    string   `json:"locale"`
 	Namespace string   `json:"namespace"`
@@ -18,6 +20,7 @@ type Unit struct {
 	JSONPath  []string `json:"jsonPath"`
 }
 
+// Warning describes a non-fatal locale inventory issue.
 type Warning struct {
 	Code      string   `json:"code"`
 	Message   string   `json:"message"`
@@ -28,11 +31,13 @@ type Warning struct {
 	JSONPath  []string `json:"jsonPath,omitzero"`
 }
 
+// FlattenResult contains flattened translation units and warnings.
 type FlattenResult struct {
 	Units    []Unit    `json:"units"`
 	Warnings []Warning `json:"warnings,omitzero"`
 }
 
+// Inventory summarizes discovered locale files and translation units.
 type Inventory struct {
 	SourceLocale      string                    `json:"sourceLocale"`
 	TargetLocales     []string                  `json:"targetLocales"`
@@ -46,18 +51,21 @@ type Inventory struct {
 	Duplicates        []DuplicateNamespaceIssue `json:"duplicates,omitzero"`
 }
 
+// FileSummary summarizes a discovered locale file.
 type FileSummary struct {
 	FileRef
 	StringKeys int `json:"stringKeys"`
 	Bytes      int `json:"bytes"`
 }
 
+// DuplicateNamespaceIssue reports files that map to the same locale namespace.
 type DuplicateNamespaceIssue struct {
 	Locale    string   `json:"locale"`
 	Namespace string   `json:"namespace"`
 	Paths     []string `json:"paths"`
 }
 
+// NamespaceContent contains raw files and units for one locale namespace.
 type NamespaceContent struct {
 	Locale    string           `json:"locale"`
 	Namespace string           `json:"namespace"`
@@ -67,6 +75,7 @@ type NamespaceContent struct {
 	Warnings  []Warning        `json:"warnings,omitzero"`
 }
 
+// RawFileContent contains raw JSON for a locale file.
 type RawFileContent struct {
 	Path string          `json:"path"`
 	JSON json.RawMessage `json:"json"`

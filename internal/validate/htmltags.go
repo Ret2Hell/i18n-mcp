@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// TagToken represents an HTML-like tag found in a translation string.
 type TagToken struct {
 	Raw         string `json:"raw"`
 	Name        string `json:"name"`
@@ -20,6 +21,7 @@ var (
 	tagNamePattern = regexp.MustCompile(`[A-Za-z][A-Za-z0-9_-]*`)
 )
 
+// ExtractTags returns the unique normalized HTML-like tags in s.
 func ExtractTags(s string) []string {
 	tokens := ExtractTagTokens(s)
 	seen := make(map[string]struct{}, len(tokens))
@@ -29,6 +31,7 @@ func ExtractTags(s string) []string {
 	return slices.Sorted(maps.Keys(seen))
 }
 
+// ExtractTagTokens returns normalized tag tokens found in s.
 func ExtractTagTokens(s string) []TagToken {
 	matches := tagPattern.FindAllString(s, -1)
 	tokens := make([]TagToken, 0, len(matches))

@@ -16,10 +16,12 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
 )
 
+// Notifier publishes resource update notifications.
 type Notifier interface {
 	Updated(ctx context.Context, uris ...string)
 }
 
+// Service generates audit reports.
 type Service struct {
 	projectRoot string
 	config      *config.Service
@@ -33,10 +35,12 @@ type Service struct {
 	latest   *GenerateOutput
 }
 
+// NewService creates a report generation service.
 func NewService(projectRoot string, configService *config.Service, localeService *locale.Service, diffService *diff.Service, scannerService *scanner.Service, deadKeyService *deadkey.Service) *Service {
 	return &Service{projectRoot: projectRoot, config: configService, locales: localeService, diff: diffService, scanner: scannerService, deadKeys: deadKeyService}
 }
 
+// Generate builds and renders an audit report.
 func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutput, error) {
 	format := cmp.Or(in.Format, FormatJSON)
 	progress := in.Progress
@@ -105,6 +109,7 @@ type noopProgress struct{}
 
 func (noopProgress) Step(context.Context, string, int, int) {}
 
+// Latest returns the most recent generated report, if any.
 func (s *Service) Latest() (GenerateOutput, bool) {
 	s.latestMu.RLock()
 	defer s.latestMu.RUnlock()

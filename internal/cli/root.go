@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// RootOptions contains values shared by root and subcommands.
 type RootOptions struct {
 	Project  string
 	Config   string
@@ -19,6 +20,7 @@ type RootOptions struct {
 	Output   string
 }
 
+// Execute runs the root CLI command with ctx.
 func Execute(ctx context.Context) error {
 	opts := &RootOptions{}
 	cmd := newRootCommand(opts)
@@ -90,6 +92,7 @@ func mustBind(err error) {
 	}
 }
 
+// ExitCode maps an execution error to a process exit code.
 func ExitCode(err error) int {
 	if err == nil {
 		return 0

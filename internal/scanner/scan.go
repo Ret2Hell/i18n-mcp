@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// Scan scans source files for translation key usage.
 func (s *Service) Scan(ctx context.Context, in ScanInput) (Report, error) {
 	progress := in.Progress
 	if progress == nil {

@@ -15,6 +15,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 )
 
+// FileEdit describes changes for one locale file.
 type FileEdit struct {
 	Path         string                 `json:"path"`
 	Before       []byte                 `json:"-"`
@@ -22,6 +23,7 @@ type FileEdit struct {
 	Translations []ValidatedTranslation `json:"translations"`
 }
 
+// BuildEdits builds locale file edits for accepted translations.
 func (s *Service) BuildEdits(ctx context.Context, accepted []ValidatedTranslation) ([]FileEdit, error) {
 	if len(accepted) == 0 {
 		return nil, nil

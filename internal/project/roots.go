@@ -9,24 +9,29 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 )
 
+// RootInfo describes the effective project root.
 type RootInfo struct {
 	ProjectRoot string `json:"projectRoot"`
 	Name        string `json:"name"`
 	Relative    string `json:"relative,omitzero"`
 }
 
+// Service resolves and inspects project roots.
 type Service struct {
 	guard *fsutil.Guard
 }
 
+// NewService creates a project service scoped by guard.
 func NewService(guard *fsutil.Guard) *Service {
 	return &Service{guard: guard}
 }
 
+// Root returns information about the current project root.
 func (s *Service) Root(ctx context.Context) (RootInfo, error) {
 	return s.ResolveRoot(ctx, "")
 }
 
+// ResolveRoot resolves projectRoot and returns project root information.
 func (s *Service) ResolveRoot(ctx context.Context, projectRoot string) (RootInfo, error) {
 	_ = ctx
 	_, info, err := s.resolveGuard(projectRoot)

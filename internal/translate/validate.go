@@ -12,6 +12,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 )
 
+// Validate validates proposed translations against source and rules.
 func (s *Service) Validate(ctx context.Context, in ValidationInput) (ValidationOutput, error) {
 	inv, err := s.locales.Inventory(ctx)
 	if err != nil {

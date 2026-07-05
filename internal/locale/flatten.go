@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Flatten converts a parsed locale JSON value into translation units.
 func Flatten(ref FileRef, value any) FlattenResult {
 	var result FlattenResult
 	flattenValue(ref, nil, value, &result)

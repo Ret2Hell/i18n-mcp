@@ -7,12 +7,14 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 )
 
+// WriteReport summarizes locale file writes.
 type WriteReport struct {
 	Written   []string `json:"written"`
 	Unchanged []string `json:"unchanged"`
 	Skipped   []string `json:"skipped"`
 }
 
+// WriteEdits writes locale file edits to disk.
 func (s *Service) WriteEdits(ctx context.Context, edits []FileEdit) (WriteReport, error) {
 	_ = ctx
 	var report WriteReport

@@ -16,6 +16,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
 )
 
+// PlanRename plans file edits and state updates for a key rename.
 func (s *Service) PlanRename(ctx context.Context, in RenameInput) (Plan, error) {
 	plan := Plan{Input: in}
 	if err := validateRenameInput(in); err != nil {

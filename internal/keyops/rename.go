@@ -9,6 +9,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/resources"
 )
 
+// Rename renames a translation key across locale files and state.
 func (s *Service) Rename(ctx context.Context, in RenameInput) (RenameOutput, error) {
 	dryRun := in.DryRunValue()
 	plan, err := s.PlanRename(ctx, in)

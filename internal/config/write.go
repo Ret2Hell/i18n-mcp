@@ -12,12 +12,14 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 )
 
+// WriteInput describes a requested configuration write.
 type WriteInput struct {
 	Config File  `json:"config" jsonschema:"complete .i18n-mcp.json config to write"`
 	DryRun *bool `json:"dryRun,omitzero" jsonschema:"when true, preview changes without writing"`
 	Apply  bool  `json:"apply,omitzero" jsonschema:"must be true to write .i18n-mcp.json"`
 }
 
+// WriteOutput describes the outcome of a configuration write.
 type WriteOutput struct {
 	DryRun      bool             `json:"dryRun"`
 	Applied     bool             `json:"applied"`
@@ -27,6 +29,7 @@ type WriteOutput struct {
 	Warnings    []string         `json:"warnings,omitzero"`
 }
 
+// ChangedFile describes the diff and write status for a file.
 type ChangedFile struct {
 	Path    string `json:"path"`
 	Diff    string `json:"diff,omitzero"`
@@ -34,6 +37,7 @@ type ChangedFile struct {
 	Written bool   `json:"written,omitzero"`
 }
 
+// DryRunValue returns the effective dry-run setting.
 func (in WriteInput) DryRunValue() bool {
 	if in.DryRun != nil {
 		return *in.DryRun || !in.Apply

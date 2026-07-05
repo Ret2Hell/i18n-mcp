@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// App wires together the application services used by the CLI and MCP server.
 type App struct {
 	Options       Options
 	Logger        *slog.Logger
@@ -44,6 +45,7 @@ type App struct {
 	Subscriptions *mcpadapter.SubscriptionRegistry
 }
 
+// New constructs an App with all services initialized from opts.
 func New(ctx context.Context, opts Options) (*App, error) {
 	_ = ctx
 	guard, err := fsutil.NewGuard(opts.ProjectRoot)

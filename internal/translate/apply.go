@@ -9,6 +9,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
 )
 
+// Apply validates and writes proposed translations.
 func (s *Service) Apply(ctx context.Context, in ApplyInput) (ApplyOutput, error) {
 	dryRun := in.DryRunValue()
 	validation, err := s.Validate(ctx, ValidationInput{

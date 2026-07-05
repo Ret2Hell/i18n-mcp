@@ -11,10 +11,12 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// TranslationPlanOutput is the output for the translation.plan tool.
 type TranslationPlanOutput struct {
 	Batch translate.Batch `json:"batch" jsonschema:"translation batch for missing and stale keys"`
 }
 
+// TranslationGenerateInput is the input for the translation.generate tool.
 type TranslationGenerateInput struct {
 	Mode           string   `json:"mode,omitempty"`
 	Statuses       []string `json:"statuses,omitzero"`
@@ -26,6 +28,7 @@ type TranslationGenerateInput struct {
 	MaxTokens      int64    `json:"maxTokens,omitempty"`
 }
 
+// TranslationGenerateOutput is the output for the translation.generate tool.
 type TranslationGenerateOutput struct {
 	Mode      string                       `json:"mode"`
 	Plan      translate.PlanOutput         `json:"plan"`

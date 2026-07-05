@@ -14,6 +14,7 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 )
 
+// LocaleLayout describes a detected locale file layout.
 type LocaleLayout struct {
 	Pattern    string                `json:"pattern"`
 	Files      []LocaleFileCandidate `json:"files"`
@@ -21,6 +22,7 @@ type LocaleLayout struct {
 	Namespaces []string              `json:"namespaces,omitzero"`
 }
 
+// LocaleFileCandidate describes a detected locale file.
 type LocaleFileCandidate struct {
 	Locale     string `json:"locale"`
 	Namespace  string `json:"namespace,omitzero"`

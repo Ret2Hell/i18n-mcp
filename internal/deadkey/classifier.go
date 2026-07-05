@@ -13,6 +13,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
 )
 
+// Report classifies source locale keys by usage status.
 func (s *Service) Report(ctx context.Context, in ReportInput) (Report, error) {
 	cfg, err := s.config.Resolve(ctx)
 	if err != nil {

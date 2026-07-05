@@ -8,8 +8,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// HealthInput is the input for the health tool.
 type HealthInput struct{}
 
+// HealthOutput is the output for the health tool.
 type HealthOutput struct {
 	Name        string       `json:"name" jsonschema:"server name"`
 	Version     version.Info `json:"version" jsonschema:"build version information"`

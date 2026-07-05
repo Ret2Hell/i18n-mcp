@@ -5,6 +5,7 @@ import (
 	"slices"
 )
 
+// LibraryHint describes a detected i18n library dependency.
 type LibraryHint struct {
 	Name       string `json:"name"`
 	Version    string `json:"version,omitzero"`

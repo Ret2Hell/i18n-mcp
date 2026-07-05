@@ -1,13 +1,16 @@
 package keyops
 
+// ConflictPolicy controls rename behavior when the destination exists.
 type ConflictPolicy string
 
+// Conflict policies for key rename operations.
 const (
 	ConflictReject    ConflictPolicy = "reject"
 	ConflictOverwrite ConflictPolicy = "overwrite"
 	ConflictSkip      ConflictPolicy = "skip"
 )
 
+// RenameInput configures a key rename operation.
 type RenameInput struct {
 	Namespace      string         `json:"namespace" jsonschema:"namespace containing the key to rename"`
 	FromKey        string         `json:"fromKey" jsonschema:"existing flattened key path"`
@@ -18,6 +21,7 @@ type RenameInput struct {
 	ConflictPolicy ConflictPolicy `json:"conflictPolicy,omitzero" jsonschema:"destination conflict policy: reject, overwrite, or skip"`
 }
 
+// RenameOutput describes the result of a key rename operation.
 type RenameOutput struct {
 	DryRun       bool          `json:"dryRun"`
 	Planned      int           `json:"planned"`
@@ -28,6 +32,7 @@ type RenameOutput struct {
 	Warnings     []string      `json:"warnings,omitzero"`
 }
 
+// ChangedFile describes changes made or previewed for a locale file.
 type ChangedFile struct {
 	Path    string `json:"path"`
 	Diff    string `json:"diff,omitzero"`
@@ -35,6 +40,7 @@ type ChangedFile struct {
 	Written bool   `json:"written,omitzero"`
 }
 
+// StateUpdate describes a state entry key rename.
 type StateUpdate struct {
 	Locale    string `json:"locale"`
 	Namespace string `json:"namespace"`
@@ -42,6 +48,7 @@ type StateUpdate struct {
 	ToKey     string `json:"toKey"`
 }
 
+// Conflict describes a reason a rename could not proceed.
 type Conflict struct {
 	Locale    string `json:"locale,omitzero"`
 	Namespace string `json:"namespace,omitzero"`
@@ -51,6 +58,7 @@ type Conflict struct {
 	Reason    string `json:"reason"`
 }
 
+// Plan contains planned file edits and state updates for a rename.
 type Plan struct {
 	Input        RenameInput
 	Edits        []fileEdit
@@ -68,6 +76,7 @@ type fileEdit struct {
 	Changed   bool
 }
 
+// DryRunValue returns the effective dry-run setting.
 func (in RenameInput) DryRunValue() bool {
 	if in.DryRun != nil {
 		return *in.DryRun || !in.Apply
@@ -75,6 +84,7 @@ func (in RenameInput) DryRunValue() bool {
 	return !in.Apply
 }
 
+// NormalizedConflictPolicy returns the requested policy or the default.
 func (in RenameInput) NormalizedConflictPolicy() ConflictPolicy {
 	switch in.ConflictPolicy {
 	case ConflictOverwrite, ConflictSkip:
