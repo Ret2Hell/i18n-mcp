@@ -40,6 +40,7 @@ type Item struct {
 	SourceValue    string         `json:"sourceValue"`
 	OldValue       string         `json:"oldValue,omitzero"`
 	SourceHash     string         `json:"sourceHash"`
+	TargetHash     string         `json:"targetHash,omitzero"`
 	Placeholders   []string       `json:"placeholders,omitzero"`
 	Tags           []string       `json:"tags,omitzero"`
 	Notes          []string       `json:"notes,omitzero"`

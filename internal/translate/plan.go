@@ -73,6 +73,7 @@ func planItems(report diff.Report, in PlanInput) []Item {
 			SourceValue:    record.SourceValue,
 			OldValue:       record.TargetValue,
 			SourceHash:     record.SourceHash,
+			TargetHash:     record.TargetHash,
 			Placeholders:   validate.ExtractPlaceholders(record.SourceValue),
 			Tags:           validate.ExtractTags(record.SourceValue),
 			Notes:          planNotes(record),
