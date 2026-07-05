@@ -76,6 +76,34 @@ func translationGenerateHandler(ctx context.Context, req *mcp.CallToolRequest, a
 	if err != nil {
 		return nil, err
 	}
+	if mode == "provider" {
+		if a.Providers == nil {
+			return nil, fmt.Errorf("translation provider registry is not configured")
+		}
+		cfg, err := a.Config.Resolve(ctx)
+		if err != nil {
+			return nil, err
+		}
+		provider, err := a.Providers.Get(cfg.Translation.Provider)
+		if err != nil {
+			return nil, err
+		}
+		generated, err := provider.Generate(ctx, translate.ProviderRequest{
+			SourceLocale: plan.SourceLocale,
+			Items:        translate.ProviderItemsFromPlan(&plan),
+			StyleGuide:   plan.StyleGuide,
+			MaxItems:     in.MaxItems,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return new(TranslationGenerateOutput{
+			Mode:      "provider",
+			Plan:      plan,
+			Proposals: generated.Proposals,
+			Warnings:  generated.Warnings,
+		}), nil
+	}
 	if mode != "sampling" {
 		return nil, fmt.Errorf("translation.generate mode %q is not implemented by Epic M", mode)
 	}
