@@ -77,6 +77,24 @@ func TestGenerateNon2xxDoesNotLeakResponseSecrets(t *testing.T) {
 	}
 }
 
+func TestGenerateMalformedJSONReturnsError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":`))
+	}))
+	defer server.Close()
+
+	client := NewClient(Options{Credentials: new(Credentials{APIKey: "sk-test-secret", BaseURL: server.URL, Model: "test-model"})})
+	_, err := client.Generate(t.Context(), providerRequest())
+
+	if err == nil {
+		t.Fatal("expected malformed JSON error")
+	}
+	if strings.Contains(err.Error(), "sk-test-secret") {
+		t.Fatalf("error leaked API key: %v", err)
+	}
+}
+
 func TestGenerateContextCancellationStopsHTTPRequest(t *testing.T) {
 	started := make(chan struct{})
 	serverDone := make(chan struct{})
