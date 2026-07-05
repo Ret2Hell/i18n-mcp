@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// Guard confines filesystem operations to a project root.
 type Guard struct {
 	root string
 }
@@ -36,6 +37,7 @@ func NewGuard(root string) (*Guard, error) {
 	return &Guard{root: filepath.Clean(realRoot)}, nil
 }
 
+// Root returns the guarded project root.
 func (g *Guard) Root() string {
 	return g.root
 }

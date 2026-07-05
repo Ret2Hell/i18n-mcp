@@ -64,6 +64,7 @@ func runAudit(cmd *cobra.Command, opts *RootOptions, refreshUsage bool) error {
 	return nil
 }
 
+// IsAuditError reports whether err is an AuditError.
 func IsAuditError(err error) bool {
 	auditErr, ok := errors.AsType[*AuditError](err)
 	return ok && auditErr != nil

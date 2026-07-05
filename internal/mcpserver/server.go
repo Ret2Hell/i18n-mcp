@@ -10,6 +10,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// New creates and configures the MCP server.
 func New(a *app.App) *mcp.Server {
 	subs := mcpadapter.NewSubscriptionRegistry()
 	opts := &mcp.ServerOptions{

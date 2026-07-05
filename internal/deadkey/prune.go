@@ -24,6 +24,7 @@ type pruneEdit struct {
 	After     []byte
 }
 
+// Prune removes selected keys from locale files or previews the changes.
 func (s *Service) Prune(ctx context.Context, in PruneInput) (PruneOutput, error) {
 	dryRun := in.DryRunValue()
 	edits, rejected, err := s.BuildPruneEdits(ctx, in)
@@ -123,6 +124,7 @@ func appendRemainingPruneEdits(out []string, edits []pruneEdit, failedPath strin
 	return out
 }
 
+// BuildPruneEdits builds the file edits needed for a prune request.
 func (s *Service) BuildPruneEdits(ctx context.Context, in PruneInput) ([]pruneEdit, []PruneReject, error) {
 	if len(in.Keys) == 0 {
 		return nil, []PruneReject{{Reason: "at least one exact namespace and key is required"}}, nil

@@ -12,16 +12,19 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 )
 
+// ProgressReporter receives project detection progress events.
 type ProgressReporter interface {
 	Step(ctx context.Context, message string, current int, total int)
 }
 
+// DetectOptions configures project detection.
 type DetectOptions struct {
 	ProjectRoot string           `json:"projectRoot,omitzero"`
 	MaxDepth    int              `json:"maxDepth,omitzero"`
 	Progress    ProgressReporter `json:"-"`
 }
 
+// Detection describes detected project i18n settings and proposed config.
 type Detection struct {
 	ProjectRoot      string                `json:"projectRoot"`
 	Root             RootInfo              `json:"root"`
@@ -36,6 +39,7 @@ type Detection struct {
 	Warnings         []string              `json:"warnings,omitzero"`
 }
 
+// NextJSHints contains Next.js project hints from detect4nextjs.
 type NextJSHints = detect4nextjs.Hints
 
 type packageJSON struct {
@@ -43,6 +47,7 @@ type packageJSON struct {
 	DevDependencies map[string]string `json:"devDependencies"`
 }
 
+// Detect inspects a project and proposes i18n MCP configuration.
 func (s *Service) Detect(ctx context.Context, opts DetectOptions) (Detection, error) {
 	progress := opts.Progress
 	if progress == nil {

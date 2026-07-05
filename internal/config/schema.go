@@ -2,6 +2,7 @@ package config
 
 import "github.com/google/jsonschema-go/jsonschema"
 
+// Schema generates the JSON schema for File configuration.
 func Schema() (*jsonschema.Schema, error) {
 	schema, err := jsonschema.For[File](nil)
 	if err != nil {

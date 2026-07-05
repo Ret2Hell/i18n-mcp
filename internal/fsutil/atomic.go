@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// AtomicWriteFile writes data to relPath atomically within guard.
 func AtomicWriteFile(guard *Guard, relPath string, data []byte, perm os.FileMode) (err error) {
 	target, err := guard.Resolve(relPath)
 	if err != nil {

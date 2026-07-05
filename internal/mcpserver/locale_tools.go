@@ -8,10 +8,12 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// LocalesListInput is the input for the locales.list tool.
 type LocalesListInput struct {
 	IncludeUnits bool `json:"includeUnits,omitzero" jsonschema:"include flattened translation units in the response; false returns summary only"`
 }
 
+// LocalesListOutput is the output for the locales.list tool.
 type LocalesListOutput struct {
 	Inventory locale.Inventory `json:"inventory" jsonschema:"locale inventory summary and optional flattened units"`
 }

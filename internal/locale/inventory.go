@@ -13,15 +13,18 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 )
 
+// Service discovers and reads locale files.
 type Service struct {
 	guard  *fsutil.Guard
 	config *config.Service
 }
 
+// NewService creates a locale service scoped by guard and configService.
 func NewService(guard *fsutil.Guard, configService *config.Service) *Service {
 	return &Service{guard: guard, config: configService}
 }
 
+// Inventory returns the locale inventory for the resolved configuration.
 func (s *Service) Inventory(ctx context.Context) (Inventory, error) {
 	cfg, err := s.config.Resolve(ctx)
 	if err != nil {
@@ -34,6 +37,7 @@ func (s *Service) Inventory(ctx context.Context) (Inventory, error) {
 	return s.InventoryForConfig(ctx, cfg)
 }
 
+// InventoryForConfig returns the locale inventory for cfg.
 func (s *Service) InventoryForConfig(ctx context.Context, cfg config.Resolved) (Inventory, error) {
 	inv := Inventory{
 		SourceLocale:      cfg.SourceLocale,
@@ -157,8 +161,10 @@ func compareWarning(a, b Warning) int {
 	)
 }
 
+// ErrNamespaceNotFound indicates that a locale namespace has no files.
 var ErrNamespaceNotFound = errors.New("locale namespace not found")
 
+// Namespace returns files and units for a locale namespace.
 func (s *Service) Namespace(ctx context.Context, localeCode string, namespace string) (NamespaceContent, error) {
 	inv, err := s.Inventory(ctx)
 	if err != nil {

@@ -13,10 +13,12 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 )
 
+// Notifier publishes resource update notifications.
 type Notifier interface {
 	Updated(ctx context.Context, uris ...string)
 }
 
+// Service plans, validates, and applies translations.
 type Service struct {
 	config    *config.Service
 	guard     *fsutil.Guard
@@ -24,12 +26,14 @@ type Service struct {
 	state     *state.Service
 	diff      *diff.Service
 	validator *validate.Service
+	Providers *ProviderRegistry
 	Notifier  Notifier
 
 	latestMu sync.RWMutex
 	latest   *Batch
 }
 
+// NewService creates a translation service.
 func NewService(configService *config.Service, guard *fsutil.Guard, locales *locale.Service, stateService *state.Service, diffService *diff.Service, validator *validate.Service) *Service {
 	return &Service{
 		config:    configService,
@@ -41,6 +45,7 @@ func NewService(configService *config.Service, guard *fsutil.Guard, locales *loc
 	}
 }
 
+// LatestPlan returns the most recent translation batch, if any.
 func (s *Service) LatestPlan() (Batch, bool) {
 	s.latestMu.RLock()
 	defer s.latestMu.RUnlock()

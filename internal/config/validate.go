@@ -7,18 +7,21 @@ import (
 	"strings"
 )
 
+// Diagnostic describes a configuration validation problem.
 type Diagnostic struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 	Field   string `json:"field,omitzero"`
 }
 
+// ValidationResult contains configuration validation errors and warnings.
 type ValidationResult struct {
 	Valid    bool         `json:"valid"`
 	Errors   []Diagnostic `json:"errors,omitzero"`
 	Warnings []Diagnostic `json:"warnings,omitzero"`
 }
 
+// Validate checks a resolved configuration for errors and warnings.
 func (s *Service) Validate(ctx context.Context, cfg Resolved) ValidationResult {
 	_ = ctx
 	var result ValidationResult

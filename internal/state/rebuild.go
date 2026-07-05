@@ -8,16 +8,19 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 )
 
+// Service manages translation state files.
 type Service struct {
 	store   *Store
 	locales *locale.Service
 	now     func() time.Time
 }
 
+// RebuildOptions configures state rebuild behavior.
 type RebuildOptions struct {
 	Apply bool `json:"apply"`
 }
 
+// RebuildResult describes the result of rebuilding state.
 type RebuildResult struct {
 	DryRun            bool             `json:"dryRun"`
 	Applied           bool             `json:"applied"`
@@ -32,10 +35,12 @@ type RebuildResult struct {
 	PreviewState      File             `json:"previewState"`
 }
 
+// NewService creates a state service.
 func NewService(store *Store, locales *locale.Service) *Service {
 	return &Service{store: store, locales: locales, now: func() time.Time { return time.Now().UTC() }}
 }
 
+// Rebuild recreates translation state from current locale files.
 func (s *Service) Rebuild(ctx context.Context, opts RebuildOptions) (RebuildResult, error) {
 	existing, err := s.store.Load(ctx)
 	if err != nil {
@@ -128,6 +133,7 @@ func (s *Service) Rebuild(ctx context.Context, opts RebuildOptions) (RebuildResu
 	return result, nil
 }
 
+// Load loads the current translation state file.
 func (s *Service) Load(ctx context.Context) (File, error) {
 	return s.store.Load(ctx)
 }

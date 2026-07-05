@@ -2,8 +2,10 @@ package diff
 
 import "github.com/Ret2Hell/i18n-mcp/internal/validate"
 
+// KeyStatus classifies the relationship between source and target keys.
 type KeyStatus string
 
+// Key diff statuses.
 const (
 	Current KeyStatus = "current"
 	Missing KeyStatus = "missing"
@@ -13,6 +15,7 @@ const (
 	Unknown KeyStatus = "unknown"
 )
 
+// KeyDiff describes one source/target key comparison.
 type KeyDiff struct {
 	Locale             string            `json:"locale"`
 	Namespace          string            `json:"namespace"`
@@ -29,6 +32,7 @@ type KeyDiff struct {
 	Metadata           map[string]string `json:"metadata,omitzero"`
 }
 
+// Report contains locale diff analysis results.
 type Report struct {
 	SourceLocale  string    `json:"sourceLocale"`
 	TargetLocales []string  `json:"targetLocales"`
@@ -37,6 +41,7 @@ type Report struct {
 	Warnings      []string  `json:"warnings,omitzero"`
 }
 
+// Summary counts key diff statuses.
 type Summary struct {
 	Total    int                     `json:"total"`
 	Current  int                     `json:"current"`
@@ -48,6 +53,7 @@ type Summary struct {
 	ByLocale map[string]StatusCounts `json:"byLocale,omitzero"`
 }
 
+// StatusCounts counts key statuses for one locale.
 type StatusCounts struct {
 	Current int `json:"current"`
 	Missing int `json:"missing"`

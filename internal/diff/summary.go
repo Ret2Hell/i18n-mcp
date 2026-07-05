@@ -1,5 +1,6 @@
 package diff
 
+// Summarize counts key diff statuses across items.
 func Summarize(items []KeyDiff) Summary {
 	summary := Summary{ByLocale: make(map[string]StatusCounts, len(items))}
 	for _, item := range items {

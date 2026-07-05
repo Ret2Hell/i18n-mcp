@@ -7,14 +7,17 @@ import (
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
+	"github.com/Ret2Hell/i18n-mcp/internal/mcpadapter"
 	"github.com/Ret2Hell/i18n-mcp/internal/translate"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// TranslationPlanOutput is the output for the translation.plan tool.
 type TranslationPlanOutput struct {
 	Batch translate.Batch `json:"batch" jsonschema:"translation batch for missing and stale keys"`
 }
 
+// TranslationGenerateInput is the input for the translation.generate tool.
 type TranslationGenerateInput struct {
 	Mode           string   `json:"mode,omitempty"`
 	Statuses       []string `json:"statuses,omitzero"`
@@ -26,13 +29,16 @@ type TranslationGenerateInput struct {
 	MaxTokens      int64    `json:"maxTokens,omitempty"`
 }
 
+// TranslationGenerateOutput is the output for the translation.generate tool.
 type TranslationGenerateOutput struct {
 	Mode      string                       `json:"mode"`
+	Provider  string                       `json:"provider,omitempty"`
 	Plan      translate.PlanOutput         `json:"plan"`
 	Proposals []translate.Proposal         `json:"proposals"`
 	Rejected  []translate.RejectedProposal `json:"rejected,omitzero"`
 	Warnings  []string                     `json:"warnings,omitzero"`
 	Model     string                       `json:"model,omitempty"`
+	Usage     translate.ProviderUsage      `json:"usage,omitzero"`
 }
 
 func translationPlanTool(a *app.App) func(context.Context, *mcp.CallToolRequest, translate.PlanInput) (*mcp.CallToolResult, TranslationPlanOutput, error) {
@@ -75,6 +81,32 @@ func translationGenerateHandler(ctx context.Context, req *mcp.CallToolRequest, a
 	})
 	if err != nil {
 		return nil, err
+	}
+	if mode == "provider" {
+		cfg, err := a.Config.Resolve(ctx)
+		if err != nil {
+			return nil, err
+		}
+		progress := mcpadapter.NewMCPProgressReporter(req, a.Logger)
+		progress.Step(ctx, "generating translation proposals with provider", 1, 2)
+		generated, err := a.Translation.GenerateWithProvider(ctx, translate.ProviderGenerateInput{
+			ProviderName: cfg.Translation.Provider,
+			Plan:         &plan,
+			StyleGuide:   plan.StyleGuide,
+		})
+		if err != nil {
+			return nil, err
+		}
+		progress.Step(ctx, "validated provider translation proposals", 2, 2)
+		return new(TranslationGenerateOutput{
+			Mode:      "provider",
+			Provider:  generated.Provider,
+			Plan:      plan,
+			Proposals: generated.Proposals,
+			Rejected:  generated.Rejected,
+			Warnings:  generated.Warnings,
+			Usage:     generated.Usage,
+		}), nil
 	}
 	if mode != "sampling" {
 		return nil, fmt.Errorf("translation.generate mode %q is not implemented by Epic M", mode)

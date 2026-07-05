@@ -7,6 +7,7 @@ import (
 	"slices"
 )
 
+// MarkdownLink represents a Markdown inline link.
 type MarkdownLink struct {
 	Raw         string `json:"raw"`
 	Text        string `json:"text"`
@@ -15,6 +16,7 @@ type MarkdownLink struct {
 
 var markdownLinkPattern = regexp.MustCompile(`\[([^\]\n]+)\]\(([^)\n]+)\)`)
 
+// ExtractMarkdownLinks returns Markdown inline links found in s.
 func ExtractMarkdownLinks(s string) []MarkdownLink {
 	matches := markdownLinkPattern.FindAllStringSubmatch(s, -1)
 	links := make([]MarkdownLink, 0, len(matches))
@@ -61,6 +63,7 @@ func markdownDestinationCounts(links []MarkdownLink) map[string]int {
 	return counts
 }
 
+// MarkdownLinkDestinations returns unique Markdown link destinations in s.
 func MarkdownLinkDestinations(s string) []string {
 	links := ExtractMarkdownLinks(s)
 	seen := make(map[string]struct{}, len(links))

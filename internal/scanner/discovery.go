@@ -30,6 +30,7 @@ var ignoredSourceDirs = map[string]bool{
 	"out":          true,
 }
 
+// DiscoverSourceFiles returns source files to scan.
 func (s *Service) DiscoverSourceFiles(ctx context.Context, requested []string) ([]SourceFile, error) {
 	if len(requested) > 0 {
 		return s.discoverRequested(ctx, requested)

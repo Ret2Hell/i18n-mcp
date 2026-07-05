@@ -2,13 +2,16 @@ package state
 
 import "time"
 
+// State file constants.
 const (
 	CurrentVersion   = 1
 	DefaultStatePath = ".i18n-mcp/state.json"
 )
 
+// Status records translation state for a tracked key.
 type Status string
 
+// Translation state statuses.
 const (
 	StatusCurrent Status = "current"
 	StatusMissing Status = "missing"
@@ -18,6 +21,7 @@ const (
 	StatusUnknown Status = "unknown"
 )
 
+// File is the persisted translation state file.
 type File struct {
 	Version      int              `json:"version"`
 	SourceLocale string           `json:"sourceLocale"`
@@ -25,6 +29,7 @@ type File struct {
 	UpdatedAt    time.Time        `json:"updatedAt"`
 }
 
+// Entry records translation state for one locale key.
 type Entry struct {
 	Locale             string    `json:"locale"`
 	Namespace          string    `json:"namespace"`
@@ -38,6 +43,7 @@ type Entry struct {
 	UpdatedBy          string    `json:"updatedBy,omitzero"`
 }
 
+// NewFile creates an initialized state file.
 func NewFile(sourceLocale string, now time.Time) File {
 	return File{
 		Version:      CurrentVersion,
@@ -47,10 +53,12 @@ func NewFile(sourceLocale string, now time.Time) File {
 	}
 }
 
+// EmptyFile returns an empty initialized state file.
 func EmptyFile() File {
 	return File{Version: CurrentVersion, Entries: map[string]Entry{}}
 }
 
+// Normalize fills missing state file defaults.
 func (f *File) Normalize() {
 	if f.Version == 0 {
 		f.Version = CurrentVersion
@@ -60,6 +68,7 @@ func (f *File) Normalize() {
 	}
 }
 
+// EntryKey returns the stable map key for a state entry.
 func EntryKey(locale string, namespace string, key string) string {
 	return locale + "\x00" + namespace + "\x00" + key
 }

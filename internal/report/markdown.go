@@ -11,6 +11,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 )
 
+// RenderMarkdown renders report as Markdown.
 func RenderMarkdown(report Report) (string, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# i18n Audit Report\n\n")

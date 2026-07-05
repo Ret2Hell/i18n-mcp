@@ -16,6 +16,7 @@ type Document struct {
 // Kind identifies the JSON value representation stored in Value.
 type Kind int
 
+// Kind values identify object, array, string, and raw JSON representations.
 const (
 	KindObject Kind = iota
 	KindArray
@@ -23,6 +24,7 @@ const (
 	KindRaw
 )
 
+// JSON edit errors returned for invalid path operations.
 var (
 	ErrPathExists             = errors.New("json path already exists")
 	ErrAncestorDescendantPath = errors.New("cannot rename between ancestor and descendant paths")

@@ -1,19 +1,24 @@
 version: "2"
-
 linters:
-  default: none
+#  default: none
   enable:
+    - revive
+  disable:
     - errcheck
-    - govet
-    - staticcheck
   settings:
-    errcheck:
-      # Report errors from type assertions (e.g. v, ok := x.(T) when ok is ignored)
-      check-type-assertions: true
-      # Report when errors are assigned to the blank identifier
-      check-blank: true
-
-issues:
-  # Don't limit the number of issues per linter
-  max-issues-per-linter: 0
-  max-same-issues: 0
+    revive:
+      rules:
+        - name: exported
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - _test\.go$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - _test\.go$

@@ -38,6 +38,7 @@ var placeholderPatterns = []placeholderPattern{
 	},
 }
 
+// ExtractPlaceholders returns unique placeholder tokens found in s.
 func ExtractPlaceholders(s string) []string {
 	spans := collectPlaceholderSpans(s)
 	seen := make(map[string]struct{}, len(spans))

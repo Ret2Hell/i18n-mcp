@@ -1,7 +1,9 @@
 package config
 
+// DefaultConfigFile is the default project-relative configuration filename.
 const DefaultConfigFile = ".i18n-mcp.json"
 
+// Defaults returns the default configuration values.
 func Defaults() File {
 	return File{
 		SourceLocale:         "en",

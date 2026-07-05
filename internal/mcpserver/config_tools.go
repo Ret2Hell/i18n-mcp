@@ -8,8 +8,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// ConfigGetInput is the input for the config.get tool.
 type ConfigGetInput struct{}
 
+// ConfigGetOutput is the output for the config.get tool.
 type ConfigGetOutput struct {
 	Config config.Resolved `json:"config" jsonschema:"resolved i18n MCP configuration"`
 }
@@ -24,13 +26,16 @@ func configGetTool(a *app.App) func(context.Context, *mcp.CallToolRequest, Confi
 	}
 }
 
+// ConfigValidateInput is the input for the config.validate tool.
 type ConfigValidateInput struct{}
 
+// ConfigValidateOutput is the output for the config.validate tool.
 type ConfigValidateOutput struct {
 	Config     config.Resolved         `json:"config" jsonschema:"resolved configuration that was validated"`
 	Validation config.ValidationResult `json:"validation" jsonschema:"validation result with errors and warnings"`
 }
 
+// ConfigWriteOutput is the output for the config.write tool.
 type ConfigWriteOutput struct {
 	Result config.WriteOutput `json:"result" jsonschema:"config write preview or apply result"`
 }

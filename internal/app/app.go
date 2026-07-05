@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
 	"strings"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// App wires together the application services used by the CLI and MCP server.
 type App struct {
 	Options       Options
 	Logger        *slog.Logger
@@ -34,6 +36,7 @@ type App struct {
 	Validator     *validate.Service
 	Diff          *diff.Service
 	Translation   *translate.Service
+	Providers     *translate.ProviderRegistry
 	Sampling      *translate.SamplingService
 	Scanner       *scanner.Service
 	DeadKeys      *deadkey.Service
@@ -42,6 +45,7 @@ type App struct {
 	Subscriptions *mcpadapter.SubscriptionRegistry
 }
 
+// New constructs an App with all services initialized from opts.
 func New(ctx context.Context, opts Options) (*App, error) {
 	_ = ctx
 	guard, err := fsutil.NewGuard(opts.ProjectRoot)
@@ -64,6 +68,11 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	validatorService := validate.NewService()
 	diffService := diff.NewService(localeService, stateService, validatorService)
 	translationService := translate.NewService(configService, guard, localeService, stateService, diffService, validatorService)
+	providerRegistry, err := BuildProviderRegistry(os.LookupEnv, http.DefaultClient)
+	if err != nil {
+		return nil, err
+	}
+	translationService.Providers = providerRegistry
 	samplingService := new(translate.SamplingService{Validator: translationService})
 	scannerService := scanner.NewService(guard, configService)
 	deadKeyService := deadkey.NewService(configService, guard, localeService, scannerService)
@@ -82,6 +91,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		Validator:   validatorService,
 		Diff:        diffService,
 		Translation: translationService,
+		Providers:   providerRegistry,
 		Sampling:    samplingService,
 		Scanner:     scannerService,
 		DeadKeys:    deadKeyService,

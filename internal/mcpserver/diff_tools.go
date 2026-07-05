@@ -8,8 +8,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// KeysDiffInput is the input for the keys.diff tool.
 type KeysDiffInput struct{}
 
+// KeysDiffOutput is the output for the keys.diff tool.
 type KeysDiffOutput struct {
 	Report diff.Report `json:"report" jsonschema:"locale key diff report with status records and summary counts"`
 }

@@ -10,11 +10,13 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// ProjectDetectInput is the input for the project.detect tool.
 type ProjectDetectInput struct {
 	ProjectRoot string `json:"projectRoot,omitzero" jsonschema:"project root to inspect; defaults to configured root and must stay inside configured root"`
 	MaxDepth    int    `json:"maxDepth,omitzero" jsonschema:"reserved for deeper scans; zero uses default detection depth"`
 }
 
+// ProjectDetectOutput is the output for the project.detect tool.
 type ProjectDetectOutput struct {
 	ProjectRoot      string                        `json:"projectRoot" jsonschema:"resolved project root"`
 	NextJS           project.NextJSHints           `json:"nextjs" jsonschema:"Next.js detection hints from detect4nextjs when applicable"`

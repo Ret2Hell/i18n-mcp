@@ -16,6 +16,7 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 )
 
+// ExpandPattern returns project-relative files matching a locale pattern.
 func ExpandPattern(ctx context.Context, guard *fsutil.Guard, pattern string) ([]string, error) {
 	_ = ctx
 	if err := validatePattern(pattern); err != nil {
@@ -108,6 +109,7 @@ func uniqueSorted(values []string) []string {
 	return slices.Compact(values)
 }
 
+// DiscoverPattern returns locale file references matching a pattern.
 func DiscoverPattern(ctx context.Context, guard *fsutil.Guard, pattern string) ([]FileRef, error) {
 	paths, err := ExpandPattern(ctx, guard, pattern)
 	if err != nil {
@@ -128,6 +130,7 @@ func DiscoverPattern(ctx context.Context, guard *fsutil.Guard, pattern string) (
 	return refs, nil
 }
 
+// MatchPattern extracts locale metadata from relPath using pattern.
 func MatchPattern(pattern string, relPath string) (FileRef, bool, error) {
 	if err := validatePattern(pattern); err != nil {
 		return FileRef{}, false, err

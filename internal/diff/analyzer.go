@@ -12,16 +12,19 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 )
 
+// Service analyzes differences between source and target locale content.
 type Service struct {
 	locales      *locale.Service
 	stateService *state.Service
 	validator    *validate.Service
 }
 
+// NewService creates a diff analysis service.
 func NewService(locales *locale.Service, stateService *state.Service, validator *validate.Service) *Service {
 	return &Service{locales: locales, stateService: stateService, validator: validator}
 }
 
+// Analyze compares locale inventory with translation state.
 func (s *Service) Analyze(ctx context.Context) (Report, error) {
 	inv, err := s.locales.Inventory(ctx)
 	if err != nil {

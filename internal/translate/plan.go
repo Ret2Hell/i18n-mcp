@@ -11,6 +11,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 )
 
+// Plan creates a translation batch from current diff analysis.
 func (s *Service) Plan(ctx context.Context, in PlanInput) (Batch, error) {
 	report, err := s.diff.Analyze(ctx)
 	if err != nil {
@@ -73,6 +74,7 @@ func planItems(report diff.Report, in PlanInput) []Item {
 			SourceValue:    record.SourceValue,
 			OldValue:       record.TargetValue,
 			SourceHash:     record.SourceHash,
+			TargetHash:     record.TargetHash,
 			Placeholders:   validate.ExtractPlaceholders(record.SourceValue),
 			Tags:           validate.ExtractTags(record.SourceValue),
 			Notes:          planNotes(record),

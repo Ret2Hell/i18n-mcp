@@ -7,6 +7,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 )
 
+// PlanInput configures translation batch planning.
 type PlanInput struct {
 	Locales        []string         `json:"locales,omitzero" jsonschema:"target locales; empty means all configured target locales"`
 	Namespaces     []string         `json:"namespaces,omitzero" jsonschema:"namespaces to include; empty means all namespaces"`
@@ -16,6 +17,7 @@ type PlanInput struct {
 	IncludeContext bool             `json:"includeContext,omitzero" jsonschema:"include configured style guide and glossary references"`
 }
 
+// Batch contains translation work items and context.
 type Batch struct {
 	BatchID            string           `json:"batchId"`
 	SourceLocale       string           `json:"sourceLocale"`
@@ -31,6 +33,7 @@ type Batch struct {
 	CreatedAt          time.Time        `json:"createdAt"`
 }
 
+// Item describes one planned translation unit.
 type Item struct {
 	ID             string         `json:"id"`
 	Locale         string         `json:"locale"`
@@ -40,6 +43,7 @@ type Item struct {
 	SourceValue    string         `json:"sourceValue"`
 	OldValue       string         `json:"oldValue,omitzero"`
 	SourceHash     string         `json:"sourceHash"`
+	TargetHash     string         `json:"targetHash,omitzero"`
 	Placeholders   []string       `json:"placeholders,omitzero"`
 	Tags           []string       `json:"tags,omitzero"`
 	Notes          []string       `json:"notes,omitzero"`
@@ -47,6 +51,7 @@ type Item struct {
 	TargetFilePath string         `json:"targetFilePath,omitzero"`
 }
 
+// GlossaryEntry describes a glossary term for translation context.
 type GlossaryEntry struct {
 	Term        string `json:"term"`
 	Translation string `json:"translation,omitzero"`
@@ -54,11 +59,13 @@ type GlossaryEntry struct {
 	Notes       string `json:"notes,omitzero"`
 }
 
+// ContextFileRef references an auxiliary context file.
 type ContextFileRef struct {
 	Kind string `json:"kind"`
 	Path string `json:"path"`
 }
 
+// ProposedTranslation is a candidate translated value.
 type ProposedTranslation struct {
 	ID          string `json:"id,omitzero"`
 	BatchID     string `json:"batchId,omitzero"`
@@ -69,12 +76,14 @@ type ProposedTranslation struct {
 	Value       string `json:"value"`
 }
 
+// ValidationInput configures validation of proposed translations.
 type ValidationInput struct {
 	BatchID          string                `json:"batchId,omitzero" jsonschema:"expected translation batch id"`
 	Translations     []ProposedTranslation `json:"translations" jsonschema:"proposed translations to validate"`
 	AllowSourceDrift bool                  `json:"allowSourceDrift,omitzero" jsonschema:"allow proposals generated from stale source text"`
 }
 
+// ValidationOutput contains accepted and rejected proposed translations.
 type ValidationOutput struct {
 	BatchID  string                 `json:"batchId,omitzero"`
 	Accepted []ValidatedTranslation `json:"accepted"`
@@ -82,6 +91,7 @@ type ValidationOutput struct {
 	Summary  ValidationSummary      `json:"summary"`
 }
 
+// ValidatedTranslation is an accepted translation proposal.
 type ValidatedTranslation struct {
 	ProposedTranslation
 	SourceHash     string           `json:"sourceHash"`
@@ -90,17 +100,20 @@ type ValidatedTranslation struct {
 	Warnings       []validate.Issue `json:"warnings,omitzero"`
 }
 
+// RejectedTranslation is a rejected translation proposal with issues.
 type RejectedTranslation struct {
 	ProposedTranslation
 	Issues []validate.Issue `json:"issues"`
 }
 
+// ValidationSummary counts translation validation outcomes.
 type ValidationSummary struct {
 	Total    int `json:"total"`
 	Accepted int `json:"accepted"`
 	Rejected int `json:"rejected"`
 }
 
+// ApplyInput configures validation and application of translations.
 type ApplyInput struct {
 	BatchID          string                `json:"batchId,omitzero" jsonschema:"expected translation batch id"`
 	Translations     []ProposedTranslation `json:"translations" jsonschema:"translations to validate and apply"`
@@ -109,6 +122,7 @@ type ApplyInput struct {
 	AllowSourceDrift bool                  `json:"allowSourceDrift,omitzero" jsonschema:"allow proposals generated from stale source text"`
 }
 
+// ApplyOutput describes the result of applying translations.
 type ApplyOutput struct {
 	DryRun       bool                  `json:"dryRun"`
 	Applied      int                   `json:"applied"`
@@ -118,6 +132,7 @@ type ApplyOutput struct {
 	Warnings     []string              `json:"warnings,omitzero"`
 }
 
+// ChangedFile describes changes made or previewed for a locale file.
 type ChangedFile struct {
 	Path    string `json:"path"`
 	Diff    string `json:"diff,omitzero"`
@@ -125,6 +140,7 @@ type ChangedFile struct {
 	Written bool   `json:"written,omitzero"`
 }
 
+// DryRunValue returns the effective dry-run setting.
 func (in ApplyInput) DryRunValue() bool {
 	if in.DryRun != nil {
 		return *in.DryRun || !in.Apply

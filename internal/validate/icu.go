@@ -9,10 +9,12 @@ import (
 
 var icuHeadPattern = regexp.MustCompile(`\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(plural|select|selectordinal|number|date|time)\b`)
 
+// LooksLikeICU reports whether s appears to contain an ICU message.
 func LooksLikeICU(s string) bool {
 	return icuHeadPattern.MatchString(s)
 }
 
+// ExtractICUArguments returns unique ICU argument names found in s.
 func ExtractICUArguments(s string) []string {
 	matches := icuHeadPattern.FindAllStringSubmatch(s, -1)
 	seen := make(map[string]struct{}, len(matches))
@@ -25,6 +27,7 @@ func ExtractICUArguments(s string) []string {
 	return slices.Sorted(maps.Keys(seen))
 }
 
+// HasBalancedBraces reports whether braces in s are balanced.
 func HasBalancedBraces(s string) bool {
 	depth := 0
 	for _, r := range s {
