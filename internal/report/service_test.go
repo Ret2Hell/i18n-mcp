@@ -29,7 +29,8 @@ func TestGenerateJSONStoresLatestAndSummarizesReports(t *testing.T) {
 	require.Equal(t, 1, out.Report.Summary.Missing)
 	require.Equal(t, 1, out.Report.Summary.ProbablyUnused)
 
-	latest, ok := a.Reports.Latest()
+	latest, ok, err := a.Reports.Latest(t.Context())
+	require.NoError(t, err)
 	require.True(t, ok)
 	require.Equal(t, out.Format, latest.Format)
 	require.Equal(t, out.Text, latest.Text)

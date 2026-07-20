@@ -166,7 +166,7 @@ func readDiffResource(a *app.App) mcp.ResourceHandler {
 func readUsageResource(a *app.App) mcp.ResourceHandler {
 	return latestJSONResource(
 		"i18n://analysis/usage",
-		func() (any, bool) { return a.Scanner.Latest() },
+		func(ctx context.Context) (any, bool, error) { return a.Scanner.Latest(ctx) },
 		map[string]any{"report": nil, "message": "no usage scan has been run yet"},
 	)
 }
@@ -174,7 +174,7 @@ func readUsageResource(a *app.App) mcp.ResourceHandler {
 func readDeadKeysResource(a *app.App) mcp.ResourceHandler {
 	return latestJSONResource(
 		"i18n://analysis/dead-keys",
-		func() (any, bool) { return a.DeadKeys.Latest() },
+		func(ctx context.Context) (any, bool, error) { return a.DeadKeys.Latest(ctx) },
 		map[string]any{"report": nil, "message": "no dead-key report has been run yet"},
 	)
 }
@@ -182,7 +182,7 @@ func readDeadKeysResource(a *app.App) mcp.ResourceHandler {
 func readTranslationPlanResource(a *app.App) mcp.ResourceHandler {
 	return latestJSONResource(
 		"i18n://translation/plan/latest",
-		func() (any, bool) { return a.Translation.LatestPlan() },
+		func(ctx context.Context) (any, bool, error) { return a.Translation.LatestPlan(ctx) },
 		map[string]any{"batch": nil, "message": "no translation plan has been created yet"},
 	)
 }
@@ -190,17 +190,20 @@ func readTranslationPlanResource(a *app.App) mcp.ResourceHandler {
 func readLatestReportResource(a *app.App) mcp.ResourceHandler {
 	return latestJSONResource(
 		"i18n://reports/latest",
-		func() (any, bool) { return a.Reports.Latest() },
+		func(ctx context.Context) (any, bool, error) { return a.Reports.Latest(ctx) },
 		map[string]any{"report": nil, "message": "no report has been generated yet"},
 	)
 }
 
-func latestJSONResource(uri string, latest func() (any, bool), empty any) mcp.ResourceHandler {
-	return func(_ context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
+func latestJSONResource(uri string, latest func(context.Context) (any, bool, error), empty any) mcp.ResourceHandler {
+	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if req.Params.URI != uri {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
-		value, ok := latest()
+		value, ok, err := latest(ctx)
+		if err != nil {
+			return nil, mcp.ResourceNotFoundError(req.Params.URI)
+		}
 		if !ok {
 			value = empty
 		}

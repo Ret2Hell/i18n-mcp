@@ -47,13 +47,17 @@ func (s *Service) Report(ctx context.Context, in ReportInput) (Report, error) {
 	}
 	sortItems(report.Items)
 	report.Summary = summarize(report.Items)
-	s.storeLatest(report)
+	s.storeLatest(ctx, report)
 	return report, nil
 }
 
 func (s *Service) usageReport(ctx context.Context, refresh bool) (scanner.Report, error) {
 	if !refresh {
-		if report, ok := s.scanner.Latest(); ok {
+		report, ok, err := s.scanner.Latest(ctx)
+		if err != nil {
+			return scanner.Report{}, err
+		}
+		if ok {
 			return report, nil
 		}
 	}

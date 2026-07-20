@@ -230,14 +230,14 @@ If the proposals pass review, return the same JSON proposal shape expected by i1
 }
 
 func translateBatchPrompt(a *app.App) mcp.PromptHandler {
-	return func(_ context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+	return func(ctx context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
 		localeCode := promptArg(req, "locale")
 		batchID := promptArg(req, "batchId")
 		tone := promptArg(req, "tone")
 		domain := promptArg(req, "domain")
 
 		batchSummary := "No latest batch is currently available. Call i18n.translation.plan first, or read i18n://translation/plan/latest after a batch has been prepared."
-		if batch, ok := a.Translation.LatestPlan(); ok {
+		if batch, ok, _ := a.Translation.LatestPlan(ctx); ok {
 			batchSummary = fmt.Sprintf("Latest batch: %s with %d item(s), source locale %s, target locales %s.", batch.BatchID, len(batch.Items), batch.SourceLocale, strings.Join(batch.TargetLocales, ", "))
 		}
 

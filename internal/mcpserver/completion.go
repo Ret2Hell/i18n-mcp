@@ -33,7 +33,7 @@ func complete(a *app.App) func(context.Context, *mcp.CompleteRequest) (*mcp.Comp
 		case "key", "keys", "fromKey", "toKey":
 			values, err = completeKeys(ctx, a, prefix, contextArgs)
 		case "batchId":
-			values = a.Translation.CompleteBatchIDs(prefix)
+			values = a.Translation.CompleteBatchIDs(ctx, prefix)
 		default:
 			values = nil
 		}
