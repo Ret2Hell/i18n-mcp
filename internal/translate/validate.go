@@ -19,7 +19,10 @@ func (s *Service) Validate(ctx context.Context, in ValidationInput) (ValidationO
 		return ValidationOutput{}, err
 	}
 
-	latest, hasLatest := s.LatestPlan()
+	latest, hasLatest, err := s.LatestPlan(ctx)
+	if err != nil {
+		return ValidationOutput{}, err
+	}
 	if in.BatchID != "" && (!hasLatest || latest.BatchID != in.BatchID) {
 		return ValidationOutput{}, fmt.Errorf("unknown translation batch id %q", in.BatchID)
 	}

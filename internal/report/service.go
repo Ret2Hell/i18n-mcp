@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
@@ -14,6 +13,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/resources"
 	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
+	"github.com/Ret2Hell/i18n-mcp/internal/security"
 )
 
 // Notifier publishes resource update notifications.
@@ -31,8 +31,7 @@ type Service struct {
 	deadKeys    *deadkey.Service
 	Notifier    Notifier
 
-	latestMu sync.RWMutex
-	latest   *GenerateOutput
+	latest security.Store[GenerateOutput]
 }
 
 // NewService creates a report generation service.
@@ -98,7 +97,7 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 	if err != nil {
 		return GenerateOutput{}, err
 	}
-	s.storeLatest(out)
+	s.storeLatest(ctx, out)
 	if s.Notifier != nil {
 		s.Notifier.Updated(ctx, resources.LatestReportURI)
 	}
@@ -109,25 +108,23 @@ type noopProgress struct{}
 
 func (noopProgress) Step(context.Context, string, int, int) {}
 
-// Latest returns the most recent generated report, if any.
-func (s *Service) Latest() (GenerateOutput, bool) {
-	s.latestMu.RLock()
-	defer s.latestMu.RUnlock()
-	if s.latest == nil {
-		return GenerateOutput{}, false
-	}
-	return cloneOutput(*s.latest), true
+// Latest returns the current subject's most recent generated report, if any.
+func (s *Service) Latest(ctx context.Context) (GenerateOutput, bool, error) {
+	out, ok, err := s.latest.Get(ctx, "latest")
+	return cloneOutput(out), ok, err
 }
 
-func (s *Service) storeLatest(out GenerateOutput) {
-	s.latestMu.Lock()
-	defer s.latestMu.Unlock()
-	s.latest = new(cloneOutput(out))
+func (s *Service) storeLatest(ctx context.Context, out GenerateOutput) {
+	s.latest.Put(ctx, "latest", cloneOutput(out))
 }
 
 func (s *Service) usage(ctx context.Context, refresh bool) (scanner.Report, error) {
 	if !refresh {
-		if usage, ok := s.scanner.Latest(); ok {
+		usage, ok, err := s.scanner.Latest(ctx)
+		if err != nil {
+			return scanner.Report{}, err
+		}
+		if ok {
 			return usage, nil
 		}
 	}

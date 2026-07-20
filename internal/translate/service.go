@@ -3,12 +3,12 @@ package translate
 import (
 	"context"
 	"slices"
-	"sync"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
+	"github.com/Ret2Hell/i18n-mcp/internal/security"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 )
@@ -29,8 +29,7 @@ type Service struct {
 	Providers *ProviderRegistry
 	Notifier  Notifier
 
-	latestMu sync.RWMutex
-	latest   *Batch
+	latest security.Store[Batch]
 }
 
 // NewService creates a translation service.
@@ -45,20 +44,14 @@ func NewService(configService *config.Service, guard *fsutil.Guard, locales *loc
 	}
 }
 
-// LatestPlan returns the most recent translation batch, if any.
-func (s *Service) LatestPlan() (Batch, bool) {
-	s.latestMu.RLock()
-	defer s.latestMu.RUnlock()
-	if s.latest == nil {
-		return Batch{}, false
-	}
-	return cloneBatch(*s.latest), true
+// LatestPlan returns the current subject's most recent translation batch, if any.
+func (s *Service) LatestPlan(ctx context.Context) (Batch, bool, error) {
+	batch, ok, err := s.latest.Get(ctx, "latest")
+	return cloneBatch(batch), ok, err
 }
 
-func (s *Service) storeLatest(batch Batch) {
-	s.latestMu.Lock()
-	defer s.latestMu.Unlock()
-	s.latest = new(cloneBatch(batch))
+func (s *Service) storeLatest(ctx context.Context, batch Batch) {
+	s.latest.Put(ctx, "latest", cloneBatch(batch))
 }
 
 func cloneBatch(batch Batch) Batch {

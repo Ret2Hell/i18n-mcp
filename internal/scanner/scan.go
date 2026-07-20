@@ -52,7 +52,7 @@ func (s *Service) Scan(ctx context.Context, in ScanInput) (Report, error) {
 	}
 	report.Usages = sortedUsages(usageByID)
 	slices.SortFunc(report.DynamicHints, compareDynamicHint)
-	s.storeLatest(report)
+	s.storeLatest(ctx, report)
 	return report, nil
 }
 

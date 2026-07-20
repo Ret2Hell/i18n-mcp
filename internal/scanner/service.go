@@ -1,19 +1,20 @@
 package scanner
 
 import (
-	"sync"
+	"context"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
+	"github.com/Ret2Hell/i18n-mcp/internal/security"
 )
+
+const latestReportID = "latest"
 
 // Service scans source files for translation usage.
 type Service struct {
 	guard  *fsutil.Guard
 	config *config.Service
-
-	latestMu sync.RWMutex
-	latest   *Report
+	latest security.Store[Report]
 }
 
 // NewService creates a scanner service scoped by guard and configService.
@@ -21,18 +22,12 @@ func NewService(guard *fsutil.Guard, configService *config.Service) *Service {
 	return &Service{guard: guard, config: configService}
 }
 
-// Latest returns the most recent scan report, if any.
-func (s *Service) Latest() (Report, bool) {
-	s.latestMu.RLock()
-	defer s.latestMu.RUnlock()
-	if s.latest == nil {
-		return Report{}, false
-	}
-	return cloneReport(*s.latest), true
+// Latest returns the current subject's most recent scan report, if any.
+func (s *Service) Latest(ctx context.Context) (Report, bool, error) {
+	report, ok, err := s.latest.Get(ctx, latestReportID)
+	return cloneReport(report), ok, err
 }
 
-func (s *Service) storeLatest(report Report) {
-	s.latestMu.Lock()
-	defer s.latestMu.Unlock()
-	s.latest = new(cloneReport(report))
+func (s *Service) storeLatest(ctx context.Context, report Report) {
+	s.latest.Put(ctx, latestReportID, cloneReport(report))
 }

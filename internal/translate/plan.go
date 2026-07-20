@@ -41,7 +41,7 @@ func (s *Service) Plan(ctx context.Context, in PlanInput) (Batch, error) {
 	}
 
 	batch.BatchID = buildBatchID(s.guard.Root(), batch)
-	s.storeLatest(batch)
+	s.storeLatest(ctx, batch)
 	return batch, nil
 }
 
