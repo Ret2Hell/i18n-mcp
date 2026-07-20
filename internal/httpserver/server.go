@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -33,6 +34,7 @@ func Run(ctx context.Context, cfg Config, app AppFactory, logger *slog.Logger) e
 	cfg.MCPPath = cmp.Or(cfg.MCPPath, "/mcp")
 	cfg.SessionTimeout = cmp.Or(cfg.SessionTimeout, 30*time.Minute)
 	cfg.Auth.MetadataPath = cmp.Or(cfg.Auth.MetadataPath, DefaultAuthConfig().MetadataPath)
+	cfg.Auth.MetadataURL = inferMetadataURL(cfg)
 	if err := cfg.Auth.Validate(cfg.Addr); err != nil {
 		return err
 	}
@@ -42,6 +44,11 @@ func Run(ctx context.Context, cfg Config, app AppFactory, logger *slog.Logger) e
 		JSONResponse:   cfg.JSONResponse,
 		Logger:         logger,
 	})
+
+	mux := http.NewServeMux()
+	if cfg.Auth.ResourceURL != "" {
+		mux.Handle(cfg.Auth.MetadataPath, ProtectedResourceHandler(cfg.Auth))
+	}
 
 	handler := http.Handler(mcpHandler)
 	if cfg.Auth.Required {
@@ -53,7 +60,6 @@ func Run(ctx context.Context, cfg Config, app AppFactory, logger *slog.Logger) e
 		handler = ProtectMCPHandler(handler, cfg.Auth, verifier)
 	}
 
-	mux := http.NewServeMux()
 	mux.Handle(cfg.MCPPath, handler)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
@@ -78,4 +84,14 @@ func Run(ctx context.Context, cfg Config, app AppFactory, logger *slog.Logger) e
 		return nil
 	}
 	return err
+}
+
+func inferMetadataURL(cfg Config) string {
+	if cfg.Auth.MetadataURL != "" {
+		return cfg.Auth.MetadataURL
+	}
+	if cfg.Auth.ResourceURL == "" || cfg.Auth.MetadataPath == "" {
+		return ""
+	}
+	return strings.TrimRight(cfg.Auth.ResourceURL, "/") + cfg.Auth.MetadataPath
 }
