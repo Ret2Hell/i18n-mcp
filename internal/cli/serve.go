@@ -3,9 +3,11 @@ package cli
 import (
 	"context"
 	"errors"
+	"net/http"
 	"os"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
+	"github.com/Ret2Hell/i18n-mcp/internal/httpserver"
 	"github.com/Ret2Hell/i18n-mcp/internal/mcpadapter"
 	"github.com/Ret2Hell/i18n-mcp/internal/mcpserver"
 	"github.com/Ret2Hell/i18n-mcp/internal/watch"
@@ -19,7 +21,45 @@ func newServeCommand(opts *RootOptions) *cobra.Command {
 		Short: "Run the MCP server",
 	}
 	cmd.AddCommand(newServeStdioCommand(opts))
+	cmd.AddCommand(newServeHTTPCommand(opts))
 	return cmd
+}
+
+func newServeHTTPCommand(opts *RootOptions) *cobra.Command {
+	var addr string
+	var path string
+	cmd := &cobra.Command{
+		Use:   "http",
+		Short: "Run the MCP server over Streamable HTTP",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			application, err := app.New(cmd.Context(), app.Options{
+				ProjectRoot: opts.Project,
+				ConfigPath:  opts.Config,
+				LogLevel:    opts.LogLevel,
+			})
+			if err != nil {
+				return err
+			}
+			cfg := httpserver.Config{
+				Addr:        addr,
+				MCPPath:     path,
+				ProjectRoot: opts.Project,
+			}
+			return httpserver.Run(cmd.Context(), cfg, serverFactory{application: application}, application.Logger)
+		},
+	}
+	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:7339", "HTTP listen address")
+	cmd.Flags().StringVar(&path, "path", "/mcp", "HTTP MCP endpoint path")
+	return cmd
+}
+
+type serverFactory struct {
+	application *app.App
+}
+
+func (f serverFactory) ServerForRequest(_ *http.Request) *mcp.Server {
+	return mcpserver.New(f.application)
 }
 
 func newServeStdioCommand(opts *RootOptions) *cobra.Command {
