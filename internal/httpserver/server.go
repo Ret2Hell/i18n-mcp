@@ -43,8 +43,18 @@ func Run(ctx context.Context, cfg Config, app AppFactory, logger *slog.Logger) e
 		Logger:         logger,
 	})
 
+	handler := http.Handler(mcpHandler)
+	if cfg.Auth.Required {
+		verifierFactory := TokenVerifierFactory(DevStaticTokenVerifier)
+		verifier, err := verifierFactory(cfg.Auth)
+		if err != nil {
+			return err
+		}
+		handler = ProtectMCPHandler(handler, cfg.Auth, verifier)
+	}
+
 	mux := http.NewServeMux()
-	mux.Handle(cfg.MCPPath, mcpHandler)
+	mux.Handle(cfg.MCPPath, handler)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
