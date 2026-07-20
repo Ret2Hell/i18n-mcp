@@ -3,7 +3,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/Ret2Hell/i18n-mcp?style=flat&color=blue)](https://github.com/Ret2Hell/i18n-mcp/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/Ret2Hell/i18n-mcp/ci.yml?label=CI)](https://github.com/Ret2Hell/i18n-mcp/actions/workflows/ci.yml)
 [![Go](https://img.shields.io/badge/Go-1.26-blue)](go.mod)
-[![MCP](https://img.shields.io/badge/MCP-stdio-purple)](#mcp-client-configuration)
+[![MCP](https://img.shields.io/badge/MCP-stdio_%7C_streamable_HTTP-purple)](#mcp-client-configuration)
 [![Tools](https://img.shields.io/badge/MCP_tools-16-orange)](#mcp-tools)
 [![Docker](https://img.shields.io/badge/docker-ret2hell%2Fi18n--mcp-blue)](https://hub.docker.com/r/ret2hell/i18n-mcp)
 [![Platform](https://img.shields.io/badge/macOS_%7C_Linux_%7C_Windows-supported-lightgrey)](https://github.com/Ret2Hell/i18n-mcp/releases/latest)
@@ -11,9 +11,9 @@
 
 **An MCP server for inspecting, validating, translating, and safely updating JSON i18n locale files in frontend projects.** Detect locale layouts, bootstrap `.i18n-mcp.json`, find missing and stale translations, plan agent translation batches, validate placeholders and ICU shape, scan application source for dead keys, preview patches, and write only after explicit approval.
 
-`i18n-mcp` runs over stdio with the same filesystem permissions as the user or container process that starts it. Write tools are dry-run by default and require `apply: true` before changing files.
+`i18n-mcp` supports both local stdio and MCP Streamable HTTP transports. It runs with the same filesystem permissions as the user or container process that starts it. Write tools are dry-run by default and require `apply: true` before changing files.
 
-> **Security & Trust** - This tool reads project files and can write locale JSON, config, and state files when explicitly asked. The default path is preview-first: config writes, state rebuilds, translation applies, key prune, and key rename all return patch previews unless `apply: true` is provided. Provider-backed translation and remote HTTP deployment are not documented as available features here. The server itself does not send locale content to translation APIs.
+> **Security & Trust** - This tool reads project files and can write locale JSON, config, and state files when explicitly asked. The default path is preview-first: config writes, state rebuilds, translation applies, key prune, and key rename all return patch previews unless `apply: true` is provided. The HTTP server binds to loopback by default and refuses non-loopback binds unless authentication is enabled. The built-in static bearer-token verifier is intended only for local development; place production deployments behind a properly authenticated and authorized gateway. The server itself does not send locale content to translation APIs.
 
 ## Why i18n-mcp
 
@@ -24,7 +24,7 @@
 - **Validation built for UI strings** - checks placeholders, HTML-like tags, ICU arguments, markdown-sensitive patterns, and empty targets.
 - **Dead-key review workflow** - scans TS/TSX/JS/JSX/MJS/CJS usage, reports confidence, respects dynamic hints, and refuses unsafe prune by default.
 - **CI-ready audits** - emits Markdown or JSON reports and exits according to configurable failure policy.
-- **Stdio integration** - simple MCP client setup with no hosted service, no database server, and no provider credentials.
+- **Flexible MCP transport** - use stdio for local coding agents or Streamable HTTP for network-capable MCP clients.
 
 ## Quick Start
 
@@ -36,10 +36,14 @@ curl -fsSL https://raw.githubusercontent.com/Ret2Hell/i18n-mcp/main/install.sh |
 
 Open OpenCode, Codex, or Claude Code from your frontend project directory and start working. The installer configures supported agents automatically.
 
-Run the stdio server manually if needed:
+Run either transport manually if needed:
 
 ```bash
+# Local stdio
 i18n-mcp serve stdio --project /path/to/frontend-app
+
+# Streamable HTTP at http://127.0.0.1:7339/mcp
+i18n-mcp serve http --project /path/to/frontend-app
 ```
 
 Ask your agent to detect the i18n project. The first MCP tool call is:
@@ -88,6 +92,21 @@ For real project access, mount the project directory:
 ```bash
 docker run --rm -i -v "$PWD:/workspace" -w /workspace ret2hell/i18n-mcp:latest serve stdio --project /workspace
 ```
+
+Run Streamable HTTP on port 7339:
+
+```bash
+export I18N_MCP_DEV_TOKEN='replace-with-a-random-secret'
+docker run --rm -p 127.0.0.1:7339:7339 \
+  -e I18N_MCP_DEV_TOKEN \
+  -v "$PWD:/workspace" -w /workspace \
+  ret2hell/i18n-mcp:latest serve http \
+  --project /workspace --addr 0.0.0.0:7339 --auth-required \
+  --auth-resource http://127.0.0.1:7339/mcp \
+  --dev-static-token-env I18N_MCP_DEV_TOKEN
+```
+
+This is a development-only bearer-token setup. Authentication is required because the process binds to a non-loopback address inside the container. Configure the client to send `Authorization: Bearer <token>`.
 
 ## Installation
 
@@ -150,7 +169,7 @@ Do not remove `.i18n-mcp.json` unless you also want to remove project configurat
 
 ## MCP Client Configuration
 
-The installer configures OpenCode, Codex CLI, and Claude Code automatically. For other MCP clients, add the server as a stdio server.
+The installer configures OpenCode, Codex CLI, and Claude Code automatically using stdio. For other MCP clients, choose either stdio or Streamable HTTP.
 
 ```json
 {
@@ -165,7 +184,32 @@ The installer configures OpenCode, Codex CLI, and Claude Code automatically. For
 
 Use absolute paths so the client does not depend on its current working directory.
 
-For Docker-based clients, use `docker` as the command and pass the run arguments explicitly. Ensure the project is mounted into the container.
+### Streamable HTTP
+
+Start the HTTP server (the default endpoint is `http://127.0.0.1:7339/mcp`):
+
+```bash
+i18n-mcp serve http --project /absolute/path/to/frontend-app
+```
+
+Configure a Streamable HTTP-capable client with that URL. The exact configuration keys vary by client; a typical configuration looks like:
+
+```json
+{
+  "mcpServers": {
+    "i18n-mcp": {
+      "type": "streamable-http",
+      "url": "http://127.0.0.1:7339/mcp"
+    }
+  }
+}
+```
+
+The server also exposes `GET /healthz`. Use `--addr` and `--path` to change the listen address and MCP endpoint. Loopback HTTP is unauthenticated by default. See [HTTP Deployment](#http-deployment) before binding to another interface.
+
+### Docker-based stdio
+
+For Docker-based clients using stdio, use `docker` as the command and pass the run arguments explicitly. Ensure the project is mounted into the container.
 
 ```json
 {
@@ -800,6 +844,8 @@ i18n://reports/latest
 i18n-mcp --help
 i18n-mcp serve stdio --project /path/to/frontend-app
 i18n-mcp serve stdio --project /path/to/frontend-app --config .i18n-mcp.json --log-level warn
+i18n-mcp serve http --project /path/to/frontend-app
+i18n-mcp serve http --project /path/to/frontend-app --addr 127.0.0.1:7339 --path /mcp
 i18n-mcp schema > i18n-mcp.schema.json
 i18n-mcp audit --project /path/to/frontend-app --output markdown
 i18n-mcp audit --project /path/to/frontend-app --output json
@@ -807,7 +853,7 @@ i18n-mcp audit --project /path/to/frontend-app --output json
 
 ## Security Model
 
-`i18n-mcp` is designed for stdio usage. The server has the same filesystem access as the user running it.
+`i18n-mcp` supports stdio and Streamable HTTP. With either transport, the server has the same filesystem access as the user running it.
 
 ### Project Root Guard
 
@@ -874,23 +920,29 @@ Recommendations:
 - Review dry-run patches before apply.
 - Do not expose stdio server processes to untrusted clients.
 
-### Remote Deployment Expectations
+### HTTP Deployment
 
-Before exposing the server remotely, add:
+Streamable HTTP defaults to `127.0.0.1:7339`, serves MCP at `/mcp`, and exposes a `/healthz` endpoint. The server refuses to bind to a non-loopback address unless `--auth-required` is set.
 
-- Authorization for every request.
-- Protected resource metadata.
-- Token validation and required scopes.
-- Per-subject isolation for jobs and write contexts.
-- Audit logging without secrets.
+The built-in bearer-token mode provides protected-resource metadata and scope checks, but its static token verifier is for development only. Clients must send the token as `Authorization: Bearer <token>`:
 
-Do not expose project files over a network without authentication and authorization.
+```bash
+export I18N_MCP_DEV_TOKEN='replace-with-a-random-secret'
+i18n-mcp serve http \
+  --project /path/to/frontend-app \
+  --auth-required \
+  --auth-resource http://127.0.0.1:7339/mcp \
+  --dev-static-token-env I18N_MCP_DEV_TOKEN
+```
+
+For production or remote access, keep the server on loopback or a private interface behind a gateway that provides TLS, token validation, authorization, rate limiting, and secret-safe audit logging. Do not expose project files over a network without authentication and authorization.
 
 ## Troubleshooting
 
 | Problem | Fix |
 | --- | --- |
-| MCP client cannot find the server | Use an absolute `command` path in MCP config and restart the client. |
+| MCP client cannot find the server | For stdio, use an absolute `command` path and restart the client. For HTTP, verify the client supports Streamable HTTP and can reach the configured `/mcp` URL. |
+| HTTP server rejects the listen address | Non-loopback binds require `--auth-required`; use loopback for local clients or configure authentication. |
 | Server starts in the wrong project | Pass `--project /absolute/path/to/frontend-app`. |
 | Config validation fails | Run `i18n.project.detect`, review `proposedConfig`, then preview `i18n.config.write`. |
 | Diff shows `unknown` keys | Run `i18n.state.rebuild` without `apply`, review, then run with `apply: true`. |
