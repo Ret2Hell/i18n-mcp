@@ -1,7 +1,7 @@
 # argument for Go version
-ARG GO_VERSION=1.26.4
+ARG GO_VERSION=1.26.5
 
-FROM golang:${GO_VERSION}-alpine@sha256:7a3e50096189ad57c9f9f865e7e4aa8585ed1585248513dc5cda498e2f41812c AS builder
+FROM golang:${GO_VERSION}-alpine@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2 AS builder
 
 # Create user in builder (these tools don't exist in scratch)
 RUN adduser -D -g '' -u 1000 appuser
