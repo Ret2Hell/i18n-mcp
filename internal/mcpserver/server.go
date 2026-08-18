@@ -12,7 +12,6 @@ import (
 
 // New creates and configures the MCP server.
 func New(a *app.App) *mcp.Server {
-	subs := mcpadapter.NewSubscriptionRegistry()
 	opts := &mcp.ServerOptions{
 		Instructions: "Use this server to inspect, validate, translate, and safely update JSON i18n locale files in the configured Next.js project. Prefer dry-run tools before write tools.",
 		Logger:       a.Logger,
@@ -21,14 +20,12 @@ func New(a *app.App) *mcp.Server {
 			Completions: &mcp.CompletionCapabilities{},
 		},
 		CompletionHandler:  complete(a),
-		SubscribeHandler:   subs.Subscribe,
-		UnsubscribeHandler: subs.Unsubscribe,
+		SubscribeHandler:   mcpadapter.ValidateSubscribe,
+		UnsubscribeHandler: mcpadapter.ValidateUnsubscribe,
 		InitializedHandler: func(_ context.Context, req *mcp.InitializedRequest) {
 			a.Logger.Info("mcp session initialized", slog.String("session", req.Session.ID()))
 		},
 	}
-
-	a.Subscriptions = subs
 
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    "i18n-mcp",

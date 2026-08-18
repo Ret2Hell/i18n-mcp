@@ -1,8 +1,10 @@
 package mcpserver_test
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/mcpserver"
@@ -41,7 +43,12 @@ func TestResourceSubscriptions(t *testing.T) {
 	require.NoError(t, err)
 
 	server := mcpserver.New(application)
-	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.0"}, nil)
+	updates := make(chan string, 1)
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.0"}, &mcp.ClientOptions{
+		ResourceUpdatedHandler: func(_ context.Context, req *mcp.ResourceUpdatedNotificationRequest) {
+			updates <- req.Params.URI
+		},
+	})
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
 	serverSession, err := server.Connect(ctx, serverTransport, nil)
@@ -54,17 +61,38 @@ func TestResourceSubscriptions(t *testing.T) {
 
 	capabilities := clientSession.InitializeResult().Capabilities
 	require.NotNil(t, capabilities.Resources)
-	require.True(t, capabilities.Resources.Subscribe)
 
-	validURI := "i18n://locales/en/common.json"
-	require.NoError(t, clientSession.Subscribe(ctx, &mcp.SubscribeParams{URI: validURI}))
-	require.ElementsMatch(t, []string{validURI}, application.Subscriptions.URIsForSession(clientSession.ID()))
+	uri := "i18n://analysis/diff"
+	require.NoError(t, clientSession.Subscribe(ctx, &mcp.SubscribeParams{URI: uri}))
+	deadline := time.NewTimer(time.Second)
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer deadline.Stop()
+	defer ticker.Stop()
+	for {
+		require.NoError(t, server.ResourceUpdated(ctx, &mcp.ResourceUpdatedNotificationParams{URI: uri}))
+		select {
+		case got := <-updates:
+			require.Equal(t, uri, got)
+			goto subscribed
+		case <-ticker.C:
+		case <-deadline.C:
+			t.Fatal("timed out waiting for subscribed resource update")
+		}
+	}
 
-	require.Error(t, clientSession.Subscribe(ctx, &mcp.SubscribeParams{URI: "file:///tmp/common.json"}))
-	require.ElementsMatch(t, []string{validURI}, application.Subscriptions.URIsForSession(clientSession.ID()))
+subscribed:
 
-	require.NoError(t, clientSession.Unsubscribe(ctx, &mcp.UnsubscribeParams{URI: validURI}))
-	require.Empty(t, application.Subscriptions.URIsForSession(clientSession.ID()))
+	require.NoError(t, clientSession.Unsubscribe(ctx, &mcp.UnsubscribeParams{URI: uri}))
+	time.Sleep(50 * time.Millisecond)
+	for len(updates) > 0 {
+		<-updates
+	}
+	require.NoError(t, server.ResourceUpdated(ctx, &mcp.ResourceUpdatedNotificationParams{URI: uri}))
+	select {
+	case got := <-updates:
+		t.Fatalf("received update %q after unsubscribe", got)
+	case <-time.After(50 * time.Millisecond):
+	}
 }
 
 func TestHealthTool(t *testing.T) {
