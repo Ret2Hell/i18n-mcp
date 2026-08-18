@@ -4,7 +4,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/Ret2Hell/i18n-mcp/ci.yml?label=CI)](https://github.com/Ret2Hell/i18n-mcp/actions/workflows/ci.yml)
 [![Go](https://img.shields.io/badge/Go-1.26-blue)](go.mod)
 [![MCP](https://img.shields.io/badge/MCP-stdio_%7C_streamable_HTTP-purple)](#mcp-client-configuration)
-[![Tools](https://img.shields.io/badge/MCP_tools-16-orange)](#mcp-tools)
+[![Tools](https://img.shields.io/badge/MCP_tools-17-orange)](#mcp-tools)
 [![Docker](https://img.shields.io/badge/docker-ret2hell%2Fi18n--mcp-blue)](https://hub.docker.com/r/ret2hell/i18n-mcp)
 [![Platform](https://img.shields.io/badge/macOS_%7C_Linux_%7C_Windows-supported-lightgrey)](https://github.com/Ret2Hell/i18n-mcp/releases/latest)
 [![License](https://img.shields.io/badge/license-see_LICENSE-green)](LICENSE)
@@ -13,7 +13,7 @@
 
 `i18n-mcp` supports both local stdio and MCP Streamable HTTP transports. It runs with the same filesystem permissions as the user or container process that starts it. Write tools are dry-run by default and require `apply: true` before changing files.
 
-> **Security & Trust** - This tool reads project files and can write locale JSON, config, and state files when explicitly asked. The default path is preview-first: config writes, state rebuilds, translation applies, key prune, and key rename all return patch previews unless `apply: true` is provided. The HTTP server binds to loopback by default and refuses non-loopback binds unless authentication is enabled. The built-in static bearer-token verifier is intended only for local development; place production deployments behind a properly authenticated and authorized gateway. The server itself does not send locale content to translation APIs.
+> **Security & Trust** - This tool reads project files and can write locale JSON, config, and state files when explicitly asked. The default path is preview-first: config writes, state rebuilds, translation applies, key prune, and key rename all return patch previews unless `apply: true` is provided. The HTTP server binds to loopback by default and refuses non-loopback binds unless authentication is enabled. The built-in static bearer-token verifier is intended only for local development; place production deployments behind a properly authenticated and authorized gateway. In `provider` mode, translation items and requested style-guide or glossary context are sent to the configured provider; `agent` mode makes no server-side provider request.
 
 ## Why i18n-mcp
 
@@ -265,7 +265,8 @@ For Docker-based clients using stdio, use `docker` as the command and pass the r
 ### Translation Workflow
 
 - Build deterministic translation batches for missing and stale keys.
-- Include configured style guide and glossary references in plans.
+- Include configured style guide and glossary content in plans when requested.
+- Generate proposals through an optional direct OpenAI-compatible provider.
 - Validate proposed translations against current source values.
 - Reject source drift by default.
 - Preview locale JSON and state patches before writing.
@@ -300,6 +301,7 @@ For Docker-based clients using stdio, use `docker` as the command and pass the r
 | `i18n.keys.prune` | Preview or remove exact locale keys; dry-run by default. |
 | `i18n.keys.rename` | Preview or rename exact locale keys and state; dry-run by default. |
 | `i18n.translation.plan` | Build a translation batch for missing and stale keys. |
+| `i18n.translation.generate` | Generate and validate proposals through the configured direct provider without writing files. |
 | `i18n.translation.validate` | Validate proposed translations. |
 | `i18n.translation.apply` | Preview or apply translations and update state; dry-run by default. |
 | `i18n.state.rebuild` | Preview or rebuild `.i18n-mcp/state.json`; dry-run by default. |
@@ -390,14 +392,44 @@ Replace the example `$schema` URL with your generated schema path or a published
 | `format.sortKeys` | No | Sort JSON object keys when writing locale files. Default is `false`. |
 | `format.indent` | No | Number of spaces for JSON indentation. Default is `2`. |
 | `format.trailingNewline` | No | Write a trailing newline. Default is `true`. |
-| `translation.mode` | No | Translation mode. Default is `agent`. Future values may include `provider` and `sampling`. |
-| `translation.provider` | No | Provider name for future provider mode. Do not store credentials here. |
+| `translation.mode` | No | Translation mode: `agent` (default) or `provider`. MCP sampling is no longer supported. |
+| `translation.provider` | No | Provider name for provider mode. Default is `openai-compatible`. Do not store credentials here. |
 | `translation.styleGuidePath` | No | Project-relative style guide file used in translation plans. |
 | `translation.glossaryPath` | No | Project-relative glossary file used in translation plans. |
 | `ci.failOnMissing` | No | Fail `i18n-mcp audit` when missing translations exist. |
 | `ci.failOnStale` | No | Fail `i18n-mcp audit` when stale translations exist. |
 | `ci.failOnInvalid` | No | Fail `i18n-mcp audit` when invalid translations exist. |
 | `ci.failOnDeadKeys` | No | Fail `i18n-mcp audit` when probably unused keys exist. |
+
+### Translation Modes
+
+The default `agent` mode keeps generation in the MCP client or coding agent. Use `i18n.translation.plan`, have the agent prepare proposals, call `i18n.translation.validate`, and preview `i18n.translation.apply` before applying changes. The server does not call an LLM provider in this mode.
+
+To let the server generate proposals through an OpenAI-compatible API, configure provider mode:
+
+```json
+{
+  "translation": {
+    "mode": "provider",
+    "provider": "openai-compatible",
+    "styleGuidePath": "docs/i18n-style.md",
+    "glossaryPath": "docs/glossary.md"
+  }
+}
+```
+
+Pass credentials to the MCP server process through its environment:
+
+```bash
+export I18N_MCP_OPENAI_API_KEY='replace-with-a-provider-key'
+export I18N_MCP_OPENAI_MODEL='gpt-4o-mini'
+# Optional for another OpenAI-compatible endpoint:
+export I18N_MCP_OPENAI_BASE_URL='https://api.openai.com/v1'
+```
+
+Restart the MCP server after changing its environment. Credentials are never read from `.i18n-mcp.json`. Provider generation is read-only: it returns validated proposals but does not write locale files or state. Requests have a finite timeout and bounded response size. They are not automatically retried, avoiding unexpected duplicate cost; callers may retry explicitly after reviewing provider errors.
+
+MCP Sampling was deprecated in protocol version `2026-07-28` by [SEP-2577](https://modelcontextprotocol.io/seps/2577-deprecate-roots-sampling-and-logging) and is not supported. Existing `"mode": "sampling"` configurations must migrate to `agent` or `provider`; the server reports a targeted validation error rather than silently changing credentials, cost, or privacy behavior.
 
 ### Common Locale Layouts
 
@@ -903,7 +935,7 @@ Safety rules:
 
 Do not store credentials in `.i18n-mcp.json`, `.i18n-mcp/state.json`, reports, prompts, or tool arguments.
 
-When provider mode exists, credentials should come from environment variables or secure storage and must not be logged or returned in MCP results.
+Provider credentials come from environment variables and must not be logged or returned in MCP results. In provider mode, planned source text, current target text, and included style-guide or glossary content leave the machine and are sent to the configured OpenAI-compatible endpoint. Custom base URLs receive both that content and the bearer credential.
 
 ### Reports
 
@@ -922,7 +954,7 @@ Recommendations:
 
 ### HTTP Deployment
 
-Streamable HTTP defaults to `127.0.0.1:7339`, serves MCP at `/mcp`, and exposes a `/healthz` endpoint. The server refuses to bind to a non-loopback address unless `--auth-required` is set.
+Streamable HTTP defaults to `127.0.0.1:7339`, serves MCP at `/mcp`, and exposes a `/healthz` endpoint. The server refuses to bind to a non-loopback address unless `--auth-required` is set. HTTP remains stateful, so MCP Go SDK v1.7 negotiates a pre-2026-07-28 protocol revision; stdio can negotiate MCP 2026-07-28. Stateless 2026-07-28 HTTP will be enabled only after a separate compatibility review.
 
 The built-in bearer-token mode provides protected-resource metadata and scope checks, but its static token verifier is for development only. Clients must send the token as `Authorization: Bearer <token>`:
 
@@ -945,6 +977,8 @@ For production or remote access, keep the server on loopback or a private interf
 | HTTP server rejects the listen address | Non-loopback binds require `--auth-required`; use loopback for local clients or configure authentication. |
 | Server starts in the wrong project | Pass `--project /absolute/path/to/frontend-app`. |
 | Config validation fails | Run `i18n.project.detect`, review `proposedConfig`, then preview `i18n.config.write`. |
+| Config rejects `sampling` mode | MCP Sampling is deprecated; choose `agent` or configure `provider` mode. |
+| Translation provider is unavailable | Set `I18N_MCP_OPENAI_API_KEY` and `I18N_MCP_OPENAI_MODEL` in the MCP server environment, then restart it. |
 | Diff shows `unknown` keys | Run `i18n.state.rebuild` without `apply`, review, then run with `apply: true`. |
 | Stale translations remain | Re-plan with `i18n.translation.plan` and regenerate proposals from current source values. |
 | Prune refuses a key | Check `i18n.keys.dead_report`; `used`, `maybe_dynamic`, `ignored`, and `kept` are refused by default. |
