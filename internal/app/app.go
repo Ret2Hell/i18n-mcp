@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
 	"github.com/Ret2Hell/i18n-mcp/internal/deadkey"
@@ -67,10 +68,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	validatorService := validate.NewService()
 	diffService := diff.NewService(localeService, stateService, validatorService)
 	translationService := translate.NewService(configService, guard, localeService, stateService, diffService, validatorService)
-	providerRegistry, err := BuildProviderRegistry(os.LookupEnv, http.DefaultClient)
-	if err != nil {
-		return nil, err
-	}
+	providerRegistry := BuildProviderRegistry(os.LookupEnv, &http.Client{Timeout: 60 * time.Second})
 	translationService.Providers = providerRegistry
 	scannerService := scanner.NewService(guard, configService)
 	deadKeyService := deadkey.NewService(configService, guard, localeService, scannerService)

@@ -95,6 +95,20 @@ func TestGenerateMalformedJSONReturnsError(t *testing.T) {
 	}
 }
 
+func TestGenerateRejectsOversizedResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(strings.Repeat("x", maxResponseBodyBytes+1)))
+	}))
+	defer server.Close()
+
+	client := NewClient(Options{Credentials: new(Credentials{APIKey: "sk-test-secret", BaseURL: server.URL, Model: "test-model"})})
+	_, err := client.Generate(t.Context(), providerRequest())
+
+	if err == nil || !strings.Contains(err.Error(), "provider response exceeds") {
+		t.Fatalf("Generate() error = %v, want response size error", err)
+	}
+}
+
 func TestGenerateContextCancellationStopsHTTPRequest(t *testing.T) {
 	started := make(chan struct{})
 	serverDone := make(chan struct{})

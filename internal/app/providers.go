@@ -8,14 +8,16 @@ import (
 )
 
 // BuildProviderRegistry builds the startup provider registry from secure local configuration.
-func BuildProviderRegistry(env func(string) (string, bool), httpClient *http.Client) (*translate.ProviderRegistry, error) {
+func BuildProviderRegistry(env func(string) (string, bool), httpClient *http.Client) *translate.ProviderRegistry {
 	creds, err := openai.LoadCredentials(env)
 	if err != nil {
-		return translate.NewProviderRegistry(), nil
+		registry := translate.NewProviderRegistry()
+		registry.MarkUnavailable("openai-compatible", err)
+		return registry
 	}
 	provider := openai.NewClient(openai.Options{
 		Credentials: creds,
 		HTTPClient:  httpClient,
 	})
-	return translate.NewProviderRegistry(provider), nil
+	return translate.NewProviderRegistry(provider)
 }

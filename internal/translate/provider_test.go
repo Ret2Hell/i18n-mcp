@@ -42,6 +42,17 @@ func TestProviderRegistryDefaultsToOpenAICompatible(t *testing.T) {
 	require.Same(t, provider, got)
 }
 
+func TestProviderRegistryUnavailableProviderError(t *testing.T) {
+	registry := NewProviderRegistry()
+	registry.MarkUnavailable("openai-compatible", context.Canceled)
+
+	got, err := registry.Get("")
+
+	require.Nil(t, got)
+	require.ErrorContains(t, err, `translation provider "openai-compatible" is unavailable`)
+	require.ErrorIs(t, err, context.Canceled)
+}
+
 func TestProviderRegistryUnknownProviderError(t *testing.T) {
 	registry := NewProviderRegistry(testProvider{name: "configured"})
 
