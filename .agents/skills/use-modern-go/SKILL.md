@@ -7,13 +7,13 @@ description: Apply modern Go syntax guidelines based on project's Go version. Us
 
 ## Project Go Version
 
-Go 1.26.5
+Go 1.26.6
 
 ## How to Use This Skill
 
 Use the fixed project Go version shown above. Do NOT search for go.mod files or run commands to detect the Go version for this repository.
 
-- Say: "This project is using Go 1.26.5, so I’ll stick to modern Go best practices and freely use language features up to and including this version. If you’d prefer a different target version, just let me know."
+- Say: "This project is using Go 1.26.6, so I’ll stick to modern Go best practices and freely use language features up to and including this version. If you’d prefer a different target version, just let me know."
 - Do NOT list features, do NOT ask for confirmation
 
 **When writing Go code**, use ALL features from this document up to the target version:
