@@ -3,6 +3,7 @@ package translate
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 )
 
@@ -127,14 +128,14 @@ func providerRequestsFromPlan(sourceLocale string, plan *Batch, styleGuide strin
 }
 
 func safeProviderMetadata(in map[string]any) map[string]any {
-	out := map[string]any{}
-	for k, v := range in {
-		switch strings.ToLower(k) {
+	out := maps.Clone(in)
+	maps.DeleteFunc(out, func(key string, _ any) bool {
+		switch strings.ToLower(key) {
 		case "apikey", "authorization", "token", "secret":
-			continue
+			return true
 		default:
-			out[k] = v
+			return false
 		}
-	}
+	})
 	return out
 }

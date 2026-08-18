@@ -149,8 +149,7 @@ func TestPruneWriteRemovesExactKeys(t *testing.T) {
 func TestPruneDryRunFalseWithoutApplyDoesNotWrite(t *testing.T) {
 	a := newDeadKeyFixtureApp(t)
 	before := readDeadKeyFile(t, a.ProjectRoot, "messages/en/common.json")
-	dryRun := false
-	out, err := a.DeadKeys.Prune(t.Context(), deadkey.PruneInput{DryRun: &dryRun, Keys: []deadkey.PruneKey{{Namespace: "common", Key: "unused"}}})
+	out, err := a.DeadKeys.Prune(t.Context(), deadkey.PruneInput{DryRun: new(false), Keys: []deadkey.PruneKey{{Namespace: "common", Key: "unused"}}})
 	require.NoError(t, err)
 	require.True(t, out.DryRun)
 	require.Equal(t, before, readDeadKeyFile(t, a.ProjectRoot, "messages/en/common.json"))
@@ -159,8 +158,7 @@ func TestPruneDryRunFalseWithoutApplyDoesNotWrite(t *testing.T) {
 func TestPruneApplyTrueWithDryRunTrueDoesNotWrite(t *testing.T) {
 	a := newDeadKeyFixtureApp(t)
 	before := readDeadKeyFile(t, a.ProjectRoot, "messages/en/common.json")
-	dryRun := true
-	out, err := a.DeadKeys.Prune(t.Context(), deadkey.PruneInput{Apply: true, DryRun: &dryRun, Keys: []deadkey.PruneKey{{Namespace: "common", Key: "unused"}}})
+	out, err := a.DeadKeys.Prune(t.Context(), deadkey.PruneInput{Apply: true, DryRun: new(true), Keys: []deadkey.PruneKey{{Namespace: "common", Key: "unused"}}})
 	require.NoError(t, err)
 	require.True(t, out.DryRun)
 	require.Equal(t, before, readDeadKeyFile(t, a.ProjectRoot, "messages/en/common.json"))
