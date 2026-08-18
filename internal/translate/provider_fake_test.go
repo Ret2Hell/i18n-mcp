@@ -32,7 +32,7 @@ func (p *fakeProvider) Generate(ctx context.Context, req translate.ProviderReque
 
 func TestProviderGenerateSuccess(t *testing.T) {
 	fake := &fakeProvider{name: "fake", response: &translate.ProviderResponse{
-		Proposals: []translate.Proposal{{Locale: "fr", Namespace: "auth", Key: "login.title", SourceValue: "Log in", Value: "Connexion"}},
+		Proposals: []translate.ProposedTranslation{{Locale: "fr", Namespace: "auth", Key: "login.title", SourceValue: "Log in", Value: "Connexion"}},
 	}}
 	service, plan := newProviderTestService(t, fake)
 
@@ -48,7 +48,7 @@ func TestProviderGenerateSuccess(t *testing.T) {
 
 func TestProviderGenerateValidationFailure(t *testing.T) {
 	fake := &fakeProvider{name: "fake", response: &translate.ProviderResponse{
-		Proposals: []translate.Proposal{{Locale: "fr", Namespace: "auth", Key: "login.subtitle", SourceValue: "Welcome {name}", Value: "Bienvenue"}},
+		Proposals: []translate.ProposedTranslation{{Locale: "fr", Namespace: "auth", Key: "login.subtitle", SourceValue: "Welcome {name}", Value: "Bienvenue"}},
 	}}
 	service, plan := newProviderTestService(t, fake)
 
@@ -98,7 +98,7 @@ func TestProviderGenerateRedactsSensitiveMetadata(t *testing.T) {
 	require.Equal(t, map[string]any{"model": "kept"}, out.Metadata)
 }
 
-func newProviderTestService(t *testing.T, provider translate.Provider) (*translate.Service, *translate.PlanOutput) {
+func newProviderTestService(t *testing.T, provider translate.Provider) (*translate.Service, *translate.Batch) {
 	t.Helper()
 	a := newTranslationFixtureApp(t)
 	plan, err := a.Translation.Plan(t.Context(), translate.PlanInput{})

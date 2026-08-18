@@ -9,23 +9,23 @@ import (
 // ProviderGenerateInput describes a provider-backed proposal generation request.
 type ProviderGenerateInput struct {
 	ProviderName string
-	Plan         *PlanOutput
+	Plan         *Batch
 	StyleGuide   string
 	Glossary     string
 }
 
 // ProviderGenerateOutput contains provider proposals after normal validation.
 type ProviderGenerateOutput struct {
-	Provider  string             `json:"provider"`
-	Proposals []Proposal         `json:"proposals"`
-	Rejected  []RejectedProposal `json:"rejected,omitzero"`
-	Usage     ProviderUsage      `json:"usage,omitzero"`
-	Warnings  []string           `json:"warnings,omitzero"`
-	Metadata  map[string]any     `json:"metadata,omitzero"`
+	Provider  string                `json:"provider"`
+	Proposals []ProposedTranslation `json:"proposals"`
+	Rejected  []RejectedTranslation `json:"rejected,omitzero"`
+	Usage     ProviderUsage         `json:"usage,omitzero"`
+	Warnings  []string              `json:"warnings,omitzero"`
+	Metadata  map[string]any        `json:"metadata,omitzero"`
 }
 
 // GenerateWithProvider asks a configured provider for proposals and validates them
-// through the same path used by agent and sampling proposals. It does not apply
+// through the same path used by agent-submitted proposals. It does not apply
 // accepted proposals to locale files or state.
 func (s *Service) GenerateWithProvider(ctx context.Context, in ProviderGenerateInput) (*ProviderGenerateOutput, error) {
 	if in.Plan == nil {
@@ -59,7 +59,7 @@ func (s *Service) GenerateWithProvider(ctx context.Context, in ProviderGenerateI
 	if err != nil {
 		return nil, err
 	}
-	acceptedProposals := make([]Proposal, 0, len(validated.Accepted))
+	acceptedProposals := make([]ProposedTranslation, 0, len(validated.Accepted))
 	for _, accepted := range validated.Accepted {
 		acceptedProposals = append(acceptedProposals, accepted.ProposedTranslation)
 	}
@@ -73,7 +73,7 @@ func (s *Service) GenerateWithProvider(ctx context.Context, in ProviderGenerateI
 	}, nil
 }
 
-func firstTargetLocale(plan *PlanOutput) string {
+func firstTargetLocale(plan *Batch) string {
 	if plan == nil || len(plan.TargetLocales) == 0 {
 		return ""
 	}

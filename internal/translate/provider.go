@@ -39,12 +39,12 @@ type ProviderItem struct {
 
 // ProviderResponse is the provider-neutral output from translation generation.
 type ProviderResponse struct {
-	Proposals []Proposal     `json:"proposals"`
-	Usage     ProviderUsage  `json:"usage,omitzero"`
-	Warnings  []string       `json:"warnings,omitzero"`
-	Metadata  map[string]any `json:"metadata,omitzero"`
-	StartedAt time.Time      `json:"startedAt,omitzero"`
-	EndedAt   time.Time      `json:"endedAt,omitzero"`
+	Proposals []ProposedTranslation `json:"proposals"`
+	Usage     ProviderUsage         `json:"usage,omitzero"`
+	Warnings  []string              `json:"warnings,omitzero"`
+	Metadata  map[string]any        `json:"metadata,omitzero"`
+	StartedAt time.Time             `json:"startedAt,omitzero"`
+	EndedAt   time.Time             `json:"endedAt,omitzero"`
 }
 
 // ProviderUsage reports token usage returned by a provider.
@@ -81,7 +81,7 @@ func (r *ProviderRegistry) Get(name string) (Provider, error) {
 }
 
 // ProviderItemsFromPlan maps a translation plan to provider request items.
-func ProviderItemsFromPlan(plan *PlanOutput) []ProviderItem {
+func ProviderItemsFromPlan(plan *Batch) []ProviderItem {
 	if plan == nil {
 		return nil
 	}

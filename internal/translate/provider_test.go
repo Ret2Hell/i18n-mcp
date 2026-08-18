@@ -52,7 +52,7 @@ func TestProviderRegistryUnknownProviderError(t *testing.T) {
 }
 
 func TestProviderItemsFromPlanPreservesPlanFields(t *testing.T) {
-	plan := &PlanOutput{Items: []Item{
+	plan := &Batch{Items: []Item{
 		{
 			ID:          "fr:common:welcome",
 			Locale:      "fr",

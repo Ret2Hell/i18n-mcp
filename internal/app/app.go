@@ -37,7 +37,6 @@ type App struct {
 	Diff          *diff.Service
 	Translation   *translate.Service
 	Providers     *translate.ProviderRegistry
-	Sampling      *translate.SamplingService
 	Scanner       *scanner.Service
 	DeadKeys      *deadkey.Service
 	Reports       *report.Service
@@ -73,7 +72,6 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		return nil, err
 	}
 	translationService.Providers = providerRegistry
-	samplingService := new(translate.SamplingService{Validator: translationService})
 	scannerService := scanner.NewService(guard, configService)
 	deadKeyService := deadkey.NewService(configService, guard, localeService, scannerService)
 	reportService := report.NewService(guard.Root(), configService, localeService, diffService, scannerService, deadKeyService)
@@ -92,7 +90,6 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		Diff:        diffService,
 		Translation: translationService,
 		Providers:   providerRegistry,
-		Sampling:    samplingService,
 		Scanner:     scannerService,
 		DeadKeys:    deadKeyService,
 		Reports:     reportService,

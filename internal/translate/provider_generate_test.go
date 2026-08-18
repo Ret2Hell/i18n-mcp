@@ -29,7 +29,7 @@ func TestGenerateWithProviderValidOutputAccepted(t *testing.T) {
 	a.Translation.Providers = translate.NewProviderRegistry(generateProvider{name: "mock", generate: func(_ context.Context, req translate.ProviderRequest) (*translate.ProviderResponse, error) {
 		require.Equal(t, "en", req.SourceLocale)
 		require.Equal(t, "fr", req.TargetLocale)
-		return &translate.ProviderResponse{Proposals: []translate.Proposal{{
+		return &translate.ProviderResponse{Proposals: []translate.ProposedTranslation{{
 			Locale:      "fr",
 			Namespace:   "auth",
 			Key:         "login.title",
@@ -51,7 +51,7 @@ func TestGenerateWithProviderRejectsPlaceholderMismatch(t *testing.T) {
 	a := newTranslationFixtureApp(t)
 	plan, err := a.Translation.Plan(ctx, translate.PlanInput{})
 	require.NoError(t, err)
-	a.Translation.Providers = providerReturning([]translate.Proposal{{
+	a.Translation.Providers = providerReturning([]translate.ProposedTranslation{{
 		Locale:      "fr",
 		Namespace:   "auth",
 		Key:         "login.subtitle",
@@ -72,7 +72,7 @@ func TestGenerateWithProviderRejectsUnknownKeyOrLocale(t *testing.T) {
 	a := newTranslationFixtureApp(t)
 	plan, err := a.Translation.Plan(ctx, translate.PlanInput{})
 	require.NoError(t, err)
-	a.Translation.Providers = providerReturning([]translate.Proposal{{
+	a.Translation.Providers = providerReturning([]translate.ProposedTranslation{{
 		Locale:      "de",
 		Namespace:   "auth",
 		Key:         "missing",
@@ -122,7 +122,7 @@ func TestGenerateWithProviderErrorDoesNotWriteFilesOrState(t *testing.T) {
 	require.Equal(t, beforeState, readFixtureFile(t, a.ProjectRoot, state.DefaultStatePath))
 }
 
-func providerReturning(proposals []translate.Proposal) *translate.ProviderRegistry {
+func providerReturning(proposals []translate.ProposedTranslation) *translate.ProviderRegistry {
 	return translate.NewProviderRegistry(generateProvider{name: "mock", generate: func(context.Context, translate.ProviderRequest) (*translate.ProviderResponse, error) {
 		return &translate.ProviderResponse{Proposals: proposals}, nil
 	}})

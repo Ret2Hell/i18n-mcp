@@ -80,7 +80,7 @@ func (c *Client) Generate(ctx context.Context, req translate.ProviderRequest) (*
 	if len(decoded.Choices) == 0 {
 		return nil, fmt.Errorf("provider returned no choices")
 	}
-	var proposals []translate.Proposal
+	var proposals []translate.ProposedTranslation
 	if err := json.Unmarshal([]byte(decoded.Choices[0].Message.Content), &proposals); err != nil {
 		return nil, fmt.Errorf("decoding provider proposals: %w", err)
 	}
