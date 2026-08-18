@@ -189,12 +189,9 @@ mcp = data.setdefault("mcp", {})
 if not isinstance(mcp, dict):
     raise SystemExit("OpenCode config field 'mcp' must be a JSON object")
 
-servers = mcp.setdefault("servers", {})
-if not isinstance(servers, dict):
-    raise SystemExit("OpenCode config field 'mcp.servers' must be a JSON object")
-
-servers["i18n-mcp"] = {
+mcp["i18n-mcp"] = {
     "type": "local",
+    "enabled": True,
     "command": [binary, "serve", "stdio", "--project", "."],
 }
 path.write_text(json.dumps(data, indent=2) + "\n")
@@ -208,11 +205,10 @@ PY_OPENCODE
 {
   "\$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "servers": {
-      "i18n-mcp": {
-        "type": "local",
-        "command": ["$binary_path", "serve", "stdio", "--project", "."]
-      }
+    "i18n-mcp": {
+      "type": "local",
+      "enabled": true,
+      "command": ["$binary_path", "serve", "stdio", "--project", "."]
     }
   }
 }
