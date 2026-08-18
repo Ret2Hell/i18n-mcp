@@ -44,8 +44,9 @@ func defaultValidationRules() []string {
 	}
 }
 
-func (s *Service) loadPlanContext(cfg config.Resolved) (string, []string, []ContextFileRef, []string) {
+func (s *Service) loadPlanContext(cfg config.Resolved) (string, string, []string, []ContextFileRef, []string) {
 	var styleGuide string
+	var glossaryText string
 	var glossaryRefs []string
 	var contextFiles []ContextFileRef
 	var warnings []string
@@ -60,8 +61,14 @@ func (s *Service) loadPlanContext(cfg config.Resolved) (string, []string, []Cont
 		}
 	}
 	if cfg.Translation.GlossaryPath != "" {
-		glossaryRefs = append(glossaryRefs, cfg.Translation.GlossaryPath)
-		contextFiles = append(contextFiles, ContextFileRef{Kind: "glossary", Path: cfg.Translation.GlossaryPath})
+		text, err := s.readOptionalText(cfg.Translation.GlossaryPath)
+		if err != nil {
+			warnings = append(warnings, err.Error())
+		} else {
+			glossaryText = text
+			glossaryRefs = append(glossaryRefs, cfg.Translation.GlossaryPath)
+			contextFiles = append(contextFiles, ContextFileRef{Kind: "glossary", Path: cfg.Translation.GlossaryPath})
+		}
 	}
 	slices.Sort(glossaryRefs)
 	slices.SortFunc(contextFiles, func(a, b ContextFileRef) int {
@@ -71,7 +78,7 @@ func (s *Service) loadPlanContext(cfg config.Resolved) (string, []string, []Cont
 		)
 	})
 	slices.Sort(warnings)
-	return styleGuide, glossaryRefs, contextFiles, warnings
+	return styleGuide, glossaryText, glossaryRefs, contextFiles, warnings
 }
 
 func (s *Service) readOptionalText(relPath string) (string, error) {

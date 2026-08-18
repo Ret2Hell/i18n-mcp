@@ -100,6 +100,7 @@ func translationGenerateHandler(ctx context.Context, req *mcp.CallToolRequest, a
 		ProviderName: cfg.Translation.Provider,
 		Plan:         &plan,
 		StyleGuide:   plan.StyleGuide,
+		Glossary:     plan.GlossaryText,
 	})
 	if err != nil {
 		return nil, err
