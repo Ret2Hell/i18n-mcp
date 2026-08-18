@@ -10,6 +10,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestServerCapabilities(t *testing.T) {
+	ctx := t.Context()
+	application, err := app.New(ctx, app.Options{ProjectRoot: t.TempDir(), LogLevel: "error"})
+	require.NoError(t, err)
+
+	server := mcpserver.New(application)
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.0"}, nil)
+	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+
+	serverSession, err := server.Connect(ctx, serverTransport, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, serverSession.Close()) })
+
+	clientSession, err := client.Connect(ctx, clientTransport, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, clientSession.Close()) })
+
+	capabilities := clientSession.InitializeResult().Capabilities
+	require.Nil(t, capabilities.Logging)
+	require.NotNil(t, capabilities.Completions)
+	require.NotNil(t, capabilities.Tools)
+	require.NotNil(t, capabilities.Prompts)
+	require.NotNil(t, capabilities.Resources)
+}
+
 func TestResourceSubscriptions(t *testing.T) {
 	ctx := t.Context()
 	application, err := app.New(ctx, app.Options{ProjectRoot: t.TempDir(), LogLevel: "error"})

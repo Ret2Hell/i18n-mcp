@@ -18,7 +18,6 @@ func New(a *app.App) *mcp.Server {
 		Logger:       a.Logger,
 		PageSize:     100,
 		Capabilities: &mcp.ServerCapabilities{
-			Logging:     &mcp.LoggingCapabilities{},
 			Completions: &mcp.CompletionCapabilities{},
 		},
 		CompletionHandler:  complete(a),
