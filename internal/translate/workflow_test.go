@@ -29,6 +29,34 @@ func TestTranslationPlanIncludesMissingAndStale(t *testing.T) {
 	require.Equal(t, "auth", batch.Items[0].Namespace)
 }
 
+func TestTranslationPlanLoadsProviderContext(t *testing.T) {
+	ctx := t.Context()
+	a := newTranslationFixtureApp(t)
+	writeFixtureFile(t, a.ProjectRoot, ".i18n-mcp.json", `{
+  "sourceLocale": "en",
+  "targetLocales": ["fr"],
+  "localeFiles": ["messages/{locale}/{namespace}.json"],
+  "defaultNamespace": "common",
+  "format": {"sortKeys": false, "indent": 2, "trailingNewline": true},
+  "translation": {
+    "mode": "agent",
+    "styleGuidePath": "docs/style.md",
+    "glossaryPath": "docs/glossary.md"
+  }
+}
+`)
+	writeFixtureFile(t, a.ProjectRoot, "docs/style.md", "Use concise product copy.\n")
+	writeFixtureFile(t, a.ProjectRoot, "docs/glossary.md", "login = sign in\n")
+
+	batch, err := a.Translation.Plan(ctx, translate.PlanInput{IncludeContext: true})
+
+	require.NoError(t, err)
+	require.Equal(t, "Use concise product copy.\n", batch.StyleGuide)
+	require.Equal(t, "login = sign in\n", batch.GlossaryText)
+	require.Equal(t, []string{"docs/glossary.md"}, batch.GlossaryReferences)
+	require.Empty(t, batch.Warnings)
+}
+
 func TestTranslationValidateRejectsSourceDrift(t *testing.T) {
 	ctx := t.Context()
 	a := newTranslationFixtureApp(t)

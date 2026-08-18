@@ -39,12 +39,12 @@ type ProviderItem struct {
 
 // ProviderResponse is the provider-neutral output from translation generation.
 type ProviderResponse struct {
-	Proposals []Proposal     `json:"proposals"`
-	Usage     ProviderUsage  `json:"usage,omitzero"`
-	Warnings  []string       `json:"warnings,omitzero"`
-	Metadata  map[string]any `json:"metadata,omitzero"`
-	StartedAt time.Time      `json:"startedAt,omitzero"`
-	EndedAt   time.Time      `json:"endedAt,omitzero"`
+	Proposals []ProposedTranslation `json:"proposals"`
+	Usage     ProviderUsage         `json:"usage,omitzero"`
+	Warnings  []string              `json:"warnings,omitzero"`
+	Metadata  map[string]any        `json:"metadata,omitzero"`
+	StartedAt time.Time             `json:"startedAt,omitzero"`
+	EndedAt   time.Time             `json:"endedAt,omitzero"`
 }
 
 // ProviderUsage reports token usage returned by a provider.
@@ -56,12 +56,13 @@ type ProviderUsage struct {
 
 // ProviderRegistry stores configured translation providers by name.
 type ProviderRegistry struct {
-	providers map[string]Provider
+	providers   map[string]Provider
+	unavailable map[string]error
 }
 
 // NewProviderRegistry builds a registry from the provided providers.
 func NewProviderRegistry(providers ...Provider) *ProviderRegistry {
-	r := &ProviderRegistry{providers: map[string]Provider{}}
+	r := &ProviderRegistry{providers: map[string]Provider{}, unavailable: map[string]error{}}
 	for _, p := range providers {
 		if p != nil {
 			r.providers[p.Name()] = p
@@ -70,18 +71,32 @@ func NewProviderRegistry(providers ...Provider) *ProviderRegistry {
 	return r
 }
 
+// MarkUnavailable records why a provider could not be configured at startup.
+func (r *ProviderRegistry) MarkUnavailable(name string, err error) {
+	if r == nil || name == "" || err == nil {
+		return
+	}
+	if r.unavailable == nil {
+		r.unavailable = map[string]error{}
+	}
+	r.unavailable[name] = err
+}
+
 // Get returns a configured provider by name, defaulting to openai-compatible.
 func (r *ProviderRegistry) Get(name string) (Provider, error) {
 	name = cmp.Or(name, "openai-compatible")
 	p, ok := r.providers[name]
-	if !ok {
-		return nil, fmt.Errorf("translation provider %q is not configured", name)
+	if ok {
+		return p, nil
 	}
-	return p, nil
+	if err := r.unavailable[name]; err != nil {
+		return nil, fmt.Errorf("translation provider %q is unavailable: %w", name, err)
+	}
+	return nil, fmt.Errorf("translation provider %q is not configured", name)
 }
 
 // ProviderItemsFromPlan maps a translation plan to provider request items.
-func ProviderItemsFromPlan(plan *PlanOutput) []ProviderItem {
+func ProviderItemsFromPlan(plan *Batch) []ProviderItem {
 	if plan == nil {
 		return nil
 	}

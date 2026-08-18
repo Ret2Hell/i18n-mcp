@@ -28,7 +28,7 @@ func (p mcpGenerateProvider) Generate(ctx context.Context, req translate.Provide
 func TestTranslationGenerateConfigProviderMode(t *testing.T) {
 	a := newMCPTranslationFixtureApp(t, `"mode": "provider", "provider": "mock"`)
 	a.Translation.Providers = translate.NewProviderRegistry(mcpGenerateProvider{name: "mock", generate: func(context.Context, translate.ProviderRequest) (*translate.ProviderResponse, error) {
-		return new(translate.ProviderResponse{Proposals: []translate.Proposal{{Locale: "fr", Namespace: "auth", Key: "login.title", SourceValue: "Log in", Value: "Connexion"}}, Usage: translate.ProviderUsage{TotalTokens: 7}}), nil
+		return new(translate.ProviderResponse{Proposals: []translate.ProposedTranslation{{Locale: "fr", Namespace: "auth", Key: "login.title", SourceValue: "Log in", Value: "Connexion"}}, Usage: translate.ProviderUsage{TotalTokens: 7}}), nil
 	}})
 
 	out, err := translationGenerateHandler(t.Context(), nil, a, TranslationGenerateInput{})
@@ -41,9 +41,9 @@ func TestTranslationGenerateConfigProviderMode(t *testing.T) {
 }
 
 func TestTranslationGenerateExplicitProviderOverridesConfig(t *testing.T) {
-	a := newMCPTranslationFixtureApp(t, `"mode": "sampling", "provider": "mock"`)
+	a := newMCPTranslationFixtureApp(t, `"mode": "agent", "provider": "mock"`)
 	a.Translation.Providers = translate.NewProviderRegistry(mcpGenerateProvider{name: "mock", generate: func(context.Context, translate.ProviderRequest) (*translate.ProviderResponse, error) {
-		return new(translate.ProviderResponse{Proposals: []translate.Proposal{{Locale: "fr", Namespace: "auth", Key: "login.title", SourceValue: "Log in", Value: "Connexion"}}}), nil
+		return new(translate.ProviderResponse{Proposals: []translate.ProposedTranslation{{Locale: "fr", Namespace: "auth", Key: "login.title", SourceValue: "Log in", Value: "Connexion"}}}), nil
 	}})
 
 	out, err := translationGenerateHandler(t.Context(), nil, a, TranslationGenerateInput{Mode: "provider"})
@@ -51,6 +51,24 @@ func TestTranslationGenerateExplicitProviderOverridesConfig(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "provider", out.Mode)
 	require.Len(t, out.Proposals, 1)
+}
+
+func TestTranslationGenerateRejectsDeprecatedSamplingMode(t *testing.T) {
+	a := newMCPTranslationFixtureApp(t, `"mode": "sampling"`)
+
+	out, err := translationGenerateHandler(t.Context(), nil, a, TranslationGenerateInput{})
+
+	require.Nil(t, out)
+	require.EqualError(t, err, "MCP sampling is deprecated; set translation.mode to agent or provider")
+}
+
+func TestTranslationGenerateRejectsAgentMode(t *testing.T) {
+	a := newMCPTranslationFixtureApp(t, `"mode": "agent"`)
+
+	out, err := translationGenerateHandler(t.Context(), nil, a, TranslationGenerateInput{})
+
+	require.Nil(t, out)
+	require.EqualError(t, err, "translation.generate is unavailable in agent mode; use translation.plan, translation.validate, and translation.apply")
 }
 
 func TestTranslationGenerateProviderMissingProviderError(t *testing.T) {
@@ -68,7 +86,7 @@ func TestTranslationGenerateProviderAcceptedRejectedAndNoWrites(t *testing.T) {
 	beforeLocale := readMCPFixtureFile(t, a.ProjectRoot, "messages/fr/auth.json")
 	beforeState := readMCPFixtureFile(t, a.ProjectRoot, state.DefaultStatePath)
 	a.Translation.Providers = translate.NewProviderRegistry(mcpGenerateProvider{name: "mock", generate: func(context.Context, translate.ProviderRequest) (*translate.ProviderResponse, error) {
-		return new(translate.ProviderResponse{Proposals: []translate.Proposal{
+		return new(translate.ProviderResponse{Proposals: []translate.ProposedTranslation{
 			{Locale: "fr", Namespace: "auth", Key: "login.title", SourceValue: "Log in", Value: "Connexion"},
 			{Locale: "fr", Namespace: "auth", Key: "login.subtitle", SourceValue: "Welcome {name}", Value: "Bienvenue"},
 		}}), nil

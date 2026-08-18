@@ -93,7 +93,7 @@ func registerTools(s *mcp.Server, a *app.App) {
 	mcp.AddTool(s, new(mcp.Tool{
 		Name:        "i18n.translation.generate",
 		Title:       "Generate Translation Proposals",
-		Description: "Generate validated translation proposals using MCP sampling without writing locale files or state.",
+		Description: "Generate validated translation proposals using a configured direct provider without writing locale files or state.",
 		Annotations: readOnly("Generate Translation Proposals"),
 	}), translationGenerateTool(a))
 

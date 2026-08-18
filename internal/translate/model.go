@@ -14,7 +14,7 @@ type PlanInput struct {
 	Keys           []string         `json:"keys,omitzero" jsonschema:"translation keys to include; empty means all keys"`
 	Statuses       []diff.KeyStatus `json:"statuses,omitzero" jsonschema:"diff statuses to include; defaults to missing and stale"`
 	MaxItems       int              `json:"maxItems,omitzero" jsonschema:"maximum translation units to include"`
-	IncludeContext bool             `json:"includeContext,omitzero" jsonschema:"include configured style guide and glossary references"`
+	IncludeContext bool             `json:"includeContext,omitzero" jsonschema:"include configured style guide and glossary content"`
 }
 
 // Batch contains translation work items and context.
@@ -24,6 +24,7 @@ type Batch struct {
 	TargetLocales      []string         `json:"targetLocales"`
 	Items              []Item           `json:"items"`
 	StyleGuide         string           `json:"styleGuide,omitzero"`
+	GlossaryText       string           `json:"glossaryText,omitzero"`
 	Glossary           []GlossaryEntry  `json:"glossary,omitzero"`
 	GlossaryReferences []string         `json:"glossaryReferences,omitzero"`
 	ContextFiles       []ContextFileRef `json:"contextFiles,omitzero"`

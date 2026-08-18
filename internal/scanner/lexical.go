@@ -64,12 +64,7 @@ func scanLiteralPatterns(path string, data []byte, patterns []literalPattern, co
 }
 
 func location(data []byte, offset int) (int, int, string) {
-	if offset < 0 {
-		offset = 0
-	}
-	if offset > len(data) {
-		offset = len(data)
-	}
+	offset = min(max(offset, 0), len(data))
 	line := bytes.Count(data[:offset], []byte("\n")) + 1
 	lineStart := bytes.LastIndexByte(data[:offset], '\n') + 1
 	column := offset - lineStart + 1
@@ -80,8 +75,6 @@ func location(data []byte, offset int) (int, int, string) {
 		lineEnd = offset + lineEnd
 	}
 	snippet := strings.TrimSpace(string(data[lineStart:lineEnd]))
-	if len(snippet) > 240 {
-		snippet = snippet[:240]
-	}
+	snippet = snippet[:min(len(snippet), 240)]
 	return line, column, snippet
 }

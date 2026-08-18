@@ -13,8 +13,8 @@ type AuthConfig struct {
 	ResourceName         string   `json:"resourceName,omitempty"`
 	MetadataPath         string   `json:"metadataPath,omitempty"`
 	MetadataURL          string   `json:"metadataUrl,omitempty"`
-	RequiredScopes       []string `json:"requiredScopes,omitempty"`
-	AuthorizationServers []string `json:"authorizationServers,omitempty"`
+	RequiredScopes       []string `json:"requiredScopes,omitzero"`
+	AuthorizationServers []string `json:"authorizationServers,omitzero"`
 	DevStaticTokenEnv    string   `json:"-"`
 }
 

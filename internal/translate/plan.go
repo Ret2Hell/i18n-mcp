@@ -33,8 +33,9 @@ func (s *Service) Plan(ctx context.Context, in PlanInput) (Batch, error) {
 	}
 
 	if in.IncludeContext {
-		styleGuide, glossaryRefs, contextFiles, warnings := s.loadPlanContext(cfg)
+		styleGuide, glossaryText, glossaryRefs, contextFiles, warnings := s.loadPlanContext(cfg)
 		batch.StyleGuide = styleGuide
+		batch.GlossaryText = glossaryText
 		batch.GlossaryReferences = glossaryRefs
 		batch.ContextFiles = contextFiles
 		batch.Warnings = warnings

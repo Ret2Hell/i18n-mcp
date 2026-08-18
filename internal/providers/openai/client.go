@@ -5,12 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/translate"
 )
+
+const maxResponseBodyBytes = 4 << 20
 
 // Options configures an OpenAI-compatible translation provider.
 type Options struct {
@@ -55,11 +58,11 @@ func (c *Client) Generate(ctx context.Context, req translate.ProviderRequest) (*
 	}
 	encoded, err := json.Marshal(body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("encoding provider request: %w", err)
 	}
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(c.creds.BaseURL, "/")+"/chat/completions", bytes.NewReader(encoded))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating provider request: %w", err)
 	}
 	httpReq.Header.Set("Authorization", "Bearer "+c.creds.APIKey)
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -67,20 +70,27 @@ func (c *Client) Generate(ctx context.Context, req translate.ProviderRequest) (*
 	started := time.Now().UTC()
 	httpRes, err := c.http.Do(httpReq)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sending provider request: %w", err)
 	}
 	defer httpRes.Body.Close()
 	if httpRes.StatusCode < 200 || httpRes.StatusCode >= 300 {
 		return nil, fmt.Errorf("provider request failed with status %d", httpRes.StatusCode)
 	}
+	responseBody, err := io.ReadAll(io.LimitReader(httpRes.Body, maxResponseBodyBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("reading provider response: %w", err)
+	}
+	if len(responseBody) > maxResponseBodyBytes {
+		return nil, fmt.Errorf("provider response exceeds %d bytes", maxResponseBodyBytes)
+	}
 	var decoded chatResponse
-	if err := json.NewDecoder(httpRes.Body).Decode(&decoded); err != nil {
-		return nil, err
+	if err := json.Unmarshal(responseBody, &decoded); err != nil {
+		return nil, fmt.Errorf("decoding provider response: %w", err)
 	}
 	if len(decoded.Choices) == 0 {
 		return nil, fmt.Errorf("provider returned no choices")
 	}
-	var proposals []translate.Proposal
+	var proposals []translate.ProposedTranslation
 	if err := json.Unmarshal([]byte(decoded.Choices[0].Message.Content), &proposals); err != nil {
 		return nil, fmt.Errorf("decoding provider proposals: %w", err)
 	}

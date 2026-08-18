@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
 	"github.com/Ret2Hell/i18n-mcp/internal/deadkey"
@@ -13,7 +14,6 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/keyops"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
-	"github.com/Ret2Hell/i18n-mcp/internal/mcpadapter"
 	"github.com/Ret2Hell/i18n-mcp/internal/project"
 	"github.com/Ret2Hell/i18n-mcp/internal/report"
 	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
@@ -25,24 +25,22 @@ import (
 
 // App wires together the application services used by the CLI and MCP server.
 type App struct {
-	Options       Options
-	Logger        *slog.Logger
-	ProjectRoot   string
-	Guard         *fsutil.Guard
-	Config        *config.Service
-	Project       *project.Service
-	Locales       *locale.Service
-	State         *state.Service
-	Validator     *validate.Service
-	Diff          *diff.Service
-	Translation   *translate.Service
-	Providers     *translate.ProviderRegistry
-	Sampling      *translate.SamplingService
-	Scanner       *scanner.Service
-	DeadKeys      *deadkey.Service
-	Reports       *report.Service
-	KeyOps        *keyops.Service
-	Subscriptions *mcpadapter.SubscriptionRegistry
+	Options     Options
+	Logger      *slog.Logger
+	ProjectRoot string
+	Guard       *fsutil.Guard
+	Config      *config.Service
+	Project     *project.Service
+	Locales     *locale.Service
+	State       *state.Service
+	Validator   *validate.Service
+	Diff        *diff.Service
+	Translation *translate.Service
+	Providers   *translate.ProviderRegistry
+	Scanner     *scanner.Service
+	DeadKeys    *deadkey.Service
+	Reports     *report.Service
+	KeyOps      *keyops.Service
 }
 
 // New constructs an App with all services initialized from opts.
@@ -68,12 +66,8 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	validatorService := validate.NewService()
 	diffService := diff.NewService(localeService, stateService, validatorService)
 	translationService := translate.NewService(configService, guard, localeService, stateService, diffService, validatorService)
-	providerRegistry, err := BuildProviderRegistry(os.LookupEnv, http.DefaultClient)
-	if err != nil {
-		return nil, err
-	}
+	providerRegistry := BuildProviderRegistry(os.LookupEnv, &http.Client{Timeout: 60 * time.Second})
 	translationService.Providers = providerRegistry
-	samplingService := new(translate.SamplingService{Validator: translationService})
 	scannerService := scanner.NewService(guard, configService)
 	deadKeyService := deadkey.NewService(configService, guard, localeService, scannerService)
 	reportService := report.NewService(guard.Root(), configService, localeService, diffService, scannerService, deadKeyService)
@@ -92,7 +86,6 @@ func New(ctx context.Context, opts Options) (*App, error) {
 		Diff:        diffService,
 		Translation: translationService,
 		Providers:   providerRegistry,
-		Sampling:    samplingService,
 		Scanner:     scannerService,
 		DeadKeys:    deadKeyService,
 		Reports:     reportService,

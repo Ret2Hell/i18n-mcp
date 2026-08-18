@@ -50,6 +50,21 @@ func TestValidateRejectsBadConfig(t *testing.T) {
 	requireDiagnostic(t, got.Errors, "invalid_translation_mode", "translation.mode")
 }
 
+func TestValidateRejectsDeprecatedSamplingMode(t *testing.T) {
+	ctx := t.Context()
+	root := t.TempDir()
+	guard, err := fsutil.NewGuard(root)
+	require.NoError(t, err)
+	service := NewService(guard, "")
+	cfg := Resolved{File: Defaults(), ProjectRoot: root}
+	cfg.Translation.Mode = "sampling"
+
+	got := service.Validate(ctx, cfg)
+
+	require.False(t, got.Valid)
+	requireDiagnostic(t, got.Errors, "translation_sampling_deprecated", "translation.mode")
+}
+
 func TestValidateRejectsProjectPathsOutsideRoot(t *testing.T) {
 	ctx := t.Context()
 	root := t.TempDir()

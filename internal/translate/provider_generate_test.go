@@ -29,7 +29,9 @@ func TestGenerateWithProviderValidOutputAccepted(t *testing.T) {
 	a.Translation.Providers = translate.NewProviderRegistry(generateProvider{name: "mock", generate: func(_ context.Context, req translate.ProviderRequest) (*translate.ProviderResponse, error) {
 		require.Equal(t, "en", req.SourceLocale)
 		require.Equal(t, "fr", req.TargetLocale)
-		return &translate.ProviderResponse{Proposals: []translate.Proposal{{
+		require.Equal(t, "Use concise copy.", req.StyleGuide)
+		require.Equal(t, "login = sign in", req.Glossary)
+		return &translate.ProviderResponse{Proposals: []translate.ProposedTranslation{{
 			Locale:      "fr",
 			Namespace:   "auth",
 			Key:         "login.title",
@@ -38,7 +40,12 @@ func TestGenerateWithProviderValidOutputAccepted(t *testing.T) {
 		}}}, nil
 	}})
 
-	out, err := a.Translation.GenerateWithProvider(ctx, translate.ProviderGenerateInput{ProviderName: "mock", Plan: &plan})
+	out, err := a.Translation.GenerateWithProvider(ctx, translate.ProviderGenerateInput{
+		ProviderName: "mock",
+		Plan:         &plan,
+		StyleGuide:   "Use concise copy.",
+		Glossary:     "login = sign in",
+	})
 
 	require.NoError(t, err)
 	require.Equal(t, "mock", out.Provider)
@@ -46,12 +53,35 @@ func TestGenerateWithProviderValidOutputAccepted(t *testing.T) {
 	require.Empty(t, out.Rejected)
 }
 
+func TestGenerateWithProviderAggregatesUsageAcrossLocales(t *testing.T) {
+	ctx := t.Context()
+	a := newTranslationFixtureApp(t)
+	plan, err := a.Translation.Plan(ctx, translate.PlanInput{})
+	require.NoError(t, err)
+	plan.TargetLocales = append(plan.TargetLocales, "de")
+	deItem := plan.Items[0]
+	deItem.ID = "de:auth:login.title"
+	deItem.Locale = "de"
+	plan.Items = append(plan.Items, deItem)
+	var locales []string
+	a.Translation.Providers = translate.NewProviderRegistry(generateProvider{name: "mock", generate: func(_ context.Context, req translate.ProviderRequest) (*translate.ProviderResponse, error) {
+		locales = append(locales, req.TargetLocale)
+		return &translate.ProviderResponse{Usage: translate.ProviderUsage{InputTokens: 2, OutputTokens: 3, TotalTokens: 5}}, nil
+	}})
+
+	out, err := a.Translation.GenerateWithProvider(ctx, translate.ProviderGenerateInput{ProviderName: "mock", Plan: &plan})
+
+	require.NoError(t, err)
+	require.Equal(t, []string{"fr", "de"}, locales)
+	require.Equal(t, translate.ProviderUsage{InputTokens: 4, OutputTokens: 6, TotalTokens: 10}, out.Usage)
+}
+
 func TestGenerateWithProviderRejectsPlaceholderMismatch(t *testing.T) {
 	ctx := t.Context()
 	a := newTranslationFixtureApp(t)
 	plan, err := a.Translation.Plan(ctx, translate.PlanInput{})
 	require.NoError(t, err)
-	a.Translation.Providers = providerReturning([]translate.Proposal{{
+	a.Translation.Providers = providerReturning([]translate.ProposedTranslation{{
 		Locale:      "fr",
 		Namespace:   "auth",
 		Key:         "login.subtitle",
@@ -72,7 +102,7 @@ func TestGenerateWithProviderRejectsUnknownKeyOrLocale(t *testing.T) {
 	a := newTranslationFixtureApp(t)
 	plan, err := a.Translation.Plan(ctx, translate.PlanInput{})
 	require.NoError(t, err)
-	a.Translation.Providers = providerReturning([]translate.Proposal{{
+	a.Translation.Providers = providerReturning([]translate.ProposedTranslation{{
 		Locale:      "de",
 		Namespace:   "auth",
 		Key:         "missing",
@@ -122,7 +152,7 @@ func TestGenerateWithProviderErrorDoesNotWriteFilesOrState(t *testing.T) {
 	require.Equal(t, beforeState, readFixtureFile(t, a.ProjectRoot, state.DefaultStatePath))
 }
 
-func providerReturning(proposals []translate.Proposal) *translate.ProviderRegistry {
+func providerReturning(proposals []translate.ProposedTranslation) *translate.ProviderRegistry {
 	return translate.NewProviderRegistry(generateProvider{name: "mock", generate: func(context.Context, translate.ProviderRequest) (*translate.ProviderResponse, error) {
 		return &translate.ProviderResponse{Proposals: proposals}, nil
 	}})

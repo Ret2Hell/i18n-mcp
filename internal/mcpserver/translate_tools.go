@@ -26,19 +26,17 @@ type TranslationGenerateInput struct {
 	Keys           []string `json:"keys,omitzero"`
 	IncludeContext bool     `json:"includeContext,omitempty"`
 	MaxItems       int      `json:"maxItems,omitempty"`
-	MaxTokens      int64    `json:"maxTokens,omitempty"`
 }
 
 // TranslationGenerateOutput is the output for the translation.generate tool.
 type TranslationGenerateOutput struct {
-	Mode      string                       `json:"mode"`
-	Provider  string                       `json:"provider,omitempty"`
-	Plan      translate.PlanOutput         `json:"plan"`
-	Proposals []translate.Proposal         `json:"proposals"`
-	Rejected  []translate.RejectedProposal `json:"rejected,omitzero"`
-	Warnings  []string                     `json:"warnings,omitzero"`
-	Model     string                       `json:"model,omitempty"`
-	Usage     translate.ProviderUsage      `json:"usage,omitzero"`
+	Mode      string                          `json:"mode"`
+	Provider  string                          `json:"provider,omitempty"`
+	Plan      translate.Batch                 `json:"plan"`
+	Proposals []translate.ProposedTranslation `json:"proposals"`
+	Rejected  []translate.RejectedTranslation `json:"rejected,omitzero"`
+	Warnings  []string                        `json:"warnings,omitzero"`
+	Usage     translate.ProviderUsage         `json:"usage,omitzero"`
 }
 
 func translationPlanTool(a *app.App) func(context.Context, *mcp.CallToolRequest, translate.PlanInput) (*mcp.CallToolResult, TranslationPlanOutput, error) {
@@ -67,6 +65,16 @@ func translationGenerateHandler(ctx context.Context, req *mcp.CallToolRequest, a
 	if err != nil {
 		return nil, err
 	}
+	switch mode {
+	case "provider":
+	case "sampling":
+		return nil, fmt.Errorf("MCP sampling is deprecated; set translation.mode to agent or provider")
+	case "agent":
+		return nil, fmt.Errorf("translation.generate is unavailable in agent mode; use translation.plan, translation.validate, and translation.apply")
+	default:
+		return nil, fmt.Errorf("unsupported translation.generate mode %q", mode)
+	}
+
 	statuses := make([]diff.KeyStatus, 0, len(in.Statuses))
 	for _, status := range in.Statuses {
 		statuses = append(statuses, diff.KeyStatus(status))
@@ -82,54 +90,30 @@ func translationGenerateHandler(ctx context.Context, req *mcp.CallToolRequest, a
 	if err != nil {
 		return nil, err
 	}
-	if mode == "provider" {
-		cfg, err := a.Config.Resolve(ctx)
-		if err != nil {
-			return nil, err
-		}
-		progress := mcpadapter.NewMCPProgressReporter(req, a.Logger)
-		progress.Step(ctx, "generating translation proposals with provider", 1, 2)
-		generated, err := a.Translation.GenerateWithProvider(ctx, translate.ProviderGenerateInput{
-			ProviderName: cfg.Translation.Provider,
-			Plan:         &plan,
-			StyleGuide:   plan.StyleGuide,
-		})
-		if err != nil {
-			return nil, err
-		}
-		progress.Step(ctx, "validated provider translation proposals", 2, 2)
-		return new(TranslationGenerateOutput{
-			Mode:      "provider",
-			Provider:  generated.Provider,
-			Plan:      plan,
-			Proposals: generated.Proposals,
-			Rejected:  generated.Rejected,
-			Warnings:  generated.Warnings,
-			Usage:     generated.Usage,
-		}), nil
-	}
-	if mode != "sampling" {
-		return nil, fmt.Errorf("translation.generate mode %q is not implemented by Epic M", mode)
-	}
-	if a.Sampling == nil {
-		return nil, fmt.Errorf("translation.generate sampling service is not configured")
-	}
-	sampler := a.Sampling
-	if in.MaxTokens > 0 {
-		sampler = new(*sampler)
-		sampler.MaxTokens = in.MaxTokens
-	}
-	generated, err := sampler.Generate(ctx, req.Session, translate.SamplingRequest{Plan: &plan})
+	cfg, err := a.Config.Resolve(ctx)
 	if err != nil {
 		return nil, err
 	}
+	progress := mcpadapter.NewMCPProgressReporter(req, a.Logger)
+	progress.Step(ctx, "generating translation proposals with provider", 1, 2)
+	generated, err := a.Translation.GenerateWithProvider(ctx, translate.ProviderGenerateInput{
+		ProviderName: cfg.Translation.Provider,
+		Plan:         &plan,
+		StyleGuide:   plan.StyleGuide,
+		Glossary:     plan.GlossaryText,
+	})
+	if err != nil {
+		return nil, err
+	}
+	progress.Step(ctx, "validated provider translation proposals", 2, 2)
 	return new(TranslationGenerateOutput{
-		Mode:      "sampling",
+		Mode:      "provider",
+		Provider:  generated.Provider,
 		Plan:      plan,
 		Proposals: generated.Proposals,
 		Rejected:  generated.Rejected,
 		Warnings:  generated.Warnings,
-		Model:     generated.Model,
+		Usage:     generated.Usage,
 	}), nil
 }
 

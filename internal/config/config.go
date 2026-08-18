@@ -26,7 +26,7 @@ type FormatConfig struct {
 
 // TranslationConfig controls translation behavior and context files.
 type TranslationConfig struct {
-	Mode           string `json:"mode" jsonschema:"translation mode: agent, provider, or sampling"`
+	Mode           string `json:"mode" jsonschema:"translation mode: agent or provider"`
 	Provider       string `json:"provider,omitzero" jsonschema:"optional provider name for provider mode"`
 	StyleGuidePath string `json:"styleGuidePath,omitzero" jsonschema:"optional project-relative style guide path"`
 	GlossaryPath   string `json:"glossaryPath,omitzero" jsonschema:"optional project-relative glossary path"`
