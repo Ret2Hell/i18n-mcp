@@ -3,7 +3,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/Ret2Hell/i18n-mcp?style=flat&color=blue)](https://github.com/Ret2Hell/i18n-mcp/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/Ret2Hell/i18n-mcp/ci.yml?label=CI)](https://github.com/Ret2Hell/i18n-mcp/actions/workflows/ci.yml)
 [![Go](https://img.shields.io/badge/Go-1.27-blue)](go.mod)
-[![MCP](https://img.shields.io/badge/MCP-stdio_%7C_streamable_HTTP-purple)](#mcp-client-configuration)
+[![MCP](https://img.shields.io/badge/MCP-2026--07--28-purple)](#mcp-client-configuration)
 [![Tools](https://img.shields.io/badge/MCP_tools-17-orange)](#mcp-tools)
 [![Docker](https://img.shields.io/badge/docker-ret2hell%2Fi18n--mcp-blue)](https://hub.docker.com/r/ret2hell/i18n-mcp)
 [![Platform](https://img.shields.io/badge/macOS_%7C_Linux_%7C_Windows-supported-lightgrey)](https://github.com/Ret2Hell/i18n-mcp/releases/latest)
@@ -11,7 +11,7 @@
 
 **An MCP server for inspecting, validating, translating, and safely updating JSON i18n locale files in frontend projects.** Detect locale layouts, bootstrap `.i18n-mcp.json`, find missing and stale translations, plan agent translation batches, validate placeholders and ICU shape, scan application source for dead keys, preview patches, and write only after explicit approval.
 
-`i18n-mcp` supports both local stdio and MCP Streamable HTTP transports. It runs with the same filesystem permissions as the user or container process that starts it. Write tools are dry-run by default and require `apply: true` before changing files.
+`i18n-mcp` implements MCP `2026-07-28` over local stdio and stateless Streamable HTTP. Clients must support that protocol revision. It runs with the same filesystem permissions as the user or container process that starts it. Write tools are dry-run by default and require `apply: true` before changing files.
 
 > **Security & Trust** - This tool reads project files and can write locale JSON, config, and state files when explicitly asked. The default path is preview-first: config writes, state rebuilds, translation applies, key prune, and key rename all return patch previews unless `apply: true` is provided. The HTTP server binds to loopback by default and refuses non-loopback binds unless authentication is enabled. The built-in static bearer-token verifier is intended only for local development; place production deployments behind a properly authenticated and authorized gateway. In `provider` mode, translation items and requested style-guide or glossary context are sent to the configured provider; `agent` mode makes no server-side provider request.
 
@@ -205,7 +205,7 @@ Configure a Streamable HTTP-capable client with that URL. The exact configuratio
 }
 ```
 
-The server also exposes `GET /healthz`. Use `--addr` and `--path` to change the listen address and MCP endpoint. Loopback HTTP is unauthenticated by default. See [HTTP Deployment](#http-deployment) before binding to another interface.
+The MCP endpoint is stateless and POST-only; the server separately exposes `GET /healthz`. Use `--addr` and `--path` to change the listen address and MCP endpoint. Loopback HTTP is unauthenticated by default. Browser clients with a different Origin must be explicitly allowed with `--trusted-origin https://client.example`. See [HTTP Deployment](#http-deployment) before binding to another interface.
 
 ### Docker-based stdio
 
@@ -392,7 +392,7 @@ Replace the example `$schema` URL with your generated schema path or a published
 | `format.sortKeys` | No | Sort JSON object keys when writing locale files. Default is `false`. |
 | `format.indent` | No | Number of spaces for JSON indentation. Default is `2`. |
 | `format.trailingNewline` | No | Write a trailing newline. Default is `true`. |
-| `translation.mode` | No | Translation mode: `agent` (default) or `provider`. MCP sampling is no longer supported. |
+| `translation.mode` | No | Translation mode: `agent` (default) or `provider`. |
 | `translation.provider` | No | Provider name for provider mode. Default is `openai-compatible`. Do not store credentials here. |
 | `translation.styleGuidePath` | No | Project-relative style guide file used in translation plans. |
 | `translation.glossaryPath` | No | Project-relative glossary file used in translation plans. |
@@ -428,8 +428,6 @@ export I18N_MCP_OPENAI_BASE_URL='https://api.openai.com/v1'
 ```
 
 Restart the MCP server after changing its environment. Credentials are never read from `.i18n-mcp.json`. Provider generation is read-only: it returns validated proposals but does not write locale files or state. Requests have a finite timeout and bounded response size. They are not automatically retried, avoiding unexpected duplicate cost; callers may retry explicitly after reviewing provider errors.
-
-MCP Sampling was deprecated in protocol version `2026-07-28` by [SEP-2577](https://modelcontextprotocol.io/seps/2577-deprecate-roots-sampling-and-logging) and is not supported. Existing `"mode": "sampling"` configurations must migrate to `agent` or `provider`; the server reports a targeted validation error rather than silently changing credentials, cost, or privacy behavior.
 
 ### Common Locale Layouts
 
@@ -577,7 +575,7 @@ Create a batch for missing and stale keys:
 }
 ```
 
-Use the `i18n_translate_batch` prompt or your agent workflow to generate proposals. Proposals should have this shape:
+Keep the opaque `batchId` returned in the plan. Pass it back unchanged to validation and apply; it binds the workflow to the project, caller, selected items, and source snapshot without relying on an MCP session. Use the `i18n_translate_batch` prompt or your agent workflow to generate proposals. Proposals should have this shape:
 
 ```json
 [
@@ -597,6 +595,7 @@ Use the `i18n_translate_batch` prompt or your agent workflow to generate proposa
 {
   "name": "i18n.translation.validate",
   "arguments": {
+    "batchId": "<batchId returned by i18n.translation.plan>",
     "translations": [
       {
         "locale": "fr",
@@ -618,6 +617,7 @@ Validation rejects source drift by default. If the source string changed after p
 {
   "name": "i18n.translation.apply",
   "arguments": {
+    "batchId": "<batchId returned by i18n.translation.plan>",
     "translations": [
       {
         "locale": "fr",
@@ -639,6 +639,7 @@ This returns patch previews and does not write files.
 {
   "name": "i18n.translation.apply",
   "arguments": {
+    "batchId": "<batchId returned by i18n.translation.plan>",
     "apply": true,
     "translations": [
       {
@@ -878,6 +879,7 @@ i18n-mcp serve stdio --project /path/to/frontend-app
 i18n-mcp serve stdio --project /path/to/frontend-app --config .i18n-mcp.json --log-level warn
 i18n-mcp serve http --project /path/to/frontend-app
 i18n-mcp serve http --project /path/to/frontend-app --addr 127.0.0.1:7339 --path /mcp
+i18n-mcp serve http --project /path/to/frontend-app --trusted-origin https://inspector.example
 i18n-mcp schema > i18n-mcp.schema.json
 i18n-mcp audit --project /path/to/frontend-app --output markdown
 i18n-mcp audit --project /path/to/frontend-app --output json
@@ -954,7 +956,7 @@ Recommendations:
 
 ### HTTP Deployment
 
-Streamable HTTP defaults to `127.0.0.1:7339`, serves MCP at `/mcp`, and exposes a `/healthz` endpoint. The server refuses to bind to a non-loopback address unless `--auth-required` is set. HTTP remains stateful, so MCP Go SDK v1.7 negotiates a pre-2026-07-28 protocol revision; stdio can negotiate MCP 2026-07-28. Stateless 2026-07-28 HTTP will be enabled only after a separate compatibility review.
+Streamable HTTP defaults to `127.0.0.1:7339`, serves MCP at `/mcp`, and exposes a `/healthz` endpoint. `/mcp` implements the stateless MCP `2026-07-28` transport: each JSON-RPC message is a separate POST, no `initialize` handshake or `Mcp-Session-Id` is used, and GET/DELETE session operations and SSE resumption are not available. Resource changes are delivered through a client-opened `subscriptions/listen` POST stream. The server refuses to bind to a non-loopback address unless `--auth-required` is set.
 
 The built-in bearer-token mode provides protected-resource metadata and scope checks, but its static token verifier is for development only. Clients must send the token as `Authorization: Bearer <token>`:
 
@@ -967,6 +969,10 @@ i18n-mcp serve http \
   --dev-static-token-env I18N_MCP_DEV_TOKEN
 ```
 
+Requests with a browser Origin are checked for cross-origin access. Same-origin requests are accepted; allow each intentional browser client explicitly, for example `--trusted-origin https://inspector.example`. Native MCP clients that do not send an Origin continue to work.
+
+MRTR confirmations and translation batch handles are signed. The server generates an ephemeral signing key by default. Set `I18N_MCP_REQUEST_STATE_SECRET` to the same random value of at least 32 bytes on every replica when handles must survive process replacement or move between replicas. Never commit or log this value.
+
 For production or remote access, keep the server on loopback or a private interface behind a gateway that provides TLS, token validation, authorization, rate limiting, and secret-safe audit logging. Do not expose project files over a network without authentication and authorization.
 
 ## Troubleshooting
@@ -977,7 +983,7 @@ For production or remote access, keep the server on loopback or a private interf
 | HTTP server rejects the listen address | Non-loopback binds require `--auth-required`; use loopback for local clients or configure authentication. |
 | Server starts in the wrong project | Pass `--project /absolute/path/to/frontend-app`. |
 | Config validation fails | Run `i18n.project.detect`, review `proposedConfig`, then preview `i18n.config.write`. |
-| Config rejects `sampling` mode | MCP Sampling is deprecated; choose `agent` or configure `provider` mode. |
+| Translation batch handle is stale or invalid | Run `i18n.translation.plan` again and pass its new `batchId` unchanged to validate/apply. |
 | Translation provider is unavailable | Set `I18N_MCP_OPENAI_API_KEY` and `I18N_MCP_OPENAI_MODEL` in the MCP server environment, then restart it. |
 | Diff shows `unknown` keys | Run `i18n.state.rebuild` without `apply`, review, then run with `apply: true`. |
 | Stale translations remain | Re-plan with `i18n.translation.plan` and regenerate proposals from current source values. |
