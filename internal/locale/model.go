@@ -1,6 +1,6 @@
 package locale
 
-import "encoding/json"
+import json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 
 // FileRef identifies a locale file matched by a configured pattern.
 type FileRef struct {

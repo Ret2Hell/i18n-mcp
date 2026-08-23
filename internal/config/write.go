@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"cmp"
 	"context"
-	"encoding/json"
 	"errors"
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"os"
 	"path/filepath"
 

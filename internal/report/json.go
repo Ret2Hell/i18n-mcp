@@ -1,6 +1,6 @@
 package report
 
-import "encoding/json"
+import json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 
 // RenderJSON renders report as indented JSON.
 func RenderJSON(report Report) (string, error) {

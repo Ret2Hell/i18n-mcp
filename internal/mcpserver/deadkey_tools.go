@@ -4,8 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"

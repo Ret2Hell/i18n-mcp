@@ -3,7 +3,7 @@ package project
 import (
 	"cmp"
 	"context"
-	"encoding/json"
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"maps"
 	"os"
 	"path/filepath"

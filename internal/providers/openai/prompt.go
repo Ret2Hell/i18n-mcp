@@ -1,7 +1,7 @@
 package openai
 
 import (
-	"encoding/json"
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/translate"
