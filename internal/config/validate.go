@@ -70,8 +70,6 @@ func validateFormat(cfg Resolved, result *ValidationResult) {
 func validateTranslationMode(cfg Resolved, result *ValidationResult) {
 	switch cfg.Translation.Mode {
 	case "agent", "provider":
-	case "sampling":
-		result.Errors = append(result.Errors, Diagnostic{Code: "translation_sampling_deprecated", Field: "translation.mode", Message: "MCP sampling is deprecated; translation.mode must be agent or provider"})
 	case "":
 		result.Errors = append(result.Errors, Diagnostic{Code: "translation_mode_required", Field: "translation.mode", Message: "translation.mode is required"})
 	default:

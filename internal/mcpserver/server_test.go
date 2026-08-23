@@ -95,6 +95,99 @@ subscribed:
 	}
 }
 
+func TestServerCatalogOrderingIsDeterministic(t *testing.T) {
+	first := serverCatalogSnapshot(t)
+	second := serverCatalogSnapshot(t)
+	require.Equal(t, first, second)
+}
+
+type catalogSnapshot struct {
+	Tools             []string
+	Prompts           []string
+	Resources         []string
+	ResourceTemplates []string
+}
+
+func serverCatalogSnapshot(t *testing.T) catalogSnapshot {
+	t.Helper()
+	ctx := t.Context()
+	application, err := app.New(ctx, app.Options{ProjectRoot: t.TempDir(), LogLevel: "error"})
+	require.NoError(t, err)
+	server := mcpserver.New(application)
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.0"}, nil)
+	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	serverSession, err := server.Connect(ctx, serverTransport, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, serverSession.Close()) })
+	clientSession, err := client.Connect(ctx, clientTransport, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, clientSession.Close()) })
+
+	tools, err := clientSession.ListTools(ctx, nil)
+	require.NoError(t, err)
+	prompts, err := clientSession.ListPrompts(ctx, nil)
+	require.NoError(t, err)
+	resources, err := clientSession.ListResources(ctx, nil)
+	require.NoError(t, err)
+	templates, err := clientSession.ListResourceTemplates(ctx, nil)
+	require.NoError(t, err)
+
+	snapshot := catalogSnapshot{}
+	for _, tool := range tools.Tools {
+		snapshot.Tools = append(snapshot.Tools, tool.Name)
+	}
+	for _, prompt := range prompts.Prompts {
+		snapshot.Prompts = append(snapshot.Prompts, prompt.Name)
+	}
+	for _, resource := range resources.Resources {
+		snapshot.Resources = append(snapshot.Resources, resource.URI)
+	}
+	for _, template := range templates.ResourceTemplates {
+		snapshot.ResourceTemplates = append(snapshot.ResourceTemplates, template.URITemplate)
+	}
+	return snapshot
+}
+
+func TestServerReturnsExplicitCacheHints(t *testing.T) {
+	ctx := t.Context()
+	application, err := app.New(ctx, app.Options{ProjectRoot: t.TempDir(), LogLevel: "error"})
+	require.NoError(t, err)
+
+	server := mcpserver.New(application)
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.0"}, nil)
+	clientTransport, serverTransport := mcp.NewInMemoryTransports()
+	serverSession, err := server.Connect(ctx, serverTransport, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, serverSession.Close()) })
+	clientSession, err := client.Connect(ctx, clientTransport, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, clientSession.Close()) })
+
+	tools, err := clientSession.ListTools(ctx, nil)
+	require.NoError(t, err)
+	assertPublicCatalogCache(t, tools)
+	prompts, err := clientSession.ListPrompts(ctx, nil)
+	require.NoError(t, err)
+	assertPublicCatalogCache(t, prompts)
+	resources, err := clientSession.ListResources(ctx, nil)
+	require.NoError(t, err)
+	assertPublicCatalogCache(t, resources)
+	templates, err := clientSession.ListResourceTemplates(ctx, nil)
+	require.NoError(t, err)
+	assertPublicCatalogCache(t, templates)
+
+	resource, err := clientSession.ReadResource(ctx, &mcp.ReadResourceParams{URI: "i18n://analysis/usage"})
+	require.NoError(t, err)
+	require.Zero(t, resource.TTLMs)
+	require.Equal(t, "private", resource.CacheScope)
+}
+
+func assertPublicCatalogCache(t *testing.T, result mcp.CacheableResult) {
+	t.Helper()
+	require.Equal(t, 300000, result.GetTTLMs())
+	require.Equal(t, "public", result.GetCacheScope())
+}
+
 func TestHealthTool(t *testing.T) {
 	ctx := t.Context()
 	projectRoot := t.TempDir()

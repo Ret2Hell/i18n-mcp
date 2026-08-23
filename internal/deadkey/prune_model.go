@@ -1,5 +1,11 @@
 package deadkey
 
+// PrunePlan identifies the exact file edits awaiting client confirmation.
+type PrunePlan struct {
+	KeyCount int
+	Digest   string
+}
+
 // PruneInput configures removal of selected dead keys.
 type PruneInput struct {
 	Keys              []PruneKey `json:"keys" jsonschema:"exact namespace and key pairs to prune"`

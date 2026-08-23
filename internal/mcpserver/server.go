@@ -1,9 +1,6 @@
 package mcpserver
 
 import (
-	"context"
-	"log/slog"
-
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/mcpadapter"
 	"github.com/Ret2Hell/i18n-mcp/internal/version"
@@ -22,9 +19,6 @@ func New(a *app.App) *mcp.Server {
 		CompletionHandler:  complete(a),
 		SubscribeHandler:   mcpadapter.ValidateSubscribe,
 		UnsubscribeHandler: mcpadapter.ValidateUnsubscribe,
-		InitializedHandler: func(_ context.Context, req *mcp.InitializedRequest) {
-			a.Logger.Info("mcp session initialized", slog.String("session", req.Session.ID()))
-		},
 	}
 
 	server := mcp.NewServer(&mcp.Implementation{
@@ -32,6 +26,7 @@ func New(a *app.App) *mcp.Server {
 		Title:   "i18n MCP Server",
 		Version: version.Version,
 	}, opts)
+	server.AddReceivingMiddleware(cacheHints)
 	notifier := mcpadapter.ResourceNotifier{Server: server, Logger: a.Logger}
 	a.Translation.Notifier = notifier
 	a.DeadKeys.Notifier = notifier

@@ -15,15 +15,21 @@ func TestStoreSubjectIsolation(t *testing.T) {
 	ctxA := authenticatedContext(t, "subject-a")
 	ctxB := authenticatedContext(t, "subject-b")
 	var store Store[string]
-	store.Put(ctxA, "job-1", "result")
+	store.Put(ctxA, "job-1", "result-a")
+	store.Put(ctxB, "job-1", "result-b")
 
-	value, ok, err := store.Get(ctxA, "job-1")
+	valueA, ok, err := store.Get(ctxA, "job-1")
 	require.NoError(t, err)
 	require.True(t, ok)
-	require.Equal(t, "result", value)
+	require.Equal(t, "result-a", valueA)
 
-	_, ok, err = store.Get(ctxB, "job-1")
-	require.EqualError(t, err, "not found")
+	valueB, ok, err := store.Get(ctxB, "job-1")
+	require.NoError(t, err)
+	require.True(t, ok)
+	require.Equal(t, "result-b", valueB)
+
+	_, ok, err = store.Get(ctxB, "unknown")
+	require.NoError(t, err)
 	require.False(t, ok)
 }
 

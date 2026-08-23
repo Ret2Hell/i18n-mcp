@@ -29,6 +29,52 @@ func TestTranslationPlanIncludesMissingAndStale(t *testing.T) {
 	require.Equal(t, "auth", batch.Items[0].Namespace)
 }
 
+func TestTranslationBatchHandleWorksWithFreshApplication(t *testing.T) {
+	first := newTranslationFixtureApp(t)
+	batch, err := first.Translation.Plan(t.Context(), translate.PlanInput{Keys: []string{"login.title"}})
+	require.NoError(t, err)
+
+	second, err := app.New(t.Context(), app.Options{
+		ProjectRoot:        first.ProjectRoot,
+		LogLevel:           "error",
+		RequestStateSecret: "translation-test-signing-key-32b",
+	})
+	require.NoError(t, err)
+	out, err := second.Translation.Validate(t.Context(), translate.ValidationInput{
+		BatchID: batch.BatchID,
+		Translations: []translate.ProposedTranslation{{
+			Locale:      "fr",
+			Namespace:   "auth",
+			Key:         "login.title",
+			SourceValue: "Log in",
+			Value:       "Connexion",
+		}},
+	})
+	require.NoError(t, err)
+	require.Len(t, out.Accepted, 1)
+}
+
+func TestTranslationBatchHandleSurvivesLaterPlans(t *testing.T) {
+	a := newTranslationFixtureApp(t)
+	first, err := a.Translation.Plan(t.Context(), translate.PlanInput{Keys: []string{"login.title"}})
+	require.NoError(t, err)
+	_, err = a.Translation.Plan(t.Context(), translate.PlanInput{Keys: []string{"login.subtitle"}})
+	require.NoError(t, err)
+
+	_, err = a.Translation.ResolveBatch(t.Context(), first.BatchID)
+	require.NoError(t, err)
+}
+
+func TestTranslationBatchHandleRejectsSourceChanges(t *testing.T) {
+	a := newTranslationFixtureApp(t)
+	batch, err := a.Translation.Plan(t.Context(), translate.PlanInput{Keys: []string{"login.title"}})
+	require.NoError(t, err)
+	writeFixtureFile(t, a.ProjectRoot, "messages/en/auth.json", `{"login":{"title":"Sign in","subtitle":"Welcome {name}"}}`)
+
+	_, err = a.Translation.ResolveBatch(t.Context(), batch.BatchID)
+	require.ErrorContains(t, err, "stale")
+}
+
 func TestTranslationPlanLoadsProviderContext(t *testing.T) {
 	ctx := t.Context()
 	a := newTranslationFixtureApp(t)
@@ -84,13 +130,8 @@ func TestTranslationApplyDryRunDoesNotWrite(t *testing.T) {
 	before := readFixtureFile(t, a.ProjectRoot, "messages/fr/auth.json")
 	stateBefore := readFixtureFile(t, a.ProjectRoot, state.DefaultStatePath)
 
-	out, err := a.Translation.Apply(ctx, translate.ApplyInput{Translations: []translate.ProposedTranslation{{
-		Locale:      "fr",
-		Namespace:   "auth",
-		Key:         "login.title",
-		SourceValue: "Log in",
-		Value:       "Connexion",
-	}}})
+	in := translationApplyInput(t, a)
+	out, err := a.Translation.Apply(ctx, in)
 	require.NoError(t, err)
 	require.True(t, out.DryRun)
 	require.Len(t, out.ChangedFiles, 1)
@@ -104,13 +145,9 @@ func TestTranslationApplyNotifiesLocaleAndDiffUpdates(t *testing.T) {
 	notifier := &recordingNotifier{}
 	a.Translation.Notifier = notifier
 
-	_, err := a.Translation.Apply(ctx, translate.ApplyInput{Apply: true, Translations: []translate.ProposedTranslation{{
-		Locale:      "fr",
-		Namespace:   "auth",
-		Key:         "login.title",
-		SourceValue: "Log in",
-		Value:       "Connexion",
-	}}})
+	in := translationApplyInput(t, a)
+	in.Apply = true
+	_, err := a.Translation.Apply(ctx, in)
 
 	require.NoError(t, err)
 	require.ElementsMatch(t, []string{resources.LocaleURI("fr", "auth"), resources.DiffURI}, notifier.uris)
@@ -122,13 +159,8 @@ func TestTranslationApplyDryRunDoesNotNotify(t *testing.T) {
 	notifier := &recordingNotifier{}
 	a.Translation.Notifier = notifier
 
-	_, err := a.Translation.Apply(ctx, translate.ApplyInput{Translations: []translate.ProposedTranslation{{
-		Locale:      "fr",
-		Namespace:   "auth",
-		Key:         "login.title",
-		SourceValue: "Log in",
-		Value:       "Connexion",
-	}}})
+	in := translationApplyInput(t, a)
+	_, err := a.Translation.Apply(ctx, in)
 
 	require.NoError(t, err)
 	require.Empty(t, notifier.uris)
@@ -138,13 +170,9 @@ func TestTranslationApplyWriteUpdatesLocaleAndState(t *testing.T) {
 	ctx := t.Context()
 	a := newTranslationFixtureApp(t)
 
-	out, err := a.Translation.Apply(ctx, translate.ApplyInput{Apply: true, Translations: []translate.ProposedTranslation{{
-		Locale:      "fr",
-		Namespace:   "auth",
-		Key:         "login.title",
-		SourceValue: "Log in",
-		Value:       "Connexion",
-	}}})
+	in := translationApplyInput(t, a)
+	in.Apply = true
+	out, err := a.Translation.Apply(ctx, in)
 	require.NoError(t, err)
 	require.False(t, out.DryRun)
 	require.Equal(t, 1, out.Applied)
@@ -152,6 +180,22 @@ func TestTranslationApplyWriteUpdatesLocaleAndState(t *testing.T) {
 
 	stateBytes := readFixtureFile(t, a.ProjectRoot, state.DefaultStatePath)
 	require.Contains(t, stateBytes, "translation.apply")
+}
+
+func translationApplyInput(t *testing.T, a *app.App) translate.ApplyInput {
+	t.Helper()
+	batch, err := a.Translation.Plan(t.Context(), translate.PlanInput{Keys: []string{"login.title"}})
+	require.NoError(t, err)
+	return translate.ApplyInput{
+		BatchID: batch.BatchID,
+		Translations: []translate.ProposedTranslation{{
+			Locale:      "fr",
+			Namespace:   "auth",
+			Key:         "login.title",
+			SourceValue: "Log in",
+			Value:       "Connexion",
+		}},
+	}
 }
 
 func newTranslationFixtureApp(t *testing.T) *app.App {
@@ -195,7 +239,11 @@ func newTranslationFixtureApp(t *testing.T) *app.App {
 	require.NoError(t, err)
 	writeFixtureFile(t, root, state.DefaultStatePath, string(data)+"\n")
 
-	a, err := app.New(t.Context(), app.Options{ProjectRoot: root, LogLevel: "error"})
+	a, err := app.New(t.Context(), app.Options{
+		ProjectRoot:        root,
+		LogLevel:           "error",
+		RequestStateSecret: "translation-test-signing-key-32b",
+	})
 	require.NoError(t, err)
 	return a
 }

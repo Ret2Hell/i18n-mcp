@@ -2,8 +2,8 @@ package mcpadapter
 
 import (
 	"context"
-	"net/url"
 
+	"github.com/Ret2Hell/i18n-mcp/internal/resources"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -18,11 +18,7 @@ func ValidateUnsubscribe(_ context.Context, req *mcp.UnsubscribeRequest) error {
 }
 
 func validateI18nURI(raw string) error {
-	u, err := url.Parse(raw)
-	if err != nil {
-		return err
-	}
-	if u.Scheme != "i18n" {
+	if !resources.IsSubscribableURI(raw) {
 		return mcp.ResourceNotFoundError(raw)
 	}
 	return nil

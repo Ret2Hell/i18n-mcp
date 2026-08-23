@@ -33,6 +33,7 @@ func newServeHTTPCommand(opts *RootOptions) *cobra.Command {
 	var resourceURL string
 	var authScopes []string
 	var authIssuers []string
+	var trustedOrigins []string
 	var devTokenEnv string
 	cmd := &cobra.Command{
 		Use:   "http",
@@ -48,9 +49,9 @@ func newServeHTTPCommand(opts *RootOptions) *cobra.Command {
 				return err
 			}
 			cfg := httpserver.Config{
-				Addr:        addr,
-				MCPPath:     path,
-				ProjectRoot: opts.Project,
+				Addr:           addr,
+				MCPPath:        path,
+				TrustedOrigins: trustedOrigins,
 				Auth: httpserver.AuthConfig{
 					Required:             authRequired,
 					ResourceURL:          resourceURL,
@@ -61,7 +62,8 @@ func newServeHTTPCommand(opts *RootOptions) *cobra.Command {
 					DevStaticTokenEnv:    devTokenEnv,
 				},
 			}
-			return httpserver.Run(cmd.Context(), cfg, serverFactory{application: application}, application.Logger)
+			server := mcpserver.New(application)
+			return httpserver.Run(cmd.Context(), cfg, serverFactory{server: server}, application.Logger)
 		},
 	}
 	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:7339", "HTTP listen address")
@@ -70,16 +72,17 @@ func newServeHTTPCommand(opts *RootOptions) *cobra.Command {
 	cmd.Flags().StringVar(&resourceURL, "auth-resource", "", "protected resource URL for bearer auth metadata")
 	cmd.Flags().StringSliceVar(&authScopes, "auth-scope", defaults.RequiredScopes, "required bearer token scopes")
 	cmd.Flags().StringSliceVar(&authIssuers, "auth-issuer", nil, "authorization server issuer URLs")
+	cmd.Flags().StringSliceVar(&trustedOrigins, "trusted-origin", nil, "trusted browser Origin values allowed to access the MCP endpoint")
 	cmd.Flags().StringVar(&devTokenEnv, "dev-static-token-env", "", "environment variable containing a development bearer token")
 	return cmd
 }
 
 type serverFactory struct {
-	application *app.App
+	server *mcp.Server
 }
 
 func (f serverFactory) ServerForRequest(_ *http.Request) *mcp.Server {
-	return mcpserver.New(f.application)
+	return f.server
 }
 
 func newServeStdioCommand(opts *RootOptions) *cobra.Command {

@@ -3,6 +3,7 @@ package httpserver
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 )
 
@@ -36,10 +37,48 @@ func (c AuthConfig) Validate(addr string) error {
 	if c.Required && c.ResourceURL == "" {
 		return fmt.Errorf("auth resource URL is required when auth is enabled")
 	}
-	if c.MetadataPath == "" {
-		return fmt.Errorf("auth metadata path is required")
+	if c.MetadataPath == "" || !strings.HasPrefix(c.MetadataPath, "/") {
+		return fmt.Errorf("auth metadata path must be an absolute HTTP path")
+	}
+	if c.ResourceURL != "" {
+		if err := validateAuthURL("auth resource URL", c.ResourceURL); err != nil {
+			return err
+		}
+	}
+	if c.MetadataURL != "" {
+		if err := validateAuthURL("auth metadata URL", c.MetadataURL); err != nil {
+			return err
+		}
+	}
+	for _, issuer := range c.AuthorizationServers {
+		if err := validateAuthURL("authorization server issuer", issuer); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func validateAuthURL(name string, raw string) error {
+	parsed, err := url.Parse(raw)
+	if err != nil || !parsed.IsAbs() || parsed.Host == "" {
+		return fmt.Errorf("%s must be an absolute URL", name)
+	}
+	if parsed.User != nil || parsed.Fragment != "" || parsed.RawQuery != "" {
+		return fmt.Errorf("%s must not contain user info, query, or fragment", name)
+	}
+	switch parsed.Scheme {
+	case "https":
+		return nil
+	case "http":
+		host := parsed.Hostname()
+		if strings.EqualFold(host, "localhost") {
+			return nil
+		}
+		if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s must use HTTPS except for loopback development URLs", name)
 }
 
 func bindsNonLocalhost(addr string) bool {

@@ -72,7 +72,7 @@ func TestCompletionForBatchIDs(t *testing.T) {
 
 	batchIDs, err := clientSession.Complete(ctx, &mcp.CompleteParams{
 		Ref:      &mcp.CompleteReference{Type: "ref/prompt", Name: "i18n_translate_batch"},
-		Argument: mcp.CompleteParamsArgument{Name: "batchId", Value: "batch_"},
+		Argument: mcp.CompleteParamsArgument{Name: "batchId", Value: ""},
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, batchIDs.Completion.Values)

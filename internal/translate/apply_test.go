@@ -10,6 +10,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
+	"github.com/Ret2Hell/i18n-mcp/internal/security"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 	"github.com/stretchr/testify/require"
@@ -18,9 +19,11 @@ import (
 func TestApplyDryRunDoesNotWriteFilesOrState(t *testing.T) {
 	root := setupApplyProject(t, `{"hello":"Hello"}`)
 	svc, _ := newApplyTestService(t, root)
+	batch := mustApplyTestPlan(t, svc)
 
 	out, err := svc.Apply(t.Context(), ApplyInput{
-		Apply: false,
+		BatchID: batch.BatchID,
+		Apply:   false,
 		Translations: []ProposedTranslation{{
 			Locale: "fr", Namespace: "common", Key: "hello", SourceValue: "Hello", Value: "Bonjour",
 		}},
@@ -76,10 +79,12 @@ func TestApplyInputContract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			root := setupApplyProject(t, `{"hello":"Hello"}`)
 			svc, _ := newApplyTestService(t, root)
+			batch := mustApplyTestPlan(t, svc)
 
 			out, err := svc.Apply(t.Context(), ApplyInput{
-				DryRun: tt.dryRun,
-				Apply:  tt.apply,
+				BatchID: batch.BatchID,
+				DryRun:  tt.dryRun,
+				Apply:   tt.apply,
 				Translations: []ProposedTranslation{{
 					Locale: "fr", Namespace: "common", Key: "hello", SourceValue: "Hello", Value: "Bonjour",
 				}},
@@ -105,9 +110,11 @@ func TestApplyInputContract(t *testing.T) {
 func TestApplyWriteUpdatesLocaleThenState(t *testing.T) {
 	root := setupApplyProject(t, `{"hello":"Hello"}`)
 	svc, stateSvc := newApplyTestService(t, root)
+	batch := mustApplyTestPlan(t, svc)
 
 	out, err := svc.Apply(t.Context(), ApplyInput{
-		Apply: true,
+		BatchID: batch.BatchID,
+		Apply:   true,
 		Translations: []ProposedTranslation{{
 			Locale: "fr", Namespace: "common", Key: "hello", SourceValue: "Hello", Value: "Bonjour",
 		}},
@@ -136,9 +143,11 @@ func TestApplyWriteUpdatesLocaleThenState(t *testing.T) {
 func TestApplyRejectsInvalidTranslationsBeforeWrites(t *testing.T) {
 	root := setupApplyProject(t, `{"hello":"Hello {name}"}`)
 	svc, _ := newApplyTestService(t, root)
+	batch := mustApplyTestPlan(t, svc)
 
 	out, err := svc.Apply(t.Context(), ApplyInput{
-		Apply: true,
+		BatchID: batch.BatchID,
+		Apply:   true,
 		Translations: []ProposedTranslation{{
 			Locale: "fr", Namespace: "common", Key: "hello", SourceValue: "Hello {name}", Value: "Bonjour",
 		}},
@@ -156,9 +165,11 @@ func TestApplyRejectsInvalidTranslationsBeforeWrites(t *testing.T) {
 func TestApplyRejectsSourceDriftBeforeWrites(t *testing.T) {
 	root := setupApplyProject(t, `{"hello":"Hello"}`)
 	svc, _ := newApplyTestService(t, root)
+	batch := mustApplyTestPlan(t, svc)
 
 	out, err := svc.Apply(t.Context(), ApplyInput{
-		Apply: true,
+		BatchID: batch.BatchID,
+		Apply:   true,
 		Translations: []ProposedTranslation{{
 			Locale: "fr", Namespace: "common", Key: "hello", SourceValue: "Old hello", Value: "Bonjour",
 		}},
@@ -171,6 +182,13 @@ func TestApplyRejectsSourceDriftBeforeWrites(t *testing.T) {
 	require.Empty(t, out.ChangedFiles)
 	require.NoFileExists(t, filepath.Join(root, "locales", "fr.json"))
 	require.NoFileExists(t, filepath.Join(root, ".i18n-mcp", "state.json"))
+}
+
+func mustApplyTestPlan(t *testing.T, svc *Service) Batch {
+	t.Helper()
+	batch, err := svc.Plan(t.Context(), PlanInput{})
+	require.NoError(t, err)
+	return batch
 }
 
 func boolPtr(v bool) *bool {
@@ -202,5 +220,8 @@ func newApplyTestService(t *testing.T, root string) (*Service, *state.Service) {
 	stateSvc := state.NewService(state.NewStore(guard), localeSvc)
 	validatorSvc := validate.NewService()
 	diffSvc := diff.NewService(localeSvc, stateSvc, validatorSvc)
-	return NewService(configSvc, guard, localeSvc, stateSvc, diffSvc, validatorSvc), stateSvc
+	svc := NewService(configSvc, guard, localeSvc, stateSvc, diffSvc, validatorSvc)
+	svc.StateSigner, err = security.NewRequestStateSigner([]byte("translation-test-signing-key-32b"))
+	require.NoError(t, err)
+	return svc, stateSvc
 }

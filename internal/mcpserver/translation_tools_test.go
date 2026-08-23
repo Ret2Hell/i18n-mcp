@@ -15,8 +15,12 @@ import (
 func TestTranslationApplyToolDryRunByDefaultAndApplyWrites(t *testing.T) {
 	root := makeTranslationApplyFixture(t)
 	ctx, clientSession := newTestClientSession(t, root)
+	plan, err := clientSession.CallTool(ctx, &mcp.CallToolParams{Name: "i18n.translation.plan", Arguments: map[string]any{}})
+	require.NoError(t, err)
+	batch := decodeTranslationPlan(t, plan.StructuredContent)
 
 	args := map[string]any{
+		"batchId": batch.BatchID,
 		"translations": []map[string]any{{
 			"locale":      "fr",
 			"namespace":   "common",
@@ -51,11 +55,15 @@ func TestTranslationApplyToolDryRunByDefaultAndApplyWrites(t *testing.T) {
 func TestTranslationApplyToolRejectsWithStructuredError(t *testing.T) {
 	root := makeTranslationApplyFixture(t)
 	ctx, clientSession := newTestClientSession(t, root)
+	plan, err := clientSession.CallTool(ctx, &mcp.CallToolParams{Name: "i18n.translation.plan", Arguments: map[string]any{}})
+	require.NoError(t, err)
+	batch := decodeTranslationPlan(t, plan.StructuredContent)
 
 	res, err := clientSession.CallTool(ctx, &mcp.CallToolParams{
 		Name: "i18n.translation.apply",
 		Arguments: map[string]any{
-			"apply": true,
+			"apply":   true,
+			"batchId": batch.BatchID,
 			"translations": []map[string]any{{
 				"locale":      "fr",
 				"namespace":   "common",
@@ -80,7 +88,9 @@ func TestTranslationPlanValidateAndApplyTools(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, plan.IsError)
 
+	batch := decodeTranslationPlan(t, plan.StructuredContent)
 	translationArgs := map[string]any{
+		"batchId": batch.BatchID,
 		"translations": []map[string]any{{
 			"locale":      "fr",
 			"namespace":   "auth",
@@ -99,6 +109,17 @@ func TestTranslationPlanValidateAndApplyTools(t *testing.T) {
 	out := decodeApplyOutput(t, apply.StructuredContent)
 	require.True(t, out.DryRun)
 	require.Len(t, out.ChangedFiles, 1)
+}
+
+func decodeTranslationPlan(t *testing.T, structured any) translate.Batch {
+	t.Helper()
+	data, err := json.Marshal(structured)
+	require.NoError(t, err)
+	var out struct {
+		Batch translate.Batch `json:"batch"`
+	}
+	require.NoError(t, json.Unmarshal(data, &out))
+	return out.Batch
 }
 
 func decodeApplyOutput(t *testing.T, structured any) translate.ApplyOutput {

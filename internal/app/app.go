@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -17,30 +18,34 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/project"
 	"github.com/Ret2Hell/i18n-mcp/internal/report"
 	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
+	"github.com/Ret2Hell/i18n-mcp/internal/security"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
 	"github.com/Ret2Hell/i18n-mcp/internal/translate"
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 	"github.com/rs/zerolog"
 )
 
+const requestStateSecretEnv = "I18N_MCP_REQUEST_STATE_SECRET"
+
 // App wires together the application services used by the CLI and MCP server.
 type App struct {
-	Options     Options
-	Logger      *slog.Logger
-	ProjectRoot string
-	Guard       *fsutil.Guard
-	Config      *config.Service
-	Project     *project.Service
-	Locales     *locale.Service
-	State       *state.Service
-	Validator   *validate.Service
-	Diff        *diff.Service
-	Translation *translate.Service
-	Providers   *translate.ProviderRegistry
-	Scanner     *scanner.Service
-	DeadKeys    *deadkey.Service
-	Reports     *report.Service
-	KeyOps      *keyops.Service
+	Options            Options
+	Logger             *slog.Logger
+	ProjectRoot        string
+	RequestStateSigner *security.RequestStateSigner
+	Guard              *fsutil.Guard
+	Config             *config.Service
+	Project            *project.Service
+	Locales            *locale.Service
+	State              *state.Service
+	Validator          *validate.Service
+	Diff               *diff.Service
+	Translation        *translate.Service
+	Providers          *translate.ProviderRegistry
+	Scanner            *scanner.Service
+	DeadKeys           *deadkey.Service
+	Reports            *report.Service
+	KeyOps             *keyops.Service
 }
 
 // New constructs an App with all services initialized from opts.
@@ -72,25 +77,47 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	deadKeyService := deadkey.NewService(configService, guard, localeService, scannerService)
 	reportService := report.NewService(guard.Root(), configService, localeService, diffService, scannerService, deadKeyService)
 	keyOpsService := keyops.NewService(configService, guard, localeService, stateService)
+	requestStateSigner, err := newRequestStateSigner(opts.RequestStateSecret)
+	if err != nil {
+		return nil, err
+	}
+	translationService.StateSigner = requestStateSigner
+	opts.RequestStateSecret = ""
 
 	return &App{
-		Options:     opts,
-		Logger:      slog.New(zerolog.NewSlogHandler(logger)),
-		ProjectRoot: guard.Root(),
-		Guard:       guard,
-		Config:      configService,
-		Project:     projectService,
-		Locales:     localeService,
-		State:       stateService,
-		Validator:   validatorService,
-		Diff:        diffService,
-		Translation: translationService,
-		Providers:   providerRegistry,
-		Scanner:     scannerService,
-		DeadKeys:    deadKeyService,
-		Reports:     reportService,
-		KeyOps:      keyOpsService,
+		Options:            opts,
+		Logger:             slog.New(zerolog.NewSlogHandler(logger)),
+		ProjectRoot:        guard.Root(),
+		RequestStateSigner: requestStateSigner,
+		Guard:              guard,
+		Config:             configService,
+		Project:            projectService,
+		Locales:            localeService,
+		State:              stateService,
+		Validator:          validatorService,
+		Diff:               diffService,
+		Translation:        translationService,
+		Providers:          providerRegistry,
+		Scanner:            scannerService,
+		DeadKeys:           deadKeyService,
+		Reports:            reportService,
+		KeyOps:             keyOpsService,
 	}, nil
+}
+
+func newRequestStateSigner(configuredSecret string) (*security.RequestStateSigner, error) {
+	secret := configuredSecret
+	if secret == "" {
+		secret = os.Getenv(requestStateSecretEnv)
+	}
+	if secret == "" {
+		return security.NewRandomRequestStateSigner()
+	}
+	signer, err := security.NewRequestStateSigner([]byte(secret))
+	if err != nil {
+		return nil, fmt.Errorf("configure %s: %w", requestStateSecretEnv, err)
+	}
+	return signer, nil
 }
 
 func parseLevel(level string) zerolog.Level {

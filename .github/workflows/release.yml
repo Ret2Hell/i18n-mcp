@@ -13,8 +13,8 @@ defaults:
     shell: bash
 
 env:
-  GORELEASER_VERSION: v2.16.0
-  SYFT_VERSION: v1.38.0
+  GORELEASER_VERSION: v2.17.1
+  SYFT_VERSION: v1.51.0
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
