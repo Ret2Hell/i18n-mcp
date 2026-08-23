@@ -33,6 +33,57 @@ func TestAuthConfigValidate(t *testing.T) {
 			},
 			wantErr: "auth resource URL is required when auth is enabled",
 		},
+		{
+			name: "valid loopback development URLs",
+			addr: "127.0.0.1:7339",
+			config: AuthConfig{
+				Required:             true,
+				ResourceURL:          "http://127.0.0.1:7339/mcp",
+				MetadataPath:         "/.well-known/oauth-protected-resource",
+				AuthorizationServers: []string{"https://issuer.example.test/tenant"},
+			},
+		},
+		{
+			name: "remote resource requires HTTPS",
+			addr: "127.0.0.1:7339",
+			config: AuthConfig{
+				Required:     true,
+				ResourceURL:  "http://example.test/mcp",
+				MetadataPath: "/.well-known/oauth-protected-resource",
+			},
+			wantErr: "must use HTTPS",
+		},
+		{
+			name: "resource rejects URL credentials",
+			addr: "127.0.0.1:7339",
+			config: AuthConfig{
+				Required:     true,
+				ResourceURL:  "https://user:pass@example.test/mcp",
+				MetadataPath: "/.well-known/oauth-protected-resource",
+			},
+			wantErr: "must not contain user info",
+		},
+		{
+			name: "issuer rejects query",
+			addr: "127.0.0.1:7339",
+			config: AuthConfig{
+				Required:             true,
+				ResourceURL:          "https://example.test/mcp",
+				MetadataPath:         "/.well-known/oauth-protected-resource",
+				AuthorizationServers: []string{"https://issuer.example.test?tenant=a"},
+			},
+			wantErr: "must not contain user info, query, or fragment",
+		},
+		{
+			name: "metadata path must be absolute",
+			addr: "127.0.0.1:7339",
+			config: AuthConfig{
+				Required:     true,
+				ResourceURL:  "https://example.test/mcp",
+				MetadataPath: ".well-known/oauth-protected-resource",
+			},
+			wantErr: "absolute HTTP path",
+		},
 	}
 
 	for _, tt := range tests {
