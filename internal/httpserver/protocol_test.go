@@ -336,6 +336,118 @@ func TestModernHTTPHeaderValidation(t *testing.T) {
 	}
 }
 
+func TestModernHTTPResourceNotFoundUsesInvalidParams(t *testing.T) {
+	httpServer := newStatelessTestServer(t)
+	body := `{
+		"jsonrpc":"2.0",
+		"id":4,
+		"method":"resources/read",
+		"params":{
+			"uri":"i18n://unknown",
+			"_meta":{
+				"io.modelcontextprotocol/protocolVersion":"2026-07-28",
+				"io.modelcontextprotocol/clientCapabilities":{}
+			}
+		}
+	}`
+	req := modernRequest(t, httpServer.URL+"/mcp", body, latestProtocolVersion, "resources/read")
+	req.Header.Set("Mcp-Name", "i18n://unknown")
+	response, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	responseBody, readErr := io.ReadAll(response.Body)
+	require.NoError(t, response.Body.Close())
+	require.NoError(t, readErr)
+	require.Equal(t, http.StatusBadRequest, response.StatusCode, string(responseBody))
+	var message struct {
+		Error struct {
+			Code int `json:"code"`
+		} `json:"error"`
+	}
+	require.NoError(t, json.Unmarshal(responseBody, &message))
+	require.Equal(t, -32602, message.Error.Code)
+}
+
+func TestModernHTTPRejectsOversizedRequestBody(t *testing.T) {
+	httpServer := newStatelessTestServer(t)
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		httpServer.URL+"/mcp",
+		strings.NewReader(strings.Repeat("x", mcp.DefaultMaxRequestBodyBytes+1)),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	response, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, response.Body.Close())
+	require.Equal(t, http.StatusRequestEntityTooLarge, response.StatusCode)
+}
+
+func TestModernHTTPPropagatesRequestCancellation(t *testing.T) {
+	started := make(chan struct{}, 1)
+	cancelled := make(chan struct{}, 1)
+	server := mcp.NewServer(&mcp.Implementation{Name: "cancellation-test", Version: "v0.0.0"}, nil)
+	mcp.AddTool(server, &mcp.Tool{Name: "wait"}, func(ctx context.Context, _ *mcp.CallToolRequest, _ struct{}) (*mcp.CallToolResult, struct{}, error) {
+		started <- struct{}{}
+		<-ctx.Done()
+		cancelled <- struct{}{}
+		return nil, struct{}{}, ctx.Err()
+	})
+	handler, err := newHandler(Config{}, staticServerProvider{server: server}, nil)
+	require.NoError(t, err)
+	httpServer := httptest.NewServer(handler)
+	t.Cleanup(httpServer.Close)
+
+	body := `{
+		"jsonrpc":"2.0",
+		"id":5,
+		"method":"tools/call",
+		"params":{
+			"name":"wait",
+			"arguments":{},
+			"_meta":{
+				"io.modelcontextprotocol/protocolVersion":"2026-07-28",
+				"io.modelcontextprotocol/clientCapabilities":{}
+			}
+		}
+	}`
+	ctx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, httpServer.URL+"/mcp", strings.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	req.Header.Set("MCP-Protocol-Version", latestProtocolVersion)
+	req.Header.Set("Mcp-Method", "tools/call")
+	req.Header.Set("Mcp-Name", "wait")
+	requestDone := make(chan error, 1)
+	go func() {
+		response, err := http.DefaultClient.Do(req)
+		if response != nil {
+			_ = response.Body.Close()
+		}
+		requestDone <- err
+	}()
+
+	select {
+	case <-started:
+		cancel()
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for tool to start")
+	}
+	select {
+	case <-cancelled:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for tool cancellation")
+	}
+	select {
+	case err := <-requestDone:
+		require.ErrorIs(t, err, context.Canceled)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for HTTP request cancellation")
+	}
+}
+
 func TestStatelessHTTPEndpointIsPostOnly(t *testing.T) {
 	httpServer := newStatelessTestServer(t)
 
