@@ -20,14 +20,15 @@ type Notifier interface {
 
 // Service plans, validates, and applies translations.
 type Service struct {
-	config    *config.Service
-	guard     *fsutil.Guard
-	locales   *locale.Service
-	state     *state.Service
-	diff      *diff.Service
-	validator *validate.Service
-	Providers *ProviderRegistry
-	Notifier  Notifier
+	config      *config.Service
+	guard       *fsutil.Guard
+	locales     *locale.Service
+	state       *state.Service
+	diff        *diff.Service
+	validator   *validate.Service
+	Providers   *ProviderRegistry
+	Notifier    Notifier
+	StateSigner *security.RequestStateSigner
 
 	latest security.Store[Batch]
 }

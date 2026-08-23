@@ -81,6 +81,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	translationService.StateSigner = requestStateSigner
 	opts.RequestStateSecret = ""
 
 	return &App{

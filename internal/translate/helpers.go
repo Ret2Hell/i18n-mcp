@@ -18,7 +18,7 @@ type batchIDPayload struct {
 	Items         []Item   `json:"items"`
 }
 
-func buildBatchID(projectRoot string, batch Batch) string {
+func batchDigest(projectRoot string, batch Batch) (string, error) {
 	payload := batchIDPayload{
 		ProjectRoot:   projectRoot,
 		SourceLocale:  batch.SourceLocale,
@@ -27,11 +27,11 @@ func buildBatchID(projectRoot string, batch Batch) string {
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	sum := state.SourceHash(string(data))
 	hash, _ := strings.CutPrefix(sum, "sha256:")
-	return "batch_" + hash[:16]
+	return hash, nil
 }
 
 func defaultValidationRules() []string {

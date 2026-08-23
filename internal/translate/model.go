@@ -79,7 +79,7 @@ type ProposedTranslation struct {
 
 // ValidationInput configures validation of proposed translations.
 type ValidationInput struct {
-	BatchID          string                `json:"batchId,omitzero" jsonschema:"expected translation batch id"`
+	BatchID          string                `json:"batchId" jsonschema:"opaque translation batch handle returned by translation.plan"`
 	Translations     []ProposedTranslation `json:"translations" jsonschema:"proposed translations to validate"`
 	AllowSourceDrift bool                  `json:"allowSourceDrift,omitzero" jsonschema:"allow proposals generated from stale source text"`
 }
@@ -116,7 +116,7 @@ type ValidationSummary struct {
 
 // ApplyInput configures validation and application of translations.
 type ApplyInput struct {
-	BatchID          string                `json:"batchId,omitzero" jsonschema:"expected translation batch id"`
+	BatchID          string                `json:"batchId" jsonschema:"opaque translation batch handle returned by translation.plan"`
 	Translations     []ProposedTranslation `json:"translations" jsonschema:"translations to validate and apply"`
 	DryRun           *bool                 `json:"dryRun,omitzero" jsonschema:"when true, preview changes without writing"`
 	Apply            bool                  `json:"apply,omitzero" jsonschema:"must be true to write locale files and state"`

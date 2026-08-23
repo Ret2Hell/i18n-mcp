@@ -14,17 +14,18 @@ import (
 
 const (
 	requestStateVersion = 1
-	maxRequestStateSize = 8 << 10
+	maxRequestStateSize = 64 << 10
 )
 
 // RequestStateClaims binds an MCP multi-round-trip retry to the operation that requested input.
 type RequestStateClaims struct {
-	Version     int    `json:"version"`
-	Subject     string `json:"subject"`
-	Operation   string `json:"operation"`
-	InputDigest string `json:"inputDigest"`
-	PlanDigest  string `json:"planDigest"`
-	ExpiresAt   int64  `json:"expiresAt"`
+	Version     int             `json:"version"`
+	Subject     string          `json:"subject"`
+	Operation   string          `json:"operation"`
+	InputDigest string          `json:"inputDigest"`
+	PlanDigest  string          `json:"planDigest"`
+	ExpiresAt   int64           `json:"expiresAt"`
+	Data        json.RawMessage `json:"data,omitempty"`
 }
 
 // RequestStateSigner signs and verifies opaque MCP multi-round-trip request state.
@@ -64,7 +65,11 @@ func (s *RequestStateSigner) Sign(claims RequestStateClaims) (string, error) {
 		return "", fmt.Errorf("marshal request state: %w", err)
 	}
 	signature := s.signature(payload)
-	return base64.RawURLEncoding.EncodeToString(payload) + "." + base64.RawURLEncoding.EncodeToString(signature), nil
+	token := base64.RawURLEncoding.EncodeToString(payload) + "." + base64.RawURLEncoding.EncodeToString(signature)
+	if len(token) > maxRequestStateSize {
+		return "", errors.New("request state exceeds size limit")
+	}
+	return token, nil
 }
 
 // Verify authenticates and decodes opaque request state.

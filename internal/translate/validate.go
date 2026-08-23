@@ -3,7 +3,6 @@ package translate
 import (
 	"cmp"
 	"context"
-	"fmt"
 	"slices"
 	"strings"
 
@@ -19,18 +18,13 @@ func (s *Service) Validate(ctx context.Context, in ValidationInput) (ValidationO
 		return ValidationOutput{}, err
 	}
 
-	latest, hasLatest, err := s.LatestPlan(ctx)
+	batch, err := s.ResolveBatch(ctx, in.BatchID)
 	if err != nil {
 		return ValidationOutput{}, err
 	}
-	if in.BatchID != "" && (!hasLatest || latest.BatchID != in.BatchID) {
-		return ValidationOutput{}, fmt.Errorf("unknown translation batch id %q", in.BatchID)
-	}
-	allowed := map[string]Item{}
-	if hasLatest && (in.BatchID == "" || in.BatchID == latest.BatchID) {
-		for _, item := range latest.Items {
-			allowed[proposalIdentity(item.Locale, item.Namespace, item.Key)] = item
-		}
+	allowed := make(map[string]Item, len(batch.Items))
+	for _, item := range batch.Items {
+		allowed[proposalIdentity(item.Locale, item.Namespace, item.Key)] = item
 	}
 
 	sources := sourceUnits(inv)
@@ -57,11 +51,9 @@ func (s *Service) validateProposal(sourceLocale string, sources map[string]local
 		rejected.Issues = append(rejected.Issues, proposalIssue(proposal, "proposal_incomplete", "locale, namespace, and key are required"))
 		return ValidatedTranslation{}, rejected
 	}
-	if len(allowed) > 0 {
-		if _, ok := allowed[identity]; !ok {
-			rejected.Issues = append(rejected.Issues, proposalIssue(proposal, "proposal_not_in_batch", "proposal is not part of the current translation batch"))
-			return ValidatedTranslation{}, rejected
-		}
+	if _, ok := allowed[identity]; !ok {
+		rejected.Issues = append(rejected.Issues, proposalIssue(proposal, "proposal_not_in_batch", "proposal is not part of the translation batch"))
+		return ValidatedTranslation{}, rejected
 	}
 
 	sourceUnit, ok := sources[sourceIdentity(proposal.Namespace, proposal.Key)]
