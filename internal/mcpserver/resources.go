@@ -4,17 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net/url"
-	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
+	resourceuri "github.com/Ret2Hell/i18n-mcp/internal/resources"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func registerResources(s *mcp.Server, a *app.App) {
 	s.AddResource(&mcp.Resource{
-		URI:         "i18n://locales",
+		URI:         resourceuri.LocalesURI,
 		Name:        "locales",
 		Title:       "i18n Locale Inventory",
 		Description: "Locale files, locales, namespaces, key counts, warnings, and duplicate namespace issues.",
@@ -32,7 +31,7 @@ func registerResources(s *mcp.Server, a *app.App) {
 	}, readLocaleNamespaceResource(a))
 
 	s.AddResource(&mcp.Resource{
-		URI:         "i18n://analysis/diff",
+		URI:         resourceuri.DiffURI,
 		Name:        "analysis_diff",
 		Title:       "i18n Key Diff Analysis",
 		Description: "Latest key diff report with missing, stale, extra, invalid, unknown, and current statuses.",
@@ -41,7 +40,7 @@ func registerResources(s *mcp.Server, a *app.App) {
 	}, readDiffResource(a))
 
 	s.AddResource(&mcp.Resource{
-		URI:         "i18n://analysis/usage",
+		URI:         resourceuri.UsageURI,
 		Name:        "analysis_usage",
 		Title:       "i18n Usage Analysis",
 		Description: "Latest static translation key usage scan with evidence and dynamic hints.",
@@ -50,7 +49,7 @@ func registerResources(s *mcp.Server, a *app.App) {
 	}, readUsageResource(a))
 
 	s.AddResource(&mcp.Resource{
-		URI:         "i18n://analysis/dead-keys",
+		URI:         resourceuri.DeadKeysURI,
 		Name:        "analysis_dead_keys",
 		Title:       "i18n Dead-Key Analysis",
 		Description: "Latest dead-key classification report with confidence and evidence.",
@@ -59,7 +58,7 @@ func registerResources(s *mcp.Server, a *app.App) {
 	}, readDeadKeysResource(a))
 
 	s.AddResource(&mcp.Resource{
-		URI:         "i18n://translation/plan/latest",
+		URI:         resourceuri.LatestPlanURI,
 		Name:        "translation_plan_latest",
 		Title:       "Latest i18n Translation Plan",
 		Description: "Latest prepared translation batch for missing and stale locale keys.",
@@ -68,7 +67,7 @@ func registerResources(s *mcp.Server, a *app.App) {
 	}, readTranslationPlanResource(a))
 
 	s.AddResource(&mcp.Resource{
-		URI:         "i18n://reports/latest",
+		URI:         resourceuri.LatestReportURI,
 		Name:        "reports_latest",
 		Title:       "Latest i18n Audit Report",
 		Description: "Latest generated i18n audit report with rendered text and structured data.",
@@ -79,7 +78,7 @@ func registerResources(s *mcp.Server, a *app.App) {
 
 func readLocalesResource(a *app.App) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
-		if req.Params.URI != "i18n://locales" {
+		if req.Params.URI != resourceuri.LocalesURI {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
 		inv, err := a.Locales.Inventory(ctx)
@@ -124,35 +123,12 @@ func readLocaleNamespaceResource(a *app.App) mcp.ResourceHandler {
 }
 
 func parseLocaleNamespaceURI(rawURI string) (string, string, bool) {
-	parsed, err := url.Parse(rawURI)
-	if err != nil || parsed.Scheme != "i18n" || parsed.Host != "locales" {
-		return "", "", false
-	}
-	path, ok := strings.CutPrefix(parsed.Path, "/")
-	if !ok {
-		return "", "", false
-	}
-	localePart, namespacePart, ok := strings.Cut(path, "/")
-	if !ok || strings.Contains(namespacePart, "/") {
-		return "", "", false
-	}
-	localeCode, err := url.PathUnescape(localePart)
-	if err != nil {
-		return "", "", false
-	}
-	namespace, err := url.PathUnescape(namespacePart)
-	if err != nil {
-		return "", "", false
-	}
-	if localeCode == "" || namespace == "" {
-		return "", "", false
-	}
-	return localeCode, namespace, true
+	return resourceuri.ParseLocaleURI(rawURI)
 }
 
 func readDiffResource(a *app.App) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
-		if req.Params.URI != "i18n://analysis/diff" {
+		if req.Params.URI != resourceuri.DiffURI {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
 		report, err := a.Diff.Analyze(ctx)
@@ -165,7 +141,7 @@ func readDiffResource(a *app.App) mcp.ResourceHandler {
 
 func readUsageResource(a *app.App) mcp.ResourceHandler {
 	return latestJSONResource(
-		"i18n://analysis/usage",
+		resourceuri.UsageURI,
 		func(ctx context.Context) (any, bool, error) { return a.Scanner.Latest(ctx) },
 		map[string]any{"report": nil, "message": "no usage scan has been run yet"},
 	)
@@ -173,7 +149,7 @@ func readUsageResource(a *app.App) mcp.ResourceHandler {
 
 func readDeadKeysResource(a *app.App) mcp.ResourceHandler {
 	return latestJSONResource(
-		"i18n://analysis/dead-keys",
+		resourceuri.DeadKeysURI,
 		func(ctx context.Context) (any, bool, error) { return a.DeadKeys.Latest(ctx) },
 		map[string]any{"report": nil, "message": "no dead-key report has been run yet"},
 	)
@@ -181,7 +157,7 @@ func readDeadKeysResource(a *app.App) mcp.ResourceHandler {
 
 func readTranslationPlanResource(a *app.App) mcp.ResourceHandler {
 	return latestJSONResource(
-		"i18n://translation/plan/latest",
+		resourceuri.LatestPlanURI,
 		func(ctx context.Context) (any, bool, error) { return a.Translation.LatestPlan(ctx) },
 		map[string]any{"batch": nil, "message": "no translation plan has been created yet"},
 	)
@@ -189,7 +165,7 @@ func readTranslationPlanResource(a *app.App) mcp.ResourceHandler {
 
 func readLatestReportResource(a *app.App) mcp.ResourceHandler {
 	return latestJSONResource(
-		"i18n://reports/latest",
+		resourceuri.LatestReportURI,
 		func(ctx context.Context) (any, bool, error) { return a.Reports.Latest(ctx) },
 		map[string]any{"report": nil, "message": "no report has been generated yet"},
 	)

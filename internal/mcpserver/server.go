@@ -26,6 +26,7 @@ func New(a *app.App) *mcp.Server {
 		Title:   "i18n MCP Server",
 		Version: version.Version,
 	}, opts)
+	server.AddReceivingMiddleware(cacheHints)
 	notifier := mcpadapter.ResourceNotifier{Server: server, Logger: a.Logger}
 	a.Translation.Notifier = notifier
 	a.DeadKeys.Notifier = notifier

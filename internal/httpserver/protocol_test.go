@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/mcpserver"
@@ -105,10 +106,47 @@ func TestStatelessHTTPDoesNotCreateProtocolSession(t *testing.T) {
 	var message struct {
 		Result struct {
 			ResultType string `json:"resultType"`
+			TTLMs      int    `json:"ttlMs"`
+			CacheScope string `json:"cacheScope"`
 		} `json:"result"`
 	}
 	require.NoError(t, json.Unmarshal(responseBody, &message))
 	require.Equal(t, "complete", message.Result.ResultType)
+	require.Equal(t, 300000, message.Result.TTLMs)
+	require.Equal(t, "public", message.Result.CacheScope)
+}
+
+func TestStatelessHTTPDeliversResourceSubscriptions(t *testing.T) {
+	application, err := app.New(t.Context(), app.Options{ProjectRoot: t.TempDir(), LogLevel: "error"})
+	require.NoError(t, err)
+	server := mcpserver.New(application)
+	handler, err := newHandler(Config{}, staticServerProvider{server: server}, application.Logger)
+	require.NoError(t, err)
+	httpServer := httptest.NewServer(handler)
+
+	updates := make(chan string, 1)
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.0"}, &mcp.ClientOptions{
+		ResourceUpdatedHandler: func(_ context.Context, req *mcp.ResourceUpdatedNotificationRequest) {
+			updates <- req.Params.URI
+		},
+	})
+	session, err := client.Connect(t.Context(), &mcp.StreamableClientTransport{Endpoint: httpServer.URL + "/mcp"}, nil)
+	require.NoError(t, err)
+
+	uri := "i18n://analysis/diff"
+	require.NoError(t, session.Subscribe(t.Context(), &mcp.SubscribeParams{URI: uri}))
+	require.NoError(t, server.ResourceUpdated(t.Context(), &mcp.ResourceUpdatedNotificationParams{URI: uri}))
+	select {
+	case got := <-updates:
+		require.Equal(t, uri, got)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for resource update")
+	}
+
+	require.NoError(t, session.Close())
+	httpServer.CloseClientConnections()
+	require.NoError(t, server.ResourceUpdated(t.Context(), &mcp.ResourceUpdatedNotificationParams{URI: uri}))
+	httpServer.Close()
 }
 
 func TestStatelessHTTPEndpointIsPostOnly(t *testing.T) {
