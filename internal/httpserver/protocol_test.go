@@ -72,6 +72,49 @@ func TestStatelessHTTPClientCallsToolWithoutInitialize(t *testing.T) {
 	require.False(t, result.IsError)
 }
 
+func TestStatelessHTTPReturnsInputRequiredMRTRResult(t *testing.T) {
+	root := statelessPruneFixture(t)
+	httpServer := newStatelessTestServerWithRoot(t, root)
+	body := `{
+		"jsonrpc":"2.0",
+		"id":3,
+		"method":"tools/call",
+		"params":{
+			"name":"i18n.keys.prune",
+			"arguments":{
+				"apply":true,
+				"confirmWithClient":true,
+				"keys":[{"namespace":"common","key":"unused"}]
+			},
+			"_meta":{
+				"io.modelcontextprotocol/protocolVersion":"2026-07-28",
+				"io.modelcontextprotocol/clientInfo":{"name":"test-client","version":"v0.0.0"},
+				"io.modelcontextprotocol/clientCapabilities":{"elicitation":{"form":{}}}
+			}
+		}
+	}`
+	req := modernRequest(t, httpServer.URL+"/mcp", body, latestProtocolVersion, "tools/call")
+	req.Header.Set("Mcp-Name", "i18n.keys.prune")
+	response, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	responseBody, readErr := io.ReadAll(response.Body)
+	require.NoError(t, response.Body.Close())
+	require.NoError(t, readErr)
+	require.Equal(t, http.StatusOK, response.StatusCode, string(responseBody))
+
+	var message struct {
+		Result struct {
+			ResultType    string                     `json:"resultType"`
+			InputRequests map[string]json.RawMessage `json:"inputRequests"`
+			RequestState  string                     `json:"requestState"`
+		} `json:"result"`
+	}
+	require.NoError(t, json.Unmarshal(responseBody, &message))
+	require.Equal(t, "input_required", message.Result.ResultType)
+	require.Contains(t, message.Result.InputRequests, "prune_confirmation")
+	require.NotEmpty(t, message.Result.RequestState)
+}
+
 func TestStatelessHTTPCompletesPruneConfirmationMRTR(t *testing.T) {
 	root := statelessPruneFixture(t)
 	httpServer := newStatelessTestServerWithRoot(t, root)
