@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -15,10 +16,11 @@ import (
 
 // Config configures the Streamable HTTP server.
 type Config struct {
-	Addr         string
-	MCPPath      string
-	JSONResponse bool
-	Auth         AuthConfig
+	Addr           string
+	MCPPath        string
+	JSONResponse   bool
+	TrustedOrigins []string
+	Auth           AuthConfig
 }
 
 // ServerProvider returns the MCP server used to handle HTTP requests.
@@ -90,6 +92,14 @@ func newHandler(cfg Config, provider ServerProvider, logger *slog.Logger) (http.
 		}
 		handler = ProtectMCPHandler(handler, cfg.Auth, verifier)
 	}
+
+	originProtection := http.NewCrossOriginProtection()
+	for _, origin := range cfg.TrustedOrigins {
+		if err := originProtection.AddTrustedOrigin(origin); err != nil {
+			return nil, fmt.Errorf("add trusted origin %q: %w", origin, err)
+		}
+	}
+	handler = originProtection.Handler(handler)
 
 	mux.Handle(cfg.MCPPath, handler)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {

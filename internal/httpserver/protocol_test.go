@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,7 +19,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const latestProtocolVersion = "2026-07-28"
+const (
+	latestProtocolVersion = "2026-07-28"
+	modernDiscoverBody    = `{
+		"jsonrpc":"2.0",
+		"id":1,
+		"method":"server/discover",
+		"params":{"_meta":{
+			"io.modelcontextprotocol/protocolVersion":"2026-07-28",
+			"io.modelcontextprotocol/clientInfo":{"name":"test-client","version":"v0.0.0"},
+			"io.modelcontextprotocol/clientCapabilities":{}
+		}}
+	}`
+	modernHealthBody = `{
+		"jsonrpc":"2.0",
+		"id":2,
+		"method":"tools/call",
+		"params":{
+			"name":"i18n.health",
+			"arguments":{},
+			"_meta":{
+				"io.modelcontextprotocol/protocolVersion":"2026-07-28",
+				"io.modelcontextprotocol/clientInfo":{"name":"test-client","version":"v0.0.0"},
+				"io.modelcontextprotocol/clientCapabilities":{}
+			}
+		}
+	}`
+)
 
 type staticServerProvider struct {
 	server *mcp.Server
@@ -77,17 +104,7 @@ func TestStatelessHTTPCompletesPruneConfirmationMRTR(t *testing.T) {
 
 func TestStatelessHTTPDoesNotCreateProtocolSession(t *testing.T) {
 	httpServer := newStatelessTestServer(t)
-	body := []byte(`{
-		"jsonrpc":"2.0",
-		"id":1,
-		"method":"server/discover",
-		"params":{"_meta":{
-			"io.modelcontextprotocol/protocolVersion":"2026-07-28",
-			"io.modelcontextprotocol/clientInfo":{"name":"test-client","version":"v0.0.0"},
-			"io.modelcontextprotocol/clientCapabilities":{}
-		}}
-	}`)
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, httpServer.URL+"/mcp", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, httpServer.URL+"/mcp", bytes.NewBufferString(modernDiscoverBody))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json, text/event-stream")
@@ -149,6 +166,133 @@ func TestStatelessHTTPDeliversResourceSubscriptions(t *testing.T) {
 	httpServer.Close()
 }
 
+func TestMCPOriginProtection(t *testing.T) {
+	tests := []struct {
+		name           string
+		origin         func(serverURL string) string
+		trustedOrigins []string
+		wantStatus     int
+	}{
+		{name: "native client without origin", wantStatus: http.StatusOK},
+		{name: "same origin", origin: func(serverURL string) string { return serverURL }, wantStatus: http.StatusOK},
+		{name: "trusted origin", origin: func(string) string { return "https://inspector.example" }, trustedOrigins: []string{"https://inspector.example"}, wantStatus: http.StatusOK},
+		{name: "untrusted origin", origin: func(string) string { return "https://attacker.example" }, wantStatus: http.StatusForbidden},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			application, err := app.New(t.Context(), app.Options{ProjectRoot: t.TempDir(), LogLevel: "error"})
+			require.NoError(t, err)
+			server := mcpserver.New(application)
+			handler, err := newHandler(Config{JSONResponse: true, TrustedOrigins: tt.trustedOrigins}, staticServerProvider{server: server}, application.Logger)
+			require.NoError(t, err)
+			httpServer := httptest.NewServer(handler)
+			t.Cleanup(httpServer.Close)
+
+			req := modernRequest(t, httpServer.URL+"/mcp", modernDiscoverBody, latestProtocolVersion, "server/discover")
+			if tt.origin != nil {
+				req.Header.Set("Origin", tt.origin(httpServer.URL))
+			}
+			response, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			require.NoError(t, response.Body.Close())
+			require.Equal(t, tt.wantStatus, response.StatusCode)
+		})
+	}
+}
+
+func TestMCPRejectsMalformedTrustedOrigin(t *testing.T) {
+	application, err := app.New(t.Context(), app.Options{ProjectRoot: t.TempDir(), LogLevel: "error"})
+	require.NoError(t, err)
+	server := mcpserver.New(application)
+	_, err = newHandler(Config{TrustedOrigins: []string{"not-an-origin"}}, staticServerProvider{server: server}, application.Logger)
+	require.ErrorContains(t, err, "trusted origin")
+}
+
+func TestModernHTTPHeaderValidation(t *testing.T) {
+	httpServer := newStatelessTestServer(t)
+	tests := []struct {
+		name       string
+		body       string
+		version    string
+		method     string
+		mutate     func(*http.Request)
+		wantStatus int
+		wantCode   int
+	}{
+		{
+			name:       "missing method header",
+			body:       modernDiscoverBody,
+			version:    latestProtocolVersion,
+			method:     "server/discover",
+			mutate:     func(req *http.Request) { req.Header.Del("Mcp-Method") },
+			wantStatus: http.StatusBadRequest,
+			wantCode:   -32020,
+		},
+		{
+			name:       "mismatched method header",
+			body:       modernDiscoverBody,
+			version:    latestProtocolVersion,
+			method:     "tools/list",
+			wantStatus: http.StatusBadRequest,
+			wantCode:   -32020,
+		},
+		{
+			name:       "missing name header",
+			body:       modernHealthBody,
+			version:    latestProtocolVersion,
+			method:     "tools/call",
+			wantStatus: http.StatusBadRequest,
+			wantCode:   -32020,
+		},
+		{
+			name:       "mismatched name header",
+			body:       modernHealthBody,
+			version:    latestProtocolVersion,
+			method:     "tools/call",
+			mutate:     func(req *http.Request) { req.Header.Set("Mcp-Name", "i18n.keys.diff") },
+			wantStatus: http.StatusBadRequest,
+			wantCode:   -32020,
+		},
+		{
+			name:       "unsupported protocol version",
+			body:       strings.ReplaceAll(modernDiscoverBody, latestProtocolVersion, "2099-01-01"),
+			version:    "2099-01-01",
+			method:     "server/discover",
+			wantStatus: http.StatusBadRequest,
+			wantCode:   -32022,
+		},
+		{
+			name:       "unknown method",
+			body:       strings.Replace(modernDiscoverBody, "server/discover", "unknown/method", 1),
+			version:    latestProtocolVersion,
+			method:     "unknown/method",
+			wantStatus: http.StatusNotFound,
+			wantCode:   -32601,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := modernRequest(t, httpServer.URL+"/mcp", tt.body, tt.version, tt.method)
+			if tt.mutate != nil {
+				tt.mutate(req)
+			}
+			response, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			body, readErr := io.ReadAll(response.Body)
+			require.NoError(t, response.Body.Close())
+			require.NoError(t, readErr)
+			require.Equal(t, tt.wantStatus, response.StatusCode, string(body))
+			var message struct {
+				Error struct {
+					Code int `json:"code"`
+				} `json:"error"`
+			}
+			require.NoError(t, json.Unmarshal(body, &message))
+			require.Equal(t, tt.wantCode, message.Error.Code)
+		})
+	}
+}
+
 func TestStatelessHTTPEndpointIsPostOnly(t *testing.T) {
 	httpServer := newStatelessTestServer(t)
 
@@ -163,6 +307,17 @@ func TestStatelessHTTPEndpointIsPostOnly(t *testing.T) {
 			require.Equal(t, "POST", response.Header.Get("Allow"))
 		})
 	}
+}
+
+func modernRequest(t *testing.T, endpoint string, body string, version string, method string) *http.Request {
+	t.Helper()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, endpoint, bytes.NewBufferString(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json, text/event-stream")
+	req.Header.Set("MCP-Protocol-Version", version)
+	req.Header.Set("Mcp-Method", method)
+	return req
 }
 
 func newStatelessTestServer(t *testing.T) *httptest.Server {
