@@ -1,8 +1,8 @@
 package jsonedit
 
 import (
-	"encoding/json"
 	"fmt"
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"strconv"
 	"unicode"
 )

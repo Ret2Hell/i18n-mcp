@@ -2,7 +2,7 @@ package translate
 
 import (
 	"cmp"
-	"encoding/json"
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"os"
 	"slices"
 	"strings"

@@ -2,8 +2,8 @@ package mcpserver
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"

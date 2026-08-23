@@ -3,9 +3,9 @@ package config
 import (
 	"cmp"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"os"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"

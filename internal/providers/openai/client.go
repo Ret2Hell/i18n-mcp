@@ -3,8 +3,8 @@ package openai
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"io"
 	"net/http"
 	"strings"

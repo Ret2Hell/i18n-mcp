@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"encoding/json"
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
 	"github.com/spf13/cobra"
