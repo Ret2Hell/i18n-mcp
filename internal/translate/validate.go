@@ -87,15 +87,14 @@ func (s *Service) validateProposal(sourceLocale string, sources map[string]local
 		return ValidatedTranslation{}, rejected
 	}
 
-	accepted := ValidatedTranslation{
+	proposal.SourceValue = sourceUnit.Value
+	return ValidatedTranslation{
 		ProposedTranslation: proposal,
 		SourceHash:          state.SourceHash(sourceUnit.Value),
 		TargetHash:          state.TargetHash(proposal.Value),
 		TargetFilePath:      targetFiles[targetFileIdentity(proposal.Locale, proposal.Namespace)],
 		Warnings:            result.Warnings,
-	}
-	accepted.SourceValue = sourceUnit.Value
-	return accepted, RejectedTranslation{}
+	}, RejectedTranslation{}
 }
 
 func sourceUnits(inv locale.Inventory) map[string]locale.Unit {
