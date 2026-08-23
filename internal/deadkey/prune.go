@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -24,13 +27,49 @@ type pruneEdit struct {
 	After     []byte
 }
 
+// PlanPrune returns a digest of the exact file edits that require confirmation.
+func (s *Service) PlanPrune(ctx context.Context, in PruneInput) (PrunePlan, []PruneReject, error) {
+	edits, rejected, err := s.BuildPruneEdits(ctx, in)
+	if err != nil || len(rejected) > 0 {
+		return PrunePlan{}, rejected, err
+	}
+	digest, err := pruneEditsDigest(edits)
+	if err != nil {
+		return PrunePlan{}, nil, err
+	}
+	return PrunePlan{KeyCount: len(in.Keys), Digest: digest}, nil, nil
+}
+
 // Prune removes selected keys from locale files or previews the changes.
 func (s *Service) Prune(ctx context.Context, in PruneInput) (PruneOutput, error) {
-	dryRun := in.DryRunValue()
 	edits, rejected, err := s.BuildPruneEdits(ctx, in)
 	if err != nil {
 		return PruneOutput{}, err
 	}
+	return s.applyPruneEdits(ctx, in, edits, rejected)
+}
+
+// PruneConfirmed applies a prune only when its current edits match the confirmed plan digest.
+func (s *Service) PruneConfirmed(ctx context.Context, in PruneInput, expectedDigest string) (PruneOutput, error) {
+	edits, rejected, err := s.BuildPruneEdits(ctx, in)
+	if err != nil {
+		return PruneOutput{}, err
+	}
+	if len(rejected) > 0 {
+		return s.applyPruneEdits(ctx, in, edits, rejected)
+	}
+	digest, err := pruneEditsDigest(edits)
+	if err != nil {
+		return PruneOutput{}, err
+	}
+	if digest != expectedDigest {
+		return PruneOutput{}, errors.New("prune plan changed after confirmation")
+	}
+	return s.applyPruneEdits(ctx, in, edits, nil)
+}
+
+func (s *Service) applyPruneEdits(ctx context.Context, in PruneInput, edits []pruneEdit, rejected []PruneReject) (PruneOutput, error) {
+	dryRun := in.DryRunValue()
 	out := PruneOutput{DryRun: dryRun, Rejected: rejected}
 	if len(rejected) > 0 {
 		return out, nil
@@ -48,6 +87,15 @@ func (s *Service) Prune(ctx context.Context, in PruneInput) (PruneOutput, error)
 	}
 	out.Pruned = len(in.Keys)
 	return out, nil
+}
+
+func pruneEditsDigest(edits []pruneEdit) (string, error) {
+	payload, err := json.Marshal(edits)
+	if err != nil {
+		return "", fmt.Errorf("marshal prune plan: %w", err)
+	}
+	digest := sha256.Sum256(payload)
+	return hex.EncodeToString(digest[:]), nil
 }
 
 func (s *Service) notifyPruned(ctx context.Context, edits []pruneEdit, written []string) {

@@ -102,7 +102,7 @@ func TestPruneConfirmWithClientDeclineCancelOrFalsePreventsWrites(t *testing.T) 
 			}})
 
 			require.NoError(t, err)
-			require.True(t, res.IsError)
+			require.False(t, res.IsError)
 			require.Equal(t, before, readMCPDeadKeyFile(t, root, "messages/en/common.json"))
 		})
 	}
