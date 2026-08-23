@@ -1,9 +1,6 @@
 package mcpserver
 
 import (
-	"context"
-	"log/slog"
-
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/mcpadapter"
 	"github.com/Ret2Hell/i18n-mcp/internal/version"
@@ -22,9 +19,6 @@ func New(a *app.App) *mcp.Server {
 		CompletionHandler:  complete(a),
 		SubscribeHandler:   mcpadapter.ValidateSubscribe,
 		UnsubscribeHandler: mcpadapter.ValidateUnsubscribe,
-		InitializedHandler: func(_ context.Context, req *mcp.InitializedRequest) {
-			a.Logger.Info("mcp session initialized", slog.String("session", req.Session.ID()))
-		},
 	}
 
 	server := mcp.NewServer(&mcp.Implementation{

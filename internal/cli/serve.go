@@ -48,9 +48,8 @@ func newServeHTTPCommand(opts *RootOptions) *cobra.Command {
 				return err
 			}
 			cfg := httpserver.Config{
-				Addr:        addr,
-				MCPPath:     path,
-				ProjectRoot: opts.Project,
+				Addr:    addr,
+				MCPPath: path,
 				Auth: httpserver.AuthConfig{
 					Required:             authRequired,
 					ResourceURL:          resourceURL,
@@ -61,7 +60,8 @@ func newServeHTTPCommand(opts *RootOptions) *cobra.Command {
 					DevStaticTokenEnv:    devTokenEnv,
 				},
 			}
-			return httpserver.Run(cmd.Context(), cfg, serverFactory{application: application}, application.Logger)
+			server := mcpserver.New(application)
+			return httpserver.Run(cmd.Context(), cfg, serverFactory{server: server}, application.Logger)
 		},
 	}
 	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:7339", "HTTP listen address")
@@ -75,11 +75,11 @@ func newServeHTTPCommand(opts *RootOptions) *cobra.Command {
 }
 
 type serverFactory struct {
-	application *app.App
+	server *mcp.Server
 }
 
 func (f serverFactory) ServerForRequest(_ *http.Request) *mcp.Server {
-	return mcpserver.New(f.application)
+	return f.server
 }
 
 func newServeStdioCommand(opts *RootOptions) *cobra.Command {
