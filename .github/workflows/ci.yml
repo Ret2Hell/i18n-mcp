@@ -245,45 +245,19 @@ jobs:
 
       - name: Determine whether a release tag is needed
         id: prepare
-        env:
-          BEFORE_SHA: ${{ github.event.before }}
         run: |
           release_tag="$(scripts/read-version.sh tag)"
           echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
 
-          version_changed=true
-          if [[ -n "$BEFORE_SHA" && ! "$BEFORE_SHA" =~ ^0+$ ]]; then
-            git fetch --no-tags origin "$BEFORE_SHA" --depth=1 || true
-            if git rev-parse --verify "$BEFORE_SHA" >/dev/null 2>&1; then
-              if git diff --quiet "$BEFORE_SHA" HEAD -- version; then
-                version_changed=false
-              fi
-            fi
-          elif git rev-parse --verify HEAD^ >/dev/null 2>&1; then
-            if git diff --quiet HEAD^ HEAD -- version; then
-              version_changed=false
-            fi
-          fi
-
-          if [[ "$version_changed" != true ]]; then
-            echo "version did not change in the CI head commit; skipping tag creation"
-            echo "should_create=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
           git fetch --tags origin "+refs/tags/${release_tag}:refs/tags/${release_tag}" || true
           if git rev-parse -q --verify "refs/tags/${release_tag}" >/dev/null; then
             tagged_commit="$(git rev-list -n 1 "${release_tag}")"
-            current_commit="$(git rev-parse HEAD)"
-            if [[ "$tagged_commit" != "$current_commit" ]]; then
-              echo "Tag ${release_tag} already exists on a different commit" >&2
-              exit 1
-            fi
-            echo "Tag ${release_tag} already exists on this commit; nothing to do"
+            echo "Tag ${release_tag} already exists at ${tagged_commit}; nothing to do"
             echo "should_create=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
+          echo "Tag ${release_tag} does not exist; it will be created after CI succeeds"
           echo "should_create=true" >> "$GITHUB_OUTPUT"
 
   create-release-tag:
