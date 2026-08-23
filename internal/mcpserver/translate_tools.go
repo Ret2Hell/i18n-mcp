@@ -67,8 +67,6 @@ func translationGenerateHandler(ctx context.Context, req *mcp.CallToolRequest, a
 	}
 	switch mode {
 	case "provider":
-	case "sampling":
-		return nil, fmt.Errorf("MCP sampling is deprecated; set translation.mode to agent or provider")
 	case "agent":
 		return nil, fmt.Errorf("translation.generate is unavailable in agent mode; use translation.plan, translation.validate, and translation.apply")
 	default:

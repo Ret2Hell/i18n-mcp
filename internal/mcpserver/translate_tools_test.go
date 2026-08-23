@@ -53,15 +53,6 @@ func TestTranslationGenerateExplicitProviderOverridesConfig(t *testing.T) {
 	require.Len(t, out.Proposals, 1)
 }
 
-func TestTranslationGenerateRejectsDeprecatedSamplingMode(t *testing.T) {
-	a := newMCPTranslationFixtureApp(t, `"mode": "sampling"`)
-
-	out, err := translationGenerateHandler(t.Context(), nil, a, TranslationGenerateInput{})
-
-	require.Nil(t, out)
-	require.EqualError(t, err, "MCP sampling is deprecated; set translation.mode to agent or provider")
-}
-
 func TestTranslationGenerateRejectsAgentMode(t *testing.T) {
 	a := newMCPTranslationFixtureApp(t, `"mode": "agent"`)
 
