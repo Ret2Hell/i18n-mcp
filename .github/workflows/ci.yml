@@ -24,7 +24,7 @@ defaults:
 
 env:
   ACTIONLINT_VERSION: v1.7.7
-  GORELEASER_VERSION: v2.17.1
+  GORELEASER_VERSION: v2.18.1
   GOVULNCHECK_VERSION: v1.7.0
 
 concurrency:
@@ -95,7 +95,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a  # v9.3.0
         with:
-          version: v2.13.1
+          version: v2.13.2
 
   security:
     name: Security
@@ -171,7 +171,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c  # v4.2.0
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e  # v4.3.0
 
       - name: Read version
         id: version
@@ -215,7 +215,7 @@ jobs:
       - name: Upload Trivy SARIF to code scanning
         if: always() && github.event_name != 'pull_request' && hashFiles('trivy-results.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd  # v4.37.7
+        uses: github/codeql-action/upload-sarif@db488ddef3bf6cb639b32c2e9a7c0a7ea8271d28  # v4.37.8
         with:
           sarif_file: trivy-results.sarif
 

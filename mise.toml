@@ -1,12 +1,13 @@
 [tools]
-go = "1.26.7"
-golangci-lint = "2.13.1"
-lefthook = "latest"
-goreleaser = "2.17.1"
-syft = "1.51.0"
+go = "1.27.1"
+golangci-lint = "2.13.2"
+hk = "latest"
+goreleaser = "2.18.1"
+syft = "1.51.1"
 
 [settings]
 jobs = 4
+lockfile = true
 
 [env]
 CGO_ENABLED = "0"
@@ -19,8 +20,8 @@ run = "go mod download"
 alias = ["i"]
 
 [tasks.hooks]
-description = "Install Lefthook Git hooks"
-run = "lefthook install"
+description = "Install hk Git hooks"
+run = "hk install --mise"
 alias = ["hook"]
 
 [tasks.build]
