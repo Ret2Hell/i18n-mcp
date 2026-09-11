@@ -1,9 +1,9 @@
 [tools]
-go = "1.26.7"
-golangci-lint = "2.13.1"
+go = "1.27.1"
+golangci-lint = "2.13.2"
 hk = "latest"
-goreleaser = "2.17.1"
-syft = "1.51.0"
+goreleaser = "2.18.1"
+syft = "1.51.1"
 
 [settings]
 jobs = 4

@@ -2,7 +2,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/Ret2Hell/i18n-mcp?style=flat&color=blue)](https://github.com/Ret2Hell/i18n-mcp/releases/latest)
 [![CI](https://img.shields.io/github/actions/workflow/status/Ret2Hell/i18n-mcp/ci.yml?label=CI)](https://github.com/Ret2Hell/i18n-mcp/actions/workflows/ci.yml)
-[![Go](https://img.shields.io/badge/Go-1.26.7-blue)](go.mod)
+[![Go](https://img.shields.io/badge/Go-1.27.1-blue)](go.mod)
 [![MCP](https://img.shields.io/badge/MCP-2026--07--28-purple)](#mcp-client-configuration)
 [![Tools](https://img.shields.io/badge/MCP_tools-17-orange)](#mcp-tools)
 [![Docker](https://img.shields.io/badge/docker-ret2hell%2Fi18n--mcp-blue)](https://hub.docker.com/r/ret2hell/i18n-mcp)
@@ -841,7 +841,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.26.7"
+          go-version: "1.27.1"
       - run: go build -o bin/i18n-mcp ./cmd/i18n-mcp
       - run: bin/i18n-mcp audit --project . --output markdown > i18n-audit.md
       - uses: actions/upload-artifact@v4
