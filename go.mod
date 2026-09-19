@@ -8,7 +8,7 @@ require (
 	github.com/bytedance/sonic v1.15.4
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/google/jsonschema-go v0.4.3
-	github.com/modelcontextprotocol/go-sdk v1.7.0
+	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/rs/zerolog v1.35.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
