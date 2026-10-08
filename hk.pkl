@@ -1,4 +1,4 @@
-amends "package://github.com/jdx/hk/releases/download/v1.58.1/hk@1.58.1#/Config.pkl"
+amends "package://github.com/jdx/hk/releases/download/v2.5.0/hk@2.5.0#/Config.pkl"
 
 local checks = new Mapping<String, Step> {
   ["gofmt"] {
@@ -18,21 +18,13 @@ local checks = new Mapping<String, Step> {
   }
 }
 
+steps = checks
+
 hooks {
-  ["pre-commit"] {
-    fix = true
-    stash = "git"
-    steps = checks
-  }
   ["pre-push"] {
     steps {
       ["test"] { check = "go test ./..." }
       ["build"] { check = "go build ./..." }
     }
-  }
-  ["check"] { steps = checks }
-  ["fix"] {
-    fix = true
-    steps = checks
   }
 }
