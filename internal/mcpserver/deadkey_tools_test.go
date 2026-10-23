@@ -14,7 +14,7 @@ import (
 )
 
 func TestUsageDeadReportAndPruneTools(t *testing.T) {
-	ctx, clientSession := newTestClientSession(t, makeDeadKeyMCPFixture(t))
+	ctx, clientSession := newTestClientSession(t, makeDeadKeyMCPFixture(t), mcpserver.RegisterDeadKeyFeaturesForTest)
 
 	usage, err := clientSession.CallTool(ctx, &mcp.CallToolParams{Name: "i18n.keys.usage_scan", Arguments: map[string]any{}})
 	require.NoError(t, err)
@@ -49,7 +49,7 @@ func TestPruneConfirmWithClientWithoutApplyDoesNotElicit(t *testing.T) {
 }
 
 func TestPruneConfirmWithClientRequiresCapability(t *testing.T) {
-	ctx, clientSession := newTestClientSession(t, makeDeadKeyMCPFixture(t))
+	ctx, clientSession := newTestClientSession(t, makeDeadKeyMCPFixture(t), mcpserver.RegisterDeadKeyFeaturesForTest)
 
 	res, err := clientSession.CallTool(ctx, &mcp.CallToolParams{Name: "i18n.keys.prune", Arguments: map[string]any{
 		"apply":             true,
@@ -109,7 +109,7 @@ func TestPruneConfirmWithClientDeclineCancelOrFalsePreventsWrites(t *testing.T) 
 }
 
 func TestAnalysisUsageAndDeadKeyResources(t *testing.T) {
-	ctx, clientSession := newTestClientSession(t, makeDeadKeyMCPFixture(t))
+	ctx, clientSession := newTestClientSession(t, makeDeadKeyMCPFixture(t), mcpserver.RegisterDeadKeyFeaturesForTest)
 
 	_, err := clientSession.CallTool(ctx, &mcp.CallToolParams{Name: "i18n.keys.usage_scan", Arguments: map[string]any{}})
 	require.NoError(t, err)
@@ -141,7 +141,7 @@ func makeDeadKeyMCPFixture(t *testing.T) string {
   "defaultNamespace": "common",
   "dynamicKeyHints": ["routes.*"],
   "format": {"sortKeys": false, "indent": 2, "trailingNewline": true},
-  "translation": {"mode": "agent"}
+  "translation": {}
 }
 `)
 	writeMCPDeadKeyFile(t, root, "messages/en/common.json", `{"used":"Used","unused":"Unused"}
@@ -178,6 +178,7 @@ func newPruneConfirmClientSession(
 	require.NoError(t, err)
 
 	server := mcpserver.New(application)
+	mcpserver.RegisterDeadKeyFeaturesForTest(server, application)
 	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.0"}, &mcp.ClientOptions{
 		ElicitationHandler: handler,
 	})

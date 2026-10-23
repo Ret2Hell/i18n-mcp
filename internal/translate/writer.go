@@ -16,9 +16,12 @@ type WriteReport struct {
 
 // WriteEdits writes locale file edits to disk.
 func (s *Service) WriteEdits(ctx context.Context, edits []FileEdit) (WriteReport, error) {
-	_ = ctx
 	var report WriteReport
 	for _, edit := range edits {
+		if err := ctx.Err(); err != nil {
+			report.Skipped = appendRemaining(report.Skipped, edits, edit.Path)
+			return report, err
+		}
 		if string(edit.Before) == string(edit.After) {
 			report.Unchanged = append(report.Unchanged, edit.Path)
 			continue

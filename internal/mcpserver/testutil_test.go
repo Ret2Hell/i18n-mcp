@@ -12,13 +12,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestClientSession(t *testing.T, root string) (context.Context, *mcp.ClientSession) {
+func newTestClientSession(t *testing.T, root string, setup ...func(*mcp.Server, *app.App)) (context.Context, *mcp.ClientSession) {
 	t.Helper()
 	ctx := t.Context()
 	application, err := app.New(ctx, app.Options{ProjectRoot: root, LogLevel: "error"})
 	require.NoError(t, err)
 
 	server := mcpserver.New(application)
+	for _, configure := range setup {
+		configure(server, application)
+	}
 	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.0"}, nil)
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 

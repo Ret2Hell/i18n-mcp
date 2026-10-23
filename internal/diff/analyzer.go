@@ -6,174 +6,145 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 )
 
-// Service analyzes differences between source and target locale content.
+// Service analyzes differences between source and target keys.
 type Service struct {
 	locales      *locale.Service
 	stateService *state.Service
 	validator    *validate.Service
 }
 
-// NewService creates a diff analysis service.
+// NewService creates a project-scoped analyzer.
 func NewService(locales *locale.Service, stateService *state.Service, validator *validate.Service) *Service {
 	return &Service{locales: locales, stateService: stateService, validator: validator}
 }
 
-// Analyze compares locale inventory with translation state.
+// Analyze is the explicit full-detail path for local exports and internal callers.
 func (s *Service) Analyze(ctx context.Context) (Report, error) {
-	inv, err := s.locales.Inventory(ctx)
+	var items []KeyDiff
+	report, err := s.Walk(ctx, Filter{}, func(item KeyDiff) error { items = append(items, item); return nil })
+	report.Items = items
+	return report, err
+}
+
+// Walk visits sorted matching records and aggregates counts without retaining them.
+// Filters are applied before validation. Summary counts describe the filtered scope.
+func (s *Service) Walk(ctx context.Context, filter Filter, visit func(KeyDiff) error) (Report, error) {
+	inv, err := s.locales.InventoryFiltered(ctx, filter.Locales, filter.Namespaces)
 	if err != nil {
 		return Report{}, err
 	}
+	return s.WalkInventory(ctx, inv, filter, visit)
+}
 
+// WalkInventory avoids loading a second inventory when generating reports.
+func (s *Service) WalkInventory(ctx context.Context, inv locale.Inventory, filter Filter, visit func(KeyDiff) error) (Report, error) {
+	if err := ctx.Err(); err != nil {
+		return Report{}, err
+	}
+	for _, status := range filter.Statuses {
+		if !slices.Contains([]KeyStatus{Current, Missing, Stale, Extra, Invalid, Unknown}, status) {
+			return Report{}, fmt.Errorf("unknown diff status %q", status)
+		}
+	}
 	stateFile, err := s.stateService.Load(ctx)
 	if err != nil {
 		return Report{}, err
 	}
-
-	sourceByKey, targetByKey := indexUnits(inv)
-	targetLocaleCodes := targetLocales(inv)
-	report := Report{
-		SourceLocale:  inv.SourceLocale,
-		TargetLocales: slices.Clone(inv.TargetLocales),
-		Warnings:      inventoryWarnings(inv.Warnings),
+	sources, targets := indexUnits(inv)
+	identities := map[string]struct{}{}
+	for _, unit := range inv.Units {
+		if (len(filter.Namespaces) == 0 || slices.Contains(filter.Namespaces, unit.Namespace)) && (len(filter.Keys) == 0 || slices.Contains(filter.Keys, unit.Key)) && strings.HasPrefix(unit.Key, filter.KeyPrefix) {
+			identities[sourceIdentity(unit.Namespace, unit.Key)] = struct{}{}
+		}
 	}
-
-	for _, sourceUnit := range sortedUnits(sourceByKey) {
-		for _, localeCode := range targetLocaleCodes {
-			key := targetIdentity(localeCode, sourceUnit.Namespace, sourceUnit.Key)
-			targetUnit, ok := targetByKey[key]
-			if !ok {
-				report.Items = append(report.Items, KeyDiff{
-					Locale:         localeCode,
-					Namespace:      sourceUnit.Namespace,
-					Key:            sourceUnit.Key,
-					Status:         Missing,
-					SourceValue:    sourceUnit.Value,
-					SourceFilePath: sourceUnit.FilePath,
-				})
+	keys := slices.Sorted(maps.Keys(identities))
+	report := Report{SourceLocale: inv.SourceLocale, TargetLocales: targetLocales(inv), Warnings: inventoryWarnings(inv.Warnings)}
+	for _, code := range report.TargetLocales {
+		if len(filter.Locales) > 0 && !slices.Contains(filter.Locales, code) {
+			continue
+		}
+		for _, id := range keys {
+			if err := ctx.Err(); err != nil {
+				return Report{}, err
+			}
+			namespace, key, _ := strings.Cut(id, "\x00")
+			source, hasSource := sources[id]
+			target, hasTarget := targets[targetIdentity(code, namespace, key)]
+			var item KeyDiff
+			switch {
+			case hasSource && hasTarget:
+				item = s.classifyExisting(inv.SourceLocale, source, target, stateFile)
+			case hasSource:
+				item = KeyDiff{Locale: code, Namespace: namespace, Key: key, Status: Missing, SourceValue: source.Value, SourceHash: state.SourceHash(source.Value), SourceFilePath: source.FilePath}
+			case hasTarget:
+				item = KeyDiff{Locale: code, Namespace: namespace, Key: key, Status: Extra, TargetValue: target.Value, TargetFilePath: target.FilePath}
+			default:
 				continue
 			}
-
-			report.Items = append(report.Items, s.classifyExisting(inv.SourceLocale, sourceUnit, targetUnit, stateFile))
+			if len(filter.Statuses) > 0 && !slices.Contains(filter.Statuses, item.Status) {
+				continue
+			}
+			report.Summary.Add(item)
+			if visit != nil {
+				if err := visit(item); err != nil {
+					return Report{}, err
+				}
+			}
 		}
 	}
-
-	targetSet := targetLocaleSet(targetLocaleCodes)
-	for _, targetUnit := range sortedUnits(targetByKey) {
-		if _, ok := targetSet[targetUnit.Locale]; !ok {
-			continue
-		}
-		if _, ok := sourceByKey[sourceIdentity(targetUnit.Namespace, targetUnit.Key)]; ok {
-			continue
-		}
-		report.Items = append(report.Items, KeyDiff{
-			Locale:         targetUnit.Locale,
-			Namespace:      targetUnit.Namespace,
-			Key:            targetUnit.Key,
-			Status:         Extra,
-			TargetValue:    targetUnit.Value,
-			TargetFilePath: targetUnit.FilePath,
-		})
-	}
-
-	sortReport(&report)
-	report.Summary = Summarize(report.Items)
 	return report, nil
 }
 
 func indexUnits(inv locale.Inventory) (map[string]locale.Unit, map[string]locale.Unit) {
-	sourceByKey := make(map[string]locale.Unit, len(inv.Units))
-	targetByKey := make(map[string]locale.Unit, len(inv.Units))
+	sources := make(map[string]locale.Unit)
+	targets := make(map[string]locale.Unit)
 	for _, unit := range inv.Units {
 		if unit.Locale == inv.SourceLocale {
-			sourceByKey[sourceIdentity(unit.Namespace, unit.Key)] = unit
-			continue
+			sources[sourceIdentity(unit.Namespace, unit.Key)] = unit
+		} else {
+			targets[targetIdentity(unit.Locale, unit.Namespace, unit.Key)] = unit
 		}
-		targetByKey[targetIdentity(unit.Locale, unit.Namespace, unit.Key)] = unit
 	}
-	return sourceByKey, targetByKey
+	return sources, targets
 }
-
 func targetLocales(inv locale.Inventory) []string {
-	if len(inv.TargetLocales) > 0 {
-		out := slices.Clone(inv.TargetLocales)
-		slices.Sort(out)
-		return out
-	}
-	var out []string
-	for _, localeCode := range inv.Locales {
-		if localeCode != inv.SourceLocale {
-			out = append(out, localeCode)
+	out := slices.Clone(inv.TargetLocales)
+	if len(out) == 0 {
+		for _, code := range inv.Locales {
+			if code != inv.SourceLocale {
+				out = append(out, code)
+			}
 		}
 	}
 	slices.Sort(out)
 	return out
 }
-
-func targetLocaleSet(locales []string) map[string]struct{} {
-	set := make(map[string]struct{}, len(locales))
-	for _, localeCode := range locales {
-		set[localeCode] = struct{}{}
-	}
-	return set
-}
-
-func sortedUnits(units map[string]locale.Unit) []locale.Unit {
-	return slices.SortedFunc(maps.Values(units), compareUnit)
-}
-
-func compareUnit(a, b locale.Unit) int {
-	return cmp.Or(
-		cmp.Compare(a.Locale, b.Locale),
-		cmp.Compare(a.Namespace, b.Namespace),
-		cmp.Compare(a.Key, b.Key),
-	)
-}
-
 func inventoryWarnings(warnings []locale.Warning) []string {
 	out := make([]string, 0, len(warnings))
 	for _, warning := range warnings {
 		if warning.FilePath != "" || warning.Key != "" {
 			out = append(out, fmt.Sprintf("%s: %s (%s %s)", warning.Code, warning.Message, warning.FilePath, warning.Key))
-			continue
+		} else {
+			out = append(out, warning.Code+": "+warning.Message)
 		}
-		out = append(out, warning.Code+": "+warning.Message)
 	}
 	slices.Sort(out)
 	return out
 }
-
-func sourceIdentity(namespace string, key string) string {
-	return namespace + "\x00" + key
+func sourceIdentity(namespace, key string) string { return namespace + "\x00" + key }
+func targetIdentity(code, namespace, key string) string {
+	return code + "\x00" + namespace + "\x00" + key
 }
-
-func targetIdentity(localeCode string, namespace string, key string) string {
-	return localeCode + "\x00" + namespace + "\x00" + key
-}
-
-func sortReport(report *Report) {
-	slices.Sort(report.TargetLocales)
-	slices.Sort(report.Warnings)
-	slices.SortFunc(report.Items, compareKeyDiff)
-}
-
-func lessKeyDiff(a, b KeyDiff) bool {
-	return compareKeyDiff(a, b) < 0
-}
-
+func lessKeyDiff(a, b KeyDiff) bool { return compareKeyDiff(a, b) < 0 }
 func compareKeyDiff(a, b KeyDiff) int {
-	return cmp.Or(
-		cmp.Compare(a.Locale, b.Locale),
-		cmp.Compare(a.Namespace, b.Namespace),
-		cmp.Compare(a.Key, b.Key),
-		cmp.Compare(a.Status, b.Status),
-	)
+	return cmp.Or(cmp.Compare(a.Locale, b.Locale), cmp.Compare(a.Namespace, b.Namespace), cmp.Compare(a.Key, b.Key), cmp.Compare(a.Status, b.Status))
 }
 
 func (s *Service) classifyExisting(sourceLocale string, sourceUnit locale.Unit, targetUnit locale.Unit, stateFile state.File) KeyDiff {

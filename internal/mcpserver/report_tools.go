@@ -16,6 +16,9 @@ func reportGenerateTool(a *app.App) func(context.Context, *mcp.CallToolRequest, 
 		if err != nil {
 			return nil, report.GenerateOutput{}, err
 		}
+		if out.Format == report.FormatMarkdown {
+			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: out.Text}}}, out, nil
+		}
 		return nil, out, nil
 	}
 }

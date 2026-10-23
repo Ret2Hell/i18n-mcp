@@ -1,7 +1,6 @@
 package translate
 
 import (
-	"cmp"
 	"context"
 	"fmt"
 	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
+	"github.com/Ret2Hell/i18n-mcp/internal/pagination"
 	"github.com/Ret2Hell/i18n-mcp/internal/security"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
@@ -69,7 +69,22 @@ func (s *Service) ResolveBatch(ctx context.Context, batchID string) (Batch, erro
 }
 
 func (s *Service) buildBatch(ctx context.Context, in PlanInput) (Batch, error) {
-	report, err := s.diff.Analyze(ctx)
+	limit := in.MaxItems
+	if limit == 0 {
+		limit = pagination.DefaultLimit
+	}
+	query := in
+	query.Cursor = ""
+	query.MaxItems = limit
+	builder, err := pagination.New[Item](ctx, s.StateSigner, "i18n.translation.page", s.guard.Root(), query, pagination.Input{Limit: limit, Cursor: in.Cursor})
+	if err != nil {
+		return Batch{}, err
+	}
+	statuses := in.Statuses
+	if len(statuses) == 0 {
+		statuses = []diff.KeyStatus{diff.Missing, diff.Stale}
+	}
+	report, err := s.diff.Walk(ctx, diff.Filter{Locales: in.Locales, Namespaces: in.Namespaces, Keys: in.Keys, Statuses: statuses}, func(record diff.KeyDiff) error { return builder.Add(planItem(record)) })
 	if err != nil {
 		return Batch{}, err
 	}
@@ -78,8 +93,13 @@ func (s *Service) buildBatch(ctx context.Context, in PlanInput) (Batch, error) {
 		return Batch{}, err
 	}
 
-	items := planItems(report, in)
+	meta, err := builder.Finish()
+	if err != nil {
+		return Batch{}, err
+	}
+	items := builder.Items
 	batch := Batch{
+		Page:            &meta,
 		SourceLocale:    report.SourceLocale,
 		TargetLocales:   targetLocalesFromItems(items),
 		Items:           items,
@@ -121,59 +141,14 @@ func (s *Service) signBatch(ctx context.Context, in PlanInput, batch Batch) (str
 	})
 }
 
-func planItems(report diff.Report, in PlanInput) []Item {
-	statuses := planStatusSet(in.Statuses)
-	locales := stringSet(in.Locales)
-	namespaces := stringSet(in.Namespaces)
-	keys := stringSet(in.Keys)
-
-	var items []Item
-	for _, record := range report.Items {
-		if !statuses[record.Status] {
-			continue
-		}
-		if len(locales) > 0 && !locales[record.Locale] {
-			continue
-		}
-		if len(namespaces) > 0 && !namespaces[record.Namespace] {
-			continue
-		}
-		if len(keys) > 0 && !keys[record.Key] {
-			continue
-		}
-		items = append(items, Item{
-			ID:             itemID(record.Locale, record.Namespace, record.Key),
-			Locale:         record.Locale,
-			Namespace:      record.Namespace,
-			Key:            record.Key,
-			Status:         record.Status,
-			SourceValue:    record.SourceValue,
-			OldValue:       record.TargetValue,
-			SourceHash:     record.SourceHash,
-			TargetHash:     record.TargetHash,
-			Placeholders:   validate.ExtractPlaceholders(record.SourceValue),
-			Tags:           validate.ExtractTags(record.SourceValue),
-			Notes:          planNotes(record),
-			SourceFilePath: record.SourceFilePath,
-			TargetFilePath: record.TargetFilePath,
-		})
+func planItem(record diff.KeyDiff) Item {
+	return Item{
+		ID:     itemID(record.Locale, record.Namespace, record.Key),
+		Locale: record.Locale, Namespace: record.Namespace, Key: record.Key, Status: record.Status,
+		SourceValue: record.SourceValue, OldValue: record.TargetValue, SourceHash: record.SourceHash, TargetHash: record.TargetHash,
+		Placeholders: validate.ExtractPlaceholders(record.SourceValue), Tags: validate.ExtractTags(record.SourceValue), Notes: planNotes(record),
+		SourceFilePath: record.SourceFilePath, TargetFilePath: record.TargetFilePath,
 	}
-	slices.SortFunc(items, compareItem)
-	if in.MaxItems > 0 && len(items) > in.MaxItems {
-		items = items[:in.MaxItems]
-	}
-	return items
-}
-
-func planStatusSet(statuses []diff.KeyStatus) map[diff.KeyStatus]bool {
-	if len(statuses) == 0 {
-		return map[diff.KeyStatus]bool{diff.Missing: true, diff.Stale: true}
-	}
-	set := map[diff.KeyStatus]bool{}
-	for _, status := range statuses {
-		set[status] = true
-	}
-	return set
 }
 
 func planNotes(record diff.KeyDiff) []string {
@@ -197,12 +172,4 @@ func targetLocalesFromItems(items []Item) []string {
 
 func itemID(localeCode string, namespace string, key string) string {
 	return localeCode + ":" + namespace + ":" + key
-}
-
-func compareItem(a, b Item) int {
-	return cmp.Or(
-		cmp.Compare(a.Locale, b.Locale),
-		cmp.Compare(a.Namespace, b.Namespace),
-		cmp.Compare(a.Key, b.Key),
-	)
 }

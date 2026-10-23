@@ -75,7 +75,7 @@ func TestTranslationBatchHandleRejectsSourceChanges(t *testing.T) {
 	require.ErrorContains(t, err, "stale")
 }
 
-func TestTranslationPlanLoadsProviderContext(t *testing.T) {
+func TestTranslationPlanLoadsTranslationContext(t *testing.T) {
 	ctx := t.Context()
 	a := newTranslationFixtureApp(t)
 	writeFixtureFile(t, a.ProjectRoot, ".i18n-mcp.json", `{
@@ -85,7 +85,6 @@ func TestTranslationPlanLoadsProviderContext(t *testing.T) {
   "defaultNamespace": "common",
   "format": {"sortKeys": false, "indent": 2, "trailingNewline": true},
   "translation": {
-    "mode": "agent",
     "styleGuidePath": "docs/style.md",
     "glossaryPath": "docs/glossary.md"
   }
@@ -207,7 +206,7 @@ func newTranslationFixtureApp(t *testing.T) *app.App {
   "localeFiles": ["messages/{locale}/{namespace}.json"],
   "defaultNamespace": "common",
   "format": {"sortKeys": false, "indent": 2, "trailingNewline": true},
-  "translation": {"mode": "agent"}
+  "translation": {}
 }
 `)
 	writeFixtureFile(t, root, "messages/en/auth.json", `{

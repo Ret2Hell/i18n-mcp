@@ -21,8 +21,7 @@ func EvaluatePolicy(r Report, policy config.CIConfig) []Failure {
 	if policy.FailOnInvalid && r.Summary.Invalid > 0 {
 		failures = append(failures, Failure{Code: "invalid", Message: "invalid translations detected", Count: r.Summary.Invalid})
 	}
-	if policy.FailOnDeadKeys && r.Summary.ProbablyUnused > 0 {
-		failures = append(failures, Failure{Code: "dead_keys", Message: "probably unused keys detected", Count: r.Summary.ProbablyUnused})
-	}
+	// FailOnDeadKeys is retained in config for compatibility but is not
+	// evaluated while dead-key analysis is disabled.
 	return failures
 }

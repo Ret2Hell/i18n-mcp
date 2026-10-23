@@ -1,6 +1,9 @@
 package diff
 
-import "github.com/Ret2Hell/i18n-mcp/internal/validate"
+import (
+	"github.com/Ret2Hell/i18n-mcp/internal/pagination"
+	"github.com/Ret2Hell/i18n-mcp/internal/validate"
+)
 
 // KeyStatus classifies the relationship between source and target keys.
 type KeyStatus string
@@ -32,13 +35,24 @@ type KeyDiff struct {
 	Metadata           map[string]string `json:"metadata,omitzero"`
 }
 
+// Filter restricts analysis before validation; summaries describe this scope.
+type Filter struct {
+	Locales    []string    `json:"locales,omitzero"`
+	Namespaces []string    `json:"namespaces,omitzero"`
+	Keys       []string    `json:"keys,omitzero"`
+	KeyPrefix  string      `json:"keyPrefix,omitzero"`
+	Statuses   []KeyStatus `json:"statuses,omitzero"`
+}
+
 // Report contains locale diff analysis results.
 type Report struct {
-	SourceLocale  string    `json:"sourceLocale"`
-	TargetLocales []string  `json:"targetLocales"`
-	Summary       Summary   `json:"summary"`
-	Items         []KeyDiff `json:"items"`
-	Warnings      []string  `json:"warnings,omitzero"`
+	SourceLocale  string               `json:"sourceLocale"`
+	TargetLocales []string             `json:"targetLocales"`
+	Summary       Summary              `json:"summary"`
+	Items         []KeyDiff            `json:"items"`
+	Warnings      []string             `json:"warnings,omitzero"`
+	WarningsTotal int                  `json:"warningsTotal,omitzero"`
+	Page          *pagination.Metadata `json:"page,omitzero"`
 }
 
 // Summary counts key diff statuses.

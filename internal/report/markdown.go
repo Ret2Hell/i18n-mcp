@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Ret2Hell/i18n-mcp/internal/deadkey"
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 )
 
@@ -16,13 +15,15 @@ func RenderMarkdown(report Report) (string, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# i18n Audit Report\n\n")
 	fmt.Fprintf(&b, "Generated: %s\n\n", report.GeneratedAt.Format("2006-01-02T15:04:05Z07:00"))
+	if report.DetailsOmitted {
+		fmt.Fprintf(&b, "Detailed rows are omitted. Read bounded pages from %s or use i18n.keys.diff.\n\n", report.DetailResource)
+	}
 	renderSummary(&b, report)
 	renderInventory(&b, report)
 	renderDiffSection(&b, "Missing Keys", report.Diff.Items, diff.Missing)
 	renderDiffSection(&b, "Stale Keys", report.Diff.Items, diff.Stale)
 	renderDiffSection(&b, "Invalid Translations", report.Diff.Items, diff.Invalid)
 	renderDiffSection(&b, "Extra Keys", report.Diff.Items, diff.Extra)
-	renderDeadKeys(&b, report)
 	renderChangedFiles(&b)
 	renderWarnings(&b, report.Warnings)
 	return b.String(), nil
@@ -39,8 +40,6 @@ func renderSummary(b *strings.Builder, report Report) {
 	fmt.Fprintf(b, "| Stale | %d |\n", report.Summary.Stale)
 	fmt.Fprintf(b, "| Invalid | %d |\n", report.Summary.Invalid)
 	fmt.Fprintf(b, "| Extra | %d |\n", report.Summary.Extra)
-	fmt.Fprintf(b, "| Probably unused | %d |\n", report.Summary.ProbablyUnused)
-	fmt.Fprintf(b, "| Maybe dynamic | %d |\n", report.Summary.MaybeDynamic)
 	fmt.Fprintf(b, "| Warnings | %d |\n\n", report.Summary.Warnings)
 }
 
@@ -87,38 +86,6 @@ func filterDiffItems(items []diff.KeyDiff, status diff.KeyStatus) []diff.KeyDiff
 			cmp.Compare(a.Locale, b.Locale),
 			cmp.Compare(a.Namespace, b.Namespace),
 			cmp.Compare(a.Key, b.Key),
-		)
-	})
-	return out
-}
-
-func renderDeadKeys(b *strings.Builder, report Report) {
-	fmt.Fprintf(b, "## Dead-Key Candidates\n\n")
-	items := filterDeadKeys(report.DeadKeys.Items)
-	if len(items) == 0 {
-		fmt.Fprintf(b, "None.\n\n")
-		return
-	}
-	fmt.Fprintf(b, "| Namespace | Key | Status | Confidence | Reasons |\n")
-	fmt.Fprintf(b, "| --- | --- | --- | --- | --- |\n")
-	for _, item := range items {
-		fmt.Fprintf(b, "| `%s` | `%s` | `%s` | `%s` | %s |\n", item.Namespace, item.Key, item.Status, item.Confidence, markdownCell(strings.Join(item.Reasons, "; ")))
-	}
-	fmt.Fprintf(b, "\n")
-}
-
-func filterDeadKeys(items []deadkey.Item) []deadkey.Item {
-	var out []deadkey.Item
-	for _, item := range items {
-		if item.Status == deadkey.StatusProbablyUnused || item.Status == deadkey.StatusMaybeDynamic {
-			out = append(out, item)
-		}
-	}
-	slices.SortFunc(out, func(a, b deadkey.Item) int {
-		return cmp.Or(
-			cmp.Compare(a.Namespace, b.Namespace),
-			cmp.Compare(a.Key, b.Key),
-			cmp.Compare(a.Status, b.Status),
 		)
 	})
 	return out

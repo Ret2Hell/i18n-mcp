@@ -7,13 +7,13 @@ type File struct {
 	TargetLocales        []string          `json:"targetLocales" jsonschema:"target locales to maintain"`
 	LocaleFiles          []string          `json:"localeFiles" jsonschema:"locale file patterns containing {locale} and optional {namespace}"`
 	DefaultNamespace     string            `json:"defaultNamespace,omitzero" jsonschema:"namespace used when file layout has no namespace segment"`
-	TranslationFunctions []string          `json:"translationFunctions,omitzero" jsonschema:"translation function names to scan in app code"`
-	NamespaceFunctions   []string          `json:"namespaceFunctions,omitzero" jsonschema:"functions that bind a translation namespace"`
-	IgnoredKeyPatterns   []string          `json:"ignoredKeyPatterns,omitzero" jsonschema:"dead-key patterns to ignore"`
-	KeptKeyPatterns      []string          `json:"keptKeyPatterns,omitzero" jsonschema:"dead-key patterns to always keep"`
-	DynamicKeyHints      []string          `json:"dynamicKeyHints,omitzero" jsonschema:"patterns that may be used dynamically"`
+	TranslationFunctions []string          `json:"translationFunctions,omitzero" jsonschema:"reserved while source usage scanning is disabled"`
+	NamespaceFunctions   []string          `json:"namespaceFunctions,omitzero" jsonschema:"reserved while source usage scanning is disabled"`
+	IgnoredKeyPatterns   []string          `json:"ignoredKeyPatterns,omitzero" jsonschema:"reserved while dead-key analysis is disabled"`
+	KeptKeyPatterns      []string          `json:"keptKeyPatterns,omitzero" jsonschema:"reserved while dead-key analysis is disabled"`
+	DynamicKeyHints      []string          `json:"dynamicKeyHints,omitzero" jsonschema:"reserved while dead-key analysis is disabled"`
 	Format               FormatConfig      `json:"format" jsonschema:"locale JSON formatting preferences"`
-	Translation          TranslationConfig `json:"translation" jsonschema:"translation mode and optional context files"`
+	Translation          TranslationConfig `json:"translation" jsonschema:"optional translation context files"`
 	CI                   CIConfig          `json:"ci" jsonschema:"CI audit failure policy"`
 }
 
@@ -24,10 +24,8 @@ type FormatConfig struct {
 	TrailingNewline bool `json:"trailingNewline" jsonschema:"write trailing newline at end of JSON files"`
 }
 
-// TranslationConfig controls translation behavior and context files.
+// TranslationConfig specifies optional context files for translation plans.
 type TranslationConfig struct {
-	Mode           string `json:"mode" jsonschema:"translation mode: agent or provider"`
-	Provider       string `json:"provider,omitzero" jsonschema:"optional provider name for provider mode"`
 	StyleGuidePath string `json:"styleGuidePath,omitzero" jsonschema:"optional project-relative style guide path"`
 	GlossaryPath   string `json:"glossaryPath,omitzero" jsonschema:"optional project-relative glossary path"`
 }
@@ -37,7 +35,7 @@ type CIConfig struct {
 	FailOnMissing  bool `json:"failOnMissing" jsonschema:"fail audit when missing translations are detected"`
 	FailOnStale    bool `json:"failOnStale" jsonschema:"fail audit when stale translations are detected"`
 	FailOnInvalid  bool `json:"failOnInvalid" jsonschema:"fail audit when invalid translations are detected"`
-	FailOnDeadKeys bool `json:"failOnDeadKeys" jsonschema:"fail audit when probably unused keys are detected"`
+	FailOnDeadKeys bool `json:"failOnDeadKeys" jsonschema:"reserved for compatibility; ignored while dead-key analysis is disabled"`
 }
 
 // Resolved is a configuration file plus project-specific resolution metadata.

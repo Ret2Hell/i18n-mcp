@@ -1,6 +1,9 @@
 package locale
 
-import json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
+import (
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
+	"github.com/Ret2Hell/i18n-mcp/internal/pagination"
+)
 
 // FileRef identifies a locale file matched by a configured pattern.
 type FileRef struct {
@@ -39,6 +42,7 @@ type FlattenResult struct {
 
 // Inventory summarizes discovered locale files and translation units.
 type Inventory struct {
+	Page              *pagination.Metadata      `json:"page,omitzero"`
 	SourceLocale      string                    `json:"sourceLocale"`
 	TargetLocales     []string                  `json:"targetLocales"`
 	Locales           []string                  `json:"locales"`
@@ -47,6 +51,7 @@ type Inventory struct {
 	Units             []Unit                    `json:"units,omitzero"`
 	CountsByLocale    map[string]int            `json:"countsByLocale"`
 	CountsByNamespace map[string]int            `json:"countsByNamespace"`
+	WarningsTotal     int                       `json:"warningsTotal,omitzero"`
 	Warnings          []Warning                 `json:"warnings,omitzero"`
 	Duplicates        []DuplicateNamespaceIssue `json:"duplicates,omitzero"`
 }

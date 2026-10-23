@@ -144,7 +144,7 @@ func assertProposedConfig(t *testing.T, got config.File, want config.File) {
 	require.Equal(t, 2, got.Format.Indent)
 	require.False(t, got.Format.SortKeys)
 	require.True(t, got.Format.TrailingNewline)
-	require.Equal(t, "agent", got.Translation.Mode)
+	require.Empty(t, got.Translation)
 }
 
 func writeFile(t *testing.T, root string, name string, data string) {

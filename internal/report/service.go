@@ -8,11 +8,9 @@ import (
 	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
-	"github.com/Ret2Hell/i18n-mcp/internal/deadkey"
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/resources"
-	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
 	"github.com/Ret2Hell/i18n-mcp/internal/security"
 )
 
@@ -27,16 +25,14 @@ type Service struct {
 	config      *config.Service
 	locales     *locale.Service
 	diff        *diff.Service
-	scanner     *scanner.Service
-	deadKeys    *deadkey.Service
 	Notifier    Notifier
 
 	latest security.Store[GenerateOutput]
 }
 
 // NewService creates a report generation service.
-func NewService(projectRoot string, configService *config.Service, localeService *locale.Service, diffService *diff.Service, scannerService *scanner.Service, deadKeyService *deadkey.Service) *Service {
-	return &Service{projectRoot: projectRoot, config: configService, locales: localeService, diff: diffService, scanner: scannerService, deadKeys: deadKeyService}
+func NewService(projectRoot string, configService *config.Service, localeService *locale.Service, diffService *diff.Service) *Service {
+	return &Service{projectRoot: projectRoot, config: configService, locales: localeService, diff: diffService}
 }
 
 // Generate builds and renders an audit report.
@@ -46,7 +42,7 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 	if progress == nil {
 		progress = noopProgress{}
 	}
-	const totalProgressSteps = 5
+	const totalProgressSteps = 3
 
 	cfg, err := s.config.Resolve(ctx)
 	if err != nil {
@@ -58,20 +54,18 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 		return GenerateOutput{}, err
 	}
 	progress.Step(ctx, "computing translation diff", 2, totalProgressSteps)
-	diffReport, err := s.diff.Analyze(ctx)
+	var details []diff.KeyDiff
+	var visit func(diff.KeyDiff) error
+	if in.Full {
+		visit = func(item diff.KeyDiff) error { details = append(details, item); return nil }
+	}
+	diffReport, err := s.diff.WalkInventory(ctx, inv, diff.Filter{}, visit)
+	diffReport.Items = details
 	if err != nil {
 		return GenerateOutput{}, err
 	}
-	progress.Step(ctx, "scanning source usage", 3, totalProgressSteps)
-	usageReport, err := s.usage(ctx, in.RefreshUsage)
-	if err != nil {
-		return GenerateOutput{}, err
-	}
-	progress.Step(ctx, "building dead-key report", 4, totalProgressSteps)
-	deadReport, err := s.deadKeys.Report(ctx, deadkey.ReportInput{RefreshUsage: in.RefreshUsage})
-	if err != nil {
-		return GenerateOutput{}, err
-	}
+	// Source scanning and dead-key analysis are intentionally disabled. In
+	// particular, never reuse a partial usage scan for audit or prune decisions.
 
 	report := Report{
 		GeneratedAt: time.Now().UTC(),
@@ -79,13 +73,17 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 		Config:      cfg,
 		Inventory:   inv,
 		Diff:        diffReport,
-		Usage:       usageReport,
-		DeadKeys:    deadReport,
-		Warnings:    collectWarnings(inv, diffReport, usageReport, deadReport),
+		Warnings:    collectWarnings(inv, diffReport),
 	}
 	report.Summary = summarize(report)
+	if !in.Full {
+		report = compactReport(report)
+	}
 	out := GenerateOutput{Report: report, Format: format}
-	progress.Step(ctx, "rendering report", 5, totalProgressSteps)
+	if err := ctx.Err(); err != nil {
+		return GenerateOutput{}, err
+	}
+	progress.Step(ctx, "rendering report", 3, totalProgressSteps)
 	switch format {
 	case FormatJSON:
 		out.Text, err = RenderJSON(report)
@@ -97,7 +95,13 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 	if err != nil {
 		return GenerateOutput{}, err
 	}
-	s.storeLatest(ctx, out)
+	if err := ctx.Err(); err != nil {
+		return GenerateOutput{}, err
+	}
+	latest := out
+	latest.Report = compactReport(report)
+	latest.Text = ""
+	s.storeLatest(ctx, latest)
 	if s.Notifier != nil {
 		s.Notifier.Updated(ctx, resources.LatestReportURI)
 	}
@@ -118,48 +122,31 @@ func (s *Service) storeLatest(ctx context.Context, out GenerateOutput) {
 	s.latest.Put(ctx, "latest", cloneOutput(out))
 }
 
-func (s *Service) usage(ctx context.Context, refresh bool) (scanner.Report, error) {
-	if !refresh {
-		usage, ok, err := s.scanner.Latest(ctx)
-		if err != nil {
-			return scanner.Report{}, err
-		}
-		if ok {
-			return usage, nil
-		}
-	}
-	return s.scanner.Scan(ctx, scanner.ScanInput{})
-}
-
-func collectWarnings(inv locale.Inventory, diffReport diff.Report, usage scanner.Report, deadReport deadkey.Report) []string {
-	var warnings []string
+func collectWarnings(inv locale.Inventory, diffReport diff.Report) []string {
+	warnings := []string{"Source usage scanning and dead-key analysis are temporarily disabled; failOnDeadKeys is not evaluated."}
 	for _, warning := range inv.Warnings {
 		warnings = append(warnings, warning.Code+": "+warning.Message)
 	}
 	warnings = append(warnings, diffReport.Warnings...)
-	warnings = append(warnings, usage.Warnings...)
-	warnings = append(warnings, deadReport.Warnings...)
 	return uniqueSorted(warnings)
 }
 
 func summarize(r Report) Summary {
 	summary := Summary{
-		Locales:        len(r.Inventory.Locales),
-		Namespaces:     len(r.Inventory.Namespaces),
-		Missing:        r.Diff.Summary.Missing,
-		Stale:          r.Diff.Summary.Stale,
-		Invalid:        r.Diff.Summary.Invalid,
-		Extra:          r.Diff.Summary.Extra,
-		Unknown:        r.Diff.Summary.Unknown,
-		ProbablyUnused: r.DeadKeys.Summary.ProbablyUnused,
-		MaybeDynamic:   r.DeadKeys.Summary.MaybeDynamic,
-		Warnings:       len(r.Warnings),
+		Locales:    len(r.Inventory.Locales),
+		Namespaces: len(r.Inventory.Namespaces),
+		Missing:    r.Diff.Summary.Missing,
+		Stale:      r.Diff.Summary.Stale,
+		Invalid:    r.Diff.Summary.Invalid,
+		Extra:      r.Diff.Summary.Extra,
+		Unknown:    r.Diff.Summary.Unknown,
+		Warnings:   len(r.Warnings),
 	}
-	for _, unit := range r.Inventory.Units {
-		if unit.Locale == r.Inventory.SourceLocale {
-			summary.SourceKeys++
+	for code, count := range r.Inventory.CountsByLocale {
+		if code == r.Inventory.SourceLocale {
+			summary.SourceKeys += count
 		} else {
-			summary.TargetKeys++
+			summary.TargetKeys += count
 		}
 	}
 	return summary
@@ -171,6 +158,27 @@ func uniqueSorted(values []string) []string {
 		return value == ""
 	})
 	return slices.Compact(values)
+}
+
+// compactReport removes full datasets before storing or returning network reports.
+func compactReport(r Report) Report {
+	r.DetailsOmitted = true
+	r.DetailResource = resources.DiffURI
+	r.Inventory.Units = nil
+	r.Diff.Items = nil
+	r.WarningsTotal = max(r.WarningsTotal, len(r.Warnings))
+	if len(r.Warnings) > 20 {
+		r.Warnings = r.Warnings[:20]
+	}
+	r.Diff.WarningsTotal = max(r.Diff.WarningsTotal, len(r.Diff.Warnings))
+	if len(r.Diff.Warnings) > 20 {
+		r.Diff.Warnings = r.Diff.Warnings[:20]
+	}
+	r.Inventory.WarningsTotal = max(r.Inventory.WarningsTotal, len(r.Inventory.Warnings))
+	if len(r.Inventory.Warnings) > 20 {
+		r.Inventory.Warnings = r.Inventory.Warnings[:20]
+	}
+	return r
 }
 
 func cloneOutput(out GenerateOutput) GenerateOutput {

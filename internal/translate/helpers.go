@@ -2,7 +2,9 @@ package translate
 
 import (
 	"cmp"
+	"fmt"
 	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
+	"io"
 	"os"
 	"slices"
 	"strings"
@@ -86,19 +88,18 @@ func (s *Service) readOptionalText(relPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	data, err := os.ReadFile(resolved)
+	file, err := os.Open(resolved)
 	if err != nil {
 		return "", err
 	}
-	return string(data), nil
-}
-
-func stringSet(values []string) map[string]bool {
-	set := map[string]bool{}
-	for _, value := range values {
-		if value != "" {
-			set[value] = true
-		}
+	defer file.Close()
+	const maxContextBytes = 16 << 10
+	data, err := io.ReadAll(io.LimitReader(file, maxContextBytes+1))
+	if err != nil {
+		return "", err
 	}
-	return set
+	if len(data) > maxContextBytes {
+		return "", fmt.Errorf("translation context %s exceeds %d bytes; shorten the file", relPath, maxContextBytes)
+	}
+	return string(data), nil
 }

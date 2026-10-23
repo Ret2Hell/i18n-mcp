@@ -2,6 +2,7 @@ package locale
 
 import (
 	"cmp"
+	"context"
 	"maps"
 	"slices"
 	"strings"
@@ -9,18 +10,27 @@ import (
 
 // Flatten converts a parsed locale JSON value into translation units.
 func Flatten(ref FileRef, value any) FlattenResult {
+	result, _ := FlattenContext(context.Background(), ref, value)
+	return result
+}
+
+// FlattenContext stops recursive traversal when the request is canceled.
+func FlattenContext(ctx context.Context, ref FileRef, value any) (FlattenResult, error) {
 	var result FlattenResult
-	flattenValue(ref, nil, value, &result)
+	flattenValue(ctx, ref, nil, value, &result)
 	slices.SortFunc(result.Units, func(a, b Unit) int {
 		return cmp.Or(
 			cmp.Compare(a.Key, b.Key),
 			cmp.Compare(a.FilePath, b.FilePath),
 		)
 	})
-	return result
+	return result, ctx.Err()
 }
 
-func flattenValue(ref FileRef, jsonPath []string, value any, result *FlattenResult) {
+func flattenValue(ctx context.Context, ref FileRef, jsonPath []string, value any, result *FlattenResult) {
+	if ctx.Err() != nil {
+		return
+	}
 	switch v := value.(type) {
 	case map[string]any:
 		if len(jsonPath) > 0 && looksLikeRichObject(v) {
@@ -35,7 +45,7 @@ func flattenValue(ref FileRef, jsonPath []string, value any, result *FlattenResu
 
 		keys := slices.Sorted(maps.Keys(v))
 		for _, key := range keys {
-			flattenValue(ref, append(slices.Clone(jsonPath), key), v[key], result)
+			flattenValue(ctx, ref, append(slices.Clone(jsonPath), key), v[key], result)
 		}
 	case string:
 		result.Units = append(result.Units, Unit{

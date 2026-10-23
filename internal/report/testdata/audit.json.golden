@@ -10,9 +10,7 @@
       "indent": 0,
       "trailingNewline": false
     },
-    "translation": {
-      "mode": ""
-    },
+    "translation": {},
     "ci": {
       "failOnMissing": false,
       "failOnStale": false,
@@ -67,42 +65,6 @@
       }
     ]
   },
-  "usage": {
-    "filesScanned": 0,
-    "files": null,
-    "usages": null,
-    "generatedAt": "2026-01-02T03:04:05Z"
-  },
-  "deadKeys": {
-    "sourceLocale": "en",
-    "items": [
-      {
-        "namespace": "common",
-        "key": "unused",
-        "fullKey": "common:unused",
-        "status": "probably_unused",
-        "confidence": "high",
-        "reasons": [
-          "not referenced"
-        ]
-      }
-    ],
-    "summary": {
-      "total": 1,
-      "used": 0,
-      "probablyUnused": 1,
-      "maybeDynamic": 0,
-      "ignored": 0,
-      "kept": 0
-    },
-    "usage": {
-      "filesScanned": 0,
-      "files": null,
-      "usages": null,
-      "generatedAt": "0001-01-01T00:00:00Z"
-    },
-    "generatedAt": "2026-01-02T03:04:05Z"
-  },
   "summary": {
     "locales": 2,
     "namespaces": 1,
@@ -113,8 +75,6 @@
     "invalid": 0,
     "extra": 0,
     "unknown": 0,
-    "probablyUnused": 1,
-    "maybeDynamic": 0,
     "warnings": 1
   },
   "warnings": [

@@ -99,6 +99,10 @@ func TestServerCatalogOrderingIsDeterministic(t *testing.T) {
 	first := serverCatalogSnapshot(t)
 	second := serverCatalogSnapshot(t)
 	require.Equal(t, first, second)
+	require.NotContains(t, first.Tools, "i18n.translation.generate")
+	require.Contains(t, first.Tools, "i18n.translation.plan")
+	require.Contains(t, first.Tools, "i18n.translation.validate")
+	require.Contains(t, first.Tools, "i18n.translation.apply")
 }
 
 type catalogSnapshot struct {
@@ -176,7 +180,7 @@ func TestServerReturnsExplicitCacheHints(t *testing.T) {
 	require.NoError(t, err)
 	assertPublicCatalogCache(t, templates)
 
-	resource, err := clientSession.ReadResource(ctx, &mcp.ReadResourceParams{URI: "i18n://analysis/usage"})
+	resource, err := clientSession.ReadResource(ctx, &mcp.ReadResourceParams{URI: "i18n://translation/plan/latest"})
 	require.NoError(t, err)
 	require.Zero(t, resource.TTLMs)
 	require.Equal(t, "private", resource.CacheScope)

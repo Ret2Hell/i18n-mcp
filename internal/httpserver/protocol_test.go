@@ -7,8 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -70,79 +68,6 @@ func TestStatelessHTTPClientCallsToolWithoutInitialize(t *testing.T) {
 	result, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: "i18n.health"})
 	require.NoError(t, err)
 	require.False(t, result.IsError)
-}
-
-func TestStatelessHTTPReturnsInputRequiredMRTRResult(t *testing.T) {
-	root := statelessPruneFixture(t)
-	httpServer := newStatelessTestServerWithRoot(t, root)
-	body := `{
-		"jsonrpc":"2.0",
-		"id":3,
-		"method":"tools/call",
-		"params":{
-			"name":"i18n.keys.prune",
-			"arguments":{
-				"apply":true,
-				"confirmWithClient":true,
-				"keys":[{"namespace":"common","key":"unused"}]
-			},
-			"_meta":{
-				"io.modelcontextprotocol/protocolVersion":"2026-07-28",
-				"io.modelcontextprotocol/clientInfo":{"name":"test-client","version":"v0.0.0"},
-				"io.modelcontextprotocol/clientCapabilities":{"elicitation":{"form":{}}}
-			}
-		}
-	}`
-	req := modernRequest(t, httpServer.URL+"/mcp", body, latestProtocolVersion, "tools/call")
-	req.Header.Set("Mcp-Name", "i18n.keys.prune")
-	response, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	responseBody, readErr := io.ReadAll(response.Body)
-	require.NoError(t, response.Body.Close())
-	require.NoError(t, readErr)
-	require.Equal(t, http.StatusOK, response.StatusCode, string(responseBody))
-
-	var message struct {
-		Result struct {
-			ResultType    string                     `json:"resultType"`
-			InputRequests map[string]json.RawMessage `json:"inputRequests"`
-			RequestState  string                     `json:"requestState"`
-		} `json:"result"`
-	}
-	require.NoError(t, json.Unmarshal(responseBody, &message))
-	require.Equal(t, "input_required", message.Result.ResultType)
-	require.Contains(t, message.Result.InputRequests, "prune_confirmation")
-	require.NotEmpty(t, message.Result.RequestState)
-}
-
-func TestStatelessHTTPCompletesPruneConfirmationMRTR(t *testing.T) {
-	root := statelessPruneFixture(t)
-	httpServer := newStatelessTestServerWithRoot(t, root)
-	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.0"}, &mcp.ClientOptions{
-		ElicitationHandler: func(context.Context, *mcp.ElicitRequest) (*mcp.ElicitResult, error) {
-			return &mcp.ElicitResult{Action: "accept", Content: map[string]any{"confirm": true}}, nil
-		},
-	})
-	session, err := client.Connect(t.Context(), &mcp.StreamableClientTransport{
-		Endpoint:             httpServer.URL + "/mcp",
-		DisableStandaloneSSE: true,
-	}, nil)
-	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, session.Close()) })
-
-	result, err := session.CallTool(t.Context(), &mcp.CallToolParams{
-		Name: "i18n.keys.prune",
-		Arguments: map[string]any{
-			"apply":             true,
-			"confirmWithClient": true,
-			"keys":              []map[string]any{{"namespace": "common", "key": "unused"}},
-		},
-	})
-	require.NoError(t, err)
-	require.False(t, result.IsError)
-	contents, err := os.ReadFile(filepath.Join(root, "messages/en/common.json"))
-	require.NoError(t, err)
-	require.NotContains(t, string(contents), "unused")
 }
 
 func TestStatelessHTTPDoesNotCreateProtocolSession(t *testing.T) {
@@ -490,27 +415,4 @@ func newStatelessTestServerWithRoot(t *testing.T, root string) *httptest.Server 
 	httpServer := httptest.NewServer(handler)
 	t.Cleanup(httpServer.Close)
 	return httpServer
-}
-
-func statelessPruneFixture(t *testing.T) string {
-	t.Helper()
-	root := t.TempDir()
-	files := map[string]string{
-		".i18n-mcp.json": `{
-			"sourceLocale":"en",
-			"targetLocales":["fr"],
-			"localeFiles":["messages/{locale}/{namespace}.json"],
-			"defaultNamespace":"common",
-			"translation":{"mode":"agent"}
-		}`,
-		"messages/en/common.json": `{"used":"Used","unused":"Unused"}`,
-		"messages/fr/common.json": `{"used":"Utilise","unused":"Inutilise"}`,
-		"app/page.tsx":            `export const value = t("used")`,
-	}
-	for path, content := range files {
-		absolute := filepath.Join(root, path)
-		require.NoError(t, os.MkdirAll(filepath.Dir(absolute), 0o700))
-		require.NoError(t, os.WriteFile(absolute, []byte(content), 0o600))
-	}
-	return root
 }

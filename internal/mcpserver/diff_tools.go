@@ -9,7 +9,7 @@ import (
 )
 
 // KeysDiffInput is the input for the keys.diff tool.
-type KeysDiffInput struct{}
+type KeysDiffInput = diff.PageInput
 
 // KeysDiffOutput is the output for the keys.diff tool.
 type KeysDiffOutput struct {
@@ -17,11 +17,12 @@ type KeysDiffOutput struct {
 }
 
 func keysDiffTool(a *app.App) func(context.Context, *mcp.CallToolRequest, KeysDiffInput) (*mcp.CallToolResult, KeysDiffOutput, error) {
-	return func(ctx context.Context, _ *mcp.CallToolRequest, _ KeysDiffInput) (*mcp.CallToolResult, KeysDiffOutput, error) {
-		report, err := a.Diff.Analyze(ctx)
+	return func(ctx context.Context, _ *mcp.CallToolRequest, in KeysDiffInput) (*mcp.CallToolResult, KeysDiffOutput, error) {
+		report, err := a.Diff.Page(ctx, a.RequestStateSigner, a.ProjectRoot, in)
 		if err != nil {
 			return nil, KeysDiffOutput{}, err
 		}
+		setDiffContinuation(&report, in)
 		return nil, KeysDiffOutput{Report: report}, nil
 	}
 }

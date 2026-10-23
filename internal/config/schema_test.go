@@ -20,4 +20,8 @@ func TestSchemaReturnsConfigSchema(t *testing.T) {
 	require.Contains(t, string(data), "sourceLocale")
 	require.Contains(t, string(data), "targetLocales")
 	require.Contains(t, string(data), "translation")
+	require.Contains(t, string(data), "styleGuidePath")
+	require.Contains(t, string(data), "glossaryPath")
+	require.NotContains(t, string(data), `"mode"`)
+	require.NotContains(t, string(data), `"provider"`)
 }

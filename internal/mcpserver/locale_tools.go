@@ -9,9 +9,7 @@ import (
 )
 
 // LocalesListInput is the input for the locales.list tool.
-type LocalesListInput struct {
-	IncludeUnits bool `json:"includeUnits,omitzero" jsonschema:"include flattened translation units in the response; false returns summary only"`
-}
+type LocalesListInput = locale.PageInput
 
 // LocalesListOutput is the output for the locales.list tool.
 type LocalesListOutput struct {
@@ -20,12 +18,14 @@ type LocalesListOutput struct {
 
 func localesListTool(a *app.App) func(context.Context, *mcp.CallToolRequest, LocalesListInput) (*mcp.CallToolResult, LocalesListOutput, error) {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in LocalesListInput) (*mcp.CallToolResult, LocalesListOutput, error) {
-		inv, err := a.Locales.Inventory(ctx)
+		inv, err := a.Locales.Page(ctx, a.RequestStateSigner, a.ProjectRoot, in)
 		if err != nil {
 			return nil, LocalesListOutput{}, err
 		}
-		if !in.IncludeUnits {
-			inv.Units = nil
+		if inv.Page != nil && inv.Page.Truncated {
+			next := in
+			next.Cursor = inv.Page.NextCursor
+			inv.Page.NextResource = pageURI("locales", next)
 		}
 		return nil, LocalesListOutput{Inventory: inv}, nil
 	}

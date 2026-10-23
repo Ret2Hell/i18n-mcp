@@ -20,19 +20,22 @@ func (e *AuditError) Error() string {
 
 func newAuditCommand(opts *RootOptions) *cobra.Command {
 	var refreshUsage bool
+	var full bool
 	cmd := &cobra.Command{
 		Use:   "audit",
 		Short: "Run non-interactive i18n audit for CI",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAudit(cmd, opts, refreshUsage)
+			return runAudit(cmd, opts, refreshUsage, full)
 		},
 	}
-	cmd.Flags().BoolVar(&refreshUsage, "refresh-usage", true, "rerun usage scan before generating the report")
+	cmd.Flags().BoolVar(&full, "full", false, "include full detail rows in local report output; may be large")
+	cmd.Flags().BoolVar(&refreshUsage, "refresh-usage", false, "deprecated: source usage scanning is temporarily disabled")
+	_ = cmd.Flags().MarkDeprecated("refresh-usage", "source usage scanning and dead-key analysis are temporarily disabled; this flag has no effect")
 	return cmd
 }
 
-func runAudit(cmd *cobra.Command, opts *RootOptions, refreshUsage bool) error {
+func runAudit(cmd *cobra.Command, opts *RootOptions, refreshUsage, full bool) error {
 	ctx := cmd.Context()
 	application, err := app.New(ctx, app.Options{ProjectRoot: opts.Project, ConfigPath: opts.Config, LogLevel: opts.LogLevel})
 	if err != nil {
@@ -44,15 +47,24 @@ func runAudit(cmd *cobra.Command, opts *RootOptions, refreshUsage bool) error {
 		format = report.FormatMarkdown
 	}
 
-	out, err := application.Reports.Generate(ctx, report.GenerateInput{Format: format, RefreshUsage: refreshUsage})
-	if err != nil {
-		return err
-	}
-	if _, err := fmt.Fprint(cmd.OutOrStdout(), out.Text); err != nil {
-		return err
+	var auditReport report.Report
+	if full && format == report.FormatJSON {
+		auditReport, err = application.Reports.WriteFullJSON(ctx, cmd.OutOrStdout())
+		if err != nil {
+			return err
+		}
+	} else {
+		out, err := application.Reports.Generate(ctx, report.GenerateInput{Format: format, RefreshUsage: refreshUsage, Full: full})
+		if err != nil {
+			return err
+		}
+		if _, err := fmt.Fprint(cmd.OutOrStdout(), out.Text); err != nil {
+			return err
+		}
+		auditReport = out.Report
 	}
 
-	failures := report.EvaluatePolicy(out.Report, out.Report.Config.CI)
+	failures := report.EvaluatePolicy(auditReport, auditReport.Config.CI)
 	if len(failures) > 0 {
 		for _, failure := range failures {
 			if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "audit failure: %s (%d)\n", failure.Message, failure.Count); err != nil {

@@ -51,30 +51,11 @@ func registerTools(s *mcp.Server, a *app.App) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.keys.diff",
 		Title:       "Diff Locale Keys",
-		Description: "Compare source and target locales for missing, stale, extra, invalid, unknown, and current keys.",
+		Description: "Return a bounded, filtered page of missing, stale, extra, invalid, unknown, and current keys with complete matching summary counts. Follow page.nextCursor or page.nextResource.",
 		Annotations: readOnly("Diff Locale Keys"),
 	}, keysDiffTool(a))
 
-	mcp.AddTool(s, &mcp.Tool{
-		Name:        "i18n.keys.usage_scan",
-		Title:       "Scan i18n Key Usage",
-		Description: "Scan TS, TSX, JS, JSX, MJS, and CJS source files for translation key usage evidence and dynamic key hints.",
-		Annotations: readOnly("Scan i18n Key Usage"),
-	}, usageScanTool(a))
-
-	mcp.AddTool(s, &mcp.Tool{
-		Name:        "i18n.keys.dead_report",
-		Title:       "Report Dead i18n Keys",
-		Description: "Classify source locale keys as used, probably unused, maybe dynamic, ignored, or kept using static usage evidence.",
-		Annotations: readOnly("Report Dead i18n Keys"),
-	}, deadReportTool(a))
-
-	mcp.AddTool(s, &mcp.Tool{
-		Name:        "i18n.keys.prune",
-		Title:       "Prune Dead i18n Keys",
-		Description: "Remove exact selected dead keys from locale JSON files. Dry-run by default; writes only with apply true.",
-		Annotations: writeOp("Prune Dead i18n Keys", true, true),
-	}, keysPruneTool(a))
+	// Dead-key features are temporarily unregistered pending safer analysis.
 
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.keys.rename",
@@ -86,16 +67,9 @@ func registerTools(s *mcp.Server, a *app.App) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.translation.plan",
 		Title:       "Plan Translations",
-		Description: "Build a deterministic translation batch from missing and stale locale keys. Does not generate translations.",
+		Description: "Build a bounded translation batch (default 50, maximum 200) from missing and stale keys. Follow page.nextCursor or re-plan after apply. Does not generate translations.",
 		Annotations: readOnly("Plan Translations"),
 	}, translationPlanTool(a))
-
-	mcp.AddTool(s, new(mcp.Tool{
-		Name:        "i18n.translation.generate",
-		Title:       "Generate Translation Proposals",
-		Description: "Generate validated translation proposals using a configured direct provider without writing locale files or state.",
-		Annotations: readOnly("Generate Translation Proposals"),
-	}), translationGenerateTool(a))
 
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.translation.validate",
@@ -114,14 +88,14 @@ func registerTools(s *mcp.Server, a *app.App) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.state.rebuild",
 		Title:       "Rebuild i18n State",
-		Description: "Rebuild .i18n-mcp/state.json from existing locale files. Dry-run by default; writes only with apply true.",
+		Description: "Preview state rebuild counts without embedding state entries; write .i18n-mcp/state.json only with apply true.",
 		Annotations: writeOp("Rebuild i18n State", false, true),
 	}, stateRebuildTool(a))
 
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.report.generate",
 		Title:       "Generate i18n Audit Report",
-		Description: "Generate a deterministic JSON or Markdown i18n audit report from config, inventory, diff, usage, and dead-key analysis.",
+		Description: "Generate a compact JSON or Markdown audit summary with a link to bounded diff details. Source usage and dead-key analysis are temporarily disabled.",
 		Annotations: readOnly("Generate i18n Audit Report"),
 	}, reportGenerateTool(a))
 }

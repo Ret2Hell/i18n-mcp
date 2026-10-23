@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+const maxStoredRecords = 64
+const recordTTL = 15 * time.Minute
+
 // OwnedRecord is a value associated with the subject that created it.
 type OwnedRecord[T any] struct {
 	ID        string
@@ -33,7 +36,25 @@ func (s *Store[T]) Put(ctx context.Context, id string, value T) {
 		s.records = make(map[storeKey]OwnedRecord[T])
 	}
 	owner := SubjectFromContext(ctx)
-	s.records[storeKey{owner: owner, id: id}] = OwnedRecord[T]{
+	now := time.Now().UTC()
+	for key, record := range s.records {
+		if now.Sub(record.CreatedAt) >= recordTTL {
+			delete(s.records, key)
+		}
+	}
+	key := storeKey{owner: owner, id: id}
+	if _, exists := s.records[key]; !exists && len(s.records) >= maxStoredRecords {
+		var oldest storeKey
+		var oldestTime time.Time
+		for k, record := range s.records {
+			if oldestTime.IsZero() || record.CreatedAt.Before(oldestTime) {
+				oldest = k
+				oldestTime = record.CreatedAt
+			}
+		}
+		delete(s.records, oldest)
+	}
+	s.records[key] = OwnedRecord[T]{
 		ID:        id,
 		Owner:     owner,
 		CreatedAt: time.Now().UTC(),
@@ -48,7 +69,7 @@ func (s *Store[T]) Get(ctx context.Context, id string) (T, bool, error) {
 	record, ok := s.records[storeKey{owner: owner, id: id}]
 	s.mu.RUnlock()
 	var zero T
-	if !ok {
+	if !ok || time.Since(record.CreatedAt) >= recordTTL {
 		return zero, false, nil
 	}
 	return record.Value, true, nil

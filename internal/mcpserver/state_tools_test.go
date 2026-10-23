@@ -50,6 +50,8 @@ func assertStateRebuildResult(t *testing.T, structured any, dryRun bool, applied
 		} `json:"result"`
 	}
 	require.NoError(t, json.Unmarshal(data, &out))
+	require.NotContains(t, string(data), `"previewState"`)
+	require.Less(t, len(data), 4096)
 	require.Equal(t, dryRun, out.Result.DryRun)
 	require.Equal(t, applied, out.Result.Applied)
 	require.Equal(t, entries, out.Result.Entries)

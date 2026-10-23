@@ -2,16 +2,19 @@ package mcpserver
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
+	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
+	"github.com/Ret2Hell/i18n-mcp/internal/pagination"
 	resourceuri "github.com/Ret2Hell/i18n-mcp/internal/resources"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func registerResources(s *mcp.Server, a *app.App) {
+	registerPageResources(s, a)
 	s.AddResource(&mcp.Resource{
 		URI:         resourceuri.LocalesURI,
 		Name:        "locales",
@@ -25,7 +28,7 @@ func registerResources(s *mcp.Server, a *app.App) {
 		URITemplate: "i18n://locales/{locale}/{namespace}",
 		Name:        "locale_namespace",
 		Title:       "Locale Namespace",
-		Description: "Read one locale namespace as raw JSON files and flattened translation units.",
+		Description: "Read one bounded page of flattened locale namespace units; follow page.nextResource for remaining units.",
 		MIMEType:    "application/json",
 		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.9},
 	}, readLocaleNamespaceResource(a))
@@ -34,28 +37,12 @@ func registerResources(s *mcp.Server, a *app.App) {
 		URI:         resourceuri.DiffURI,
 		Name:        "analysis_diff",
 		Title:       "i18n Key Diff Analysis",
-		Description: "Latest key diff report with missing, stale, extra, invalid, unknown, and current statuses.",
+		Description: "First bounded diff page with complete summary counts; follow page.nextResource for more.",
 		MIMEType:    "application/json",
 		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.9},
 	}, readDiffResource(a))
 
-	s.AddResource(&mcp.Resource{
-		URI:         resourceuri.UsageURI,
-		Name:        "analysis_usage",
-		Title:       "i18n Usage Analysis",
-		Description: "Latest static translation key usage scan with evidence and dynamic hints.",
-		MIMEType:    "application/json",
-		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.8},
-	}, readUsageResource(a))
-
-	s.AddResource(&mcp.Resource{
-		URI:         resourceuri.DeadKeysURI,
-		Name:        "analysis_dead_keys",
-		Title:       "i18n Dead-Key Analysis",
-		Description: "Latest dead-key classification report with confidence and evidence.",
-		MIMEType:    "application/json",
-		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.8},
-	}, readDeadKeysResource(a))
+	// Dead-key features are temporarily unregistered pending safer analysis.
 
 	s.AddResource(&mcp.Resource{
 		URI:         resourceuri.LatestPlanURI,
@@ -81,27 +68,33 @@ func readLocalesResource(a *app.App) mcp.ResourceHandler {
 		if req.Params.URI != resourceuri.LocalesURI {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
-		inv, err := a.Locales.Inventory(ctx)
-		if err != nil {
-			return nil, err
-		}
-		inv.Units = nil
-		return jsonResource(req.Params.URI, inv)
+		return localePageResource(ctx, a, req.Params.URI, locale.PageInput{})
 	}
 }
 
 func jsonResource(uri string, value any) (*mcp.ReadResourceResult, error) {
-	data, err := json.MarshalIndent(value, "", "  ")
+	data, err := json.Marshal(value)
 	if err != nil {
 		return nil, err
 	}
-	return &mcp.ReadResourceResult{
+	if len(data) > pagination.ResponseBudget {
+		return nil, fmt.Errorf("resource exceeds %d-byte response budget; request a smaller filtered page", pagination.ResponseBudget)
+	}
+	result := &mcp.ReadResourceResult{
 		Contents: []*mcp.ResourceContents{{
 			URI:      uri,
 			MIMEType: "application/json",
 			Text:     string(data),
 		}},
-	}, nil
+	}
+	envelope, err := json.Marshal(result)
+	if err != nil {
+		return nil, err
+	}
+	if len(envelope) > pagination.ResponseBudget {
+		return nil, fmt.Errorf("resource envelope exceeds response budget; request a smaller filtered page")
+	}
+	return result, nil
 }
 
 func readLocaleNamespaceResource(a *app.App) mcp.ResourceHandler {
@@ -111,14 +104,7 @@ func readLocaleNamespaceResource(a *app.App) mcp.ResourceHandler {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
 
-		content, err := a.Locales.Namespace(ctx, localeCode, namespace)
-		if err != nil {
-			if errors.Is(err, locale.ErrNamespaceNotFound) {
-				return nil, mcp.ResourceNotFoundError(req.Params.URI)
-			}
-			return nil, err
-		}
-		return jsonResource(req.Params.URI, content)
+		return localePageResource(ctx, a, req.Params.URI, locale.PageInput{IncludeUnits: true, Locales: []string{localeCode}, Namespaces: []string{namespace}})
 	}
 }
 
@@ -131,10 +117,11 @@ func readDiffResource(a *app.App) mcp.ResourceHandler {
 		if req.Params.URI != resourceuri.DiffURI {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
-		report, err := a.Diff.Analyze(ctx)
+		report, err := a.Diff.Page(ctx, a.RequestStateSigner, a.ProjectRoot, diff.PageInput{})
 		if err != nil {
 			return nil, err
 		}
+		setDiffContinuation(&report, diff.PageInput{})
 		return jsonResource(req.Params.URI, report)
 	}
 }
