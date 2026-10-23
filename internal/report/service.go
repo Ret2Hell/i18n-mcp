@@ -54,7 +54,13 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 		return GenerateOutput{}, err
 	}
 	progress.Step(ctx, "computing translation diff", 2, totalProgressSteps)
-	diffReport, err := s.diff.Analyze(ctx)
+	var details []diff.KeyDiff
+	var visit func(diff.KeyDiff) error
+	if in.Full {
+		visit = func(item diff.KeyDiff) error { details = append(details, item); return nil }
+	}
+	diffReport, err := s.diff.WalkInventory(ctx, inv, diff.Filter{}, visit)
+	diffReport.Items = details
 	if err != nil {
 		return GenerateOutput{}, err
 	}
@@ -70,6 +76,9 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 		Warnings:    collectWarnings(inv, diffReport),
 	}
 	report.Summary = summarize(report)
+	if !in.Full {
+		report = compactReport(report)
+	}
 	out := GenerateOutput{Report: report, Format: format}
 	progress.Step(ctx, "rendering report", 3, totalProgressSteps)
 	switch format {
@@ -83,7 +92,10 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 	if err != nil {
 		return GenerateOutput{}, err
 	}
-	s.storeLatest(ctx, out)
+	latest := out
+	latest.Report = compactReport(report)
+	latest.Text = ""
+	s.storeLatest(ctx, latest)
 	if s.Notifier != nil {
 		s.Notifier.Updated(ctx, resources.LatestReportURI)
 	}
@@ -124,11 +136,11 @@ func summarize(r Report) Summary {
 		Unknown:    r.Diff.Summary.Unknown,
 		Warnings:   len(r.Warnings),
 	}
-	for _, unit := range r.Inventory.Units {
-		if unit.Locale == r.Inventory.SourceLocale {
-			summary.SourceKeys++
+	for code, count := range r.Inventory.CountsByLocale {
+		if code == r.Inventory.SourceLocale {
+			summary.SourceKeys += count
 		} else {
-			summary.TargetKeys++
+			summary.TargetKeys += count
 		}
 	}
 	return summary
@@ -140,6 +152,27 @@ func uniqueSorted(values []string) []string {
 		return value == ""
 	})
 	return slices.Compact(values)
+}
+
+// compactReport removes full datasets before storing or returning network reports.
+func compactReport(r Report) Report {
+	r.DetailsOmitted = true
+	r.DetailResource = resources.DiffURI
+	r.Inventory.Units = nil
+	r.Diff.Items = nil
+	r.WarningsTotal = max(r.WarningsTotal, len(r.Warnings))
+	if len(r.Warnings) > 20 {
+		r.Warnings = r.Warnings[:20]
+	}
+	r.Diff.WarningsTotal = max(r.Diff.WarningsTotal, len(r.Diff.Warnings))
+	if len(r.Diff.Warnings) > 20 {
+		r.Diff.Warnings = r.Diff.Warnings[:20]
+	}
+	r.Inventory.WarningsTotal = max(r.Inventory.WarningsTotal, len(r.Inventory.Warnings))
+	if len(r.Inventory.Warnings) > 20 {
+		r.Inventory.Warnings = r.Inventory.Warnings[:20]
+	}
+	return r
 }
 
 func cloneOutput(out GenerateOutput) GenerateOutput {

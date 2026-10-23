@@ -15,6 +15,9 @@ func RenderMarkdown(report Report) (string, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# i18n Audit Report\n\n")
 	fmt.Fprintf(&b, "Generated: %s\n\n", report.GeneratedAt.Format("2006-01-02T15:04:05Z07:00"))
+	if report.DetailsOmitted {
+		fmt.Fprintf(&b, "Detailed rows are omitted. Read bounded pages from %s or use i18n.keys.diff.\n\n", report.DetailResource)
+	}
 	renderSummary(&b, report)
 	renderInventory(&b, report)
 	renderDiffSection(&b, "Missing Keys", report.Diff.Items, diff.Missing)

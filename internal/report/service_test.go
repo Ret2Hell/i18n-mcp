@@ -42,11 +42,29 @@ func TestGenerateJSONStoresLatestAndSummarizesReports(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, ok)
 	require.Equal(t, out.Format, latest.Format)
-	require.Equal(t, out.Text, latest.Text)
+	require.Empty(t, latest.Text)
+	require.True(t, latest.Report.DetailsOmitted)
+	require.Empty(t, latest.Report.Inventory.Units)
+	require.Empty(t, latest.Report.Diff.Items)
 
 	var decoded report.Report
 	require.NoError(t, json.Unmarshal([]byte(out.Text), &decoded))
 	require.Equal(t, out.Report.Summary, decoded.Summary)
+}
+
+func TestFullExportDoesNotRetainDetailsInLatest(t *testing.T) {
+	a := newReportFixtureApp(t)
+	out, err := a.Reports.Generate(t.Context(), report.GenerateInput{Format: report.FormatJSON, Full: true})
+	require.NoError(t, err)
+	require.NotEmpty(t, out.Report.Inventory.Units)
+	require.NotEmpty(t, out.Report.Diff.Items)
+	require.False(t, out.Report.DetailsOmitted)
+	latest, ok, err := a.Reports.Latest(t.Context())
+	require.NoError(t, err)
+	require.True(t, ok)
+	require.Empty(t, latest.Report.Inventory.Units)
+	require.Empty(t, latest.Report.Diff.Items)
+	require.Equal(t, out.Report.Summary, latest.Report.Summary)
 }
 
 func TestGenerateMarkdownAndUnsupportedFormat(t *testing.T) {

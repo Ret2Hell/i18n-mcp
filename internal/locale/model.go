@@ -47,6 +47,7 @@ type Inventory struct {
 	Units             []Unit                    `json:"units,omitzero"`
 	CountsByLocale    map[string]int            `json:"countsByLocale"`
 	CountsByNamespace map[string]int            `json:"countsByNamespace"`
+	WarningsTotal     int                       `json:"warningsTotal,omitzero"`
 	Warnings          []Warning                 `json:"warnings,omitzero"`
 	Duplicates        []DuplicateNamespaceIssue `json:"duplicates,omitzero"`
 }
