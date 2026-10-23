@@ -80,6 +80,9 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 		report = compactReport(report)
 	}
 	out := GenerateOutput{Report: report, Format: format}
+	if err := ctx.Err(); err != nil {
+		return GenerateOutput{}, err
+	}
 	progress.Step(ctx, "rendering report", 3, totalProgressSteps)
 	switch format {
 	case FormatJSON:
@@ -90,6 +93,9 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 		return GenerateOutput{}, fmt.Errorf("unsupported report format %q", format)
 	}
 	if err != nil {
+		return GenerateOutput{}, err
+	}
+	if err := ctx.Err(); err != nil {
 		return GenerateOutput{}, err
 	}
 	latest := out

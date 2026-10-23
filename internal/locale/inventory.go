@@ -26,6 +26,12 @@ func NewService(guard *fsutil.Guard, configService *config.Service) *Service {
 
 // Inventory returns the locale inventory for the resolved configuration.
 func (s *Service) Inventory(ctx context.Context) (Inventory, error) {
+	return s.InventoryFiltered(ctx, nil, nil)
+}
+
+// InventoryFiltered skips unrelated locale/namespace files before parsing them.
+// The source locale is always retained for comparisons.
+func (s *Service) InventoryFiltered(ctx context.Context, codes, namespaces []string) (Inventory, error) {
 	cfg, err := s.config.Resolve(ctx)
 	if err != nil {
 		return Inventory{}, err
@@ -34,11 +40,18 @@ func (s *Service) Inventory(ctx context.Context) (Inventory, error) {
 	if !validation.Valid {
 		return Inventory{}, configValidationError(validation)
 	}
-	return s.InventoryForConfig(ctx, cfg)
+	return s.inventoryForConfig(ctx, cfg, codes, namespaces)
 }
 
 // InventoryForConfig returns the locale inventory for cfg.
 func (s *Service) InventoryForConfig(ctx context.Context, cfg config.Resolved) (Inventory, error) {
+	return s.inventoryForConfig(ctx, cfg, nil, nil)
+}
+
+func (s *Service) inventoryForConfig(ctx context.Context, cfg config.Resolved, codes, namespaces []string) (Inventory, error) {
+	if err := ctx.Err(); err != nil {
+		return Inventory{}, err
+	}
 	inv := Inventory{
 		SourceLocale:      cfg.SourceLocale,
 		TargetLocales:     slices.Clone(cfg.TargetLocales),
@@ -62,12 +75,24 @@ func (s *Service) InventoryForConfig(ctx context.Context, cfg config.Resolved) (
 			}
 			seenPath[ref.Path] = struct{}{}
 			ref.Namespace = cmp.Or(ref.Namespace, cfg.DefaultNamespace, "common")
+			if err := ctx.Err(); err != nil {
+				return Inventory{}, err
+			}
+			if len(codes) > 0 && ref.Locale != cfg.SourceLocale && !slices.Contains(codes, ref.Locale) {
+				continue
+			}
+			if len(namespaces) > 0 && !slices.Contains(namespaces, ref.Namespace) {
+				continue
+			}
 
 			doc, err := ParseJSONFile(ctx, s.guard, ref.Path)
 			if err != nil {
 				return Inventory{}, err
 			}
-			flat := Flatten(ref, doc.Value)
+			flat, err := FlattenContext(ctx, ref, doc.Value)
+			if err != nil {
+				return Inventory{}, err
+			}
 
 			inv.Files = append(inv.Files, FileSummary{
 				FileRef:    ref,
@@ -89,6 +114,14 @@ func (s *Service) InventoryForConfig(ctx context.Context, cfg config.Resolved) (
 	inv.Locales = slices.Sorted(maps.Keys(seenLocale))
 	inv.Namespaces = slices.Sorted(maps.Keys(seenNamespace))
 
+	if len(codes) > 0 {
+		inv.TargetLocales = nil
+		for _, code := range codes {
+			if code != cfg.SourceLocale {
+				inv.TargetLocales = append(inv.TargetLocales, code)
+			}
+		}
+	}
 	if len(inv.TargetLocales) == 0 {
 		for _, locale := range inv.Locales {
 			if locale != inv.SourceLocale {

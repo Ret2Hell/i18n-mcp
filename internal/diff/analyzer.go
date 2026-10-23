@@ -36,7 +36,7 @@ func (s *Service) Analyze(ctx context.Context) (Report, error) {
 // Walk visits sorted matching records and aggregates counts without retaining them.
 // Filters are applied before validation. Summary counts describe the filtered scope.
 func (s *Service) Walk(ctx context.Context, filter Filter, visit func(KeyDiff) error) (Report, error) {
-	inv, err := s.locales.Inventory(ctx)
+	inv, err := s.locales.InventoryFiltered(ctx, filter.Locales, filter.Namespaces)
 	if err != nil {
 		return Report{}, err
 	}

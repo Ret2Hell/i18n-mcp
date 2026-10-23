@@ -6,13 +6,18 @@ import (
 	"slices"
 	"strings"
 
+	"fmt"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
+	"github.com/Ret2Hell/i18n-mcp/internal/pagination"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 )
 
 // Validate validates proposed translations against source and rules.
 func (s *Service) Validate(ctx context.Context, in ValidationInput) (ValidationOutput, error) {
+	if len(in.Translations) > pagination.MaxLimit {
+		return ValidationOutput{}, fmt.Errorf("at most %d translation proposals per request", pagination.MaxLimit)
+	}
 	inv, err := s.locales.Inventory(ctx)
 	if err != nil {
 		return ValidationOutput{}, err
@@ -31,6 +36,9 @@ func (s *Service) Validate(ctx context.Context, in ValidationInput) (ValidationO
 	targetFiles := targetFileMap(inv)
 	out := ValidationOutput{BatchID: in.BatchID}
 	for _, proposal := range in.Translations {
+		if err := ctx.Err(); err != nil {
+			return ValidationOutput{}, err
+		}
 		accepted, rejected := s.validateProposal(inv.SourceLocale, sources, targetFiles, allowed, in, proposal)
 		if len(rejected.Issues) > 0 {
 			out.Rejected = append(out.Rejected, rejected)

@@ -62,6 +62,9 @@ func (s *Service) Rebuild(ctx context.Context, opts RebuildOptions) (RebuildResu
 	}
 
 	for _, unit := range inv.Units {
+		if err := ctx.Err(); err != nil {
+			return RebuildResult{}, err
+		}
 		if unit.Locale == inv.SourceLocale {
 			sourceByKey[unitIdentity(unit.Namespace, unit.Key)] = unit
 		}
@@ -71,6 +74,9 @@ func (s *Service) Rebuild(ctx context.Context, opts RebuildOptions) (RebuildResu
 	var updated int
 	var skipped int
 	for _, unit := range inv.Units {
+		if err := ctx.Err(); err != nil {
+			return RebuildResult{}, err
+		}
 		if unit.Locale == inv.SourceLocale {
 			continue
 		}

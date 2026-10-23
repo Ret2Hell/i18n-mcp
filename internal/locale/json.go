@@ -36,7 +36,9 @@ func (e *ParseError) Unwrap() error {
 
 // ParseJSONFile reads and parses a locale JSON file under guard.
 func ParseJSONFile(ctx context.Context, guard *fsutil.Guard, relPath string) (JSONDocument, error) {
-	_ = ctx
+	if err := ctx.Err(); err != nil {
+		return JSONDocument{}, err
+	}
 	resolved, err := guard.ResolveExisting(relPath)
 	if err != nil {
 		return JSONDocument{}, err
@@ -47,6 +49,9 @@ func ParseJSONFile(ctx context.Context, guard *fsutil.Guard, relPath string) (JS
 		return JSONDocument{}, fmt.Errorf("read locale file %s: %w", relPath, err)
 	}
 
+	if err := ctx.Err(); err != nil {
+		return JSONDocument{}, err
+	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.UseNumber()
 
@@ -63,6 +68,9 @@ func ParseJSONFile(ctx context.Context, guard *fsutil.Guard, relPath string) (JS
 		return JSONDocument{}, &ParseError{Path: relPath, Err: err}
 	}
 
+	if err := ctx.Err(); err != nil {
+		return JSONDocument{}, err
+	}
 	return JSONDocument{
 		Path:  relPath,
 		Bytes: len(data),

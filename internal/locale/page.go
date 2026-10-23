@@ -20,7 +20,7 @@ type PageInput struct {
 
 // Page returns metadata and optionally a bounded unit page, never raw locale JSON.
 func (s *Service) Page(ctx context.Context, signer *security.RequestStateSigner, project string, in PageInput) (Inventory, error) {
-	inv, err := s.Inventory(ctx)
+	inv, err := s.InventoryFiltered(ctx, in.Locales, in.Namespaces)
 	if err != nil {
 		return Inventory{}, err
 	}

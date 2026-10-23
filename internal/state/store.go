@@ -35,7 +35,9 @@ func (s *Store) Path() string {
 
 // Load reads the state file from disk.
 func (s *Store) Load(ctx context.Context) (File, error) {
-	_ = ctx
+	if err := ctx.Err(); err != nil {
+		return File{}, err
+	}
 	resolved, err := s.guard.Resolve(s.path)
 	if err != nil {
 		return File{}, err
@@ -64,13 +66,18 @@ func (s *Store) Load(ctx context.Context) (File, error) {
 	if file.Version != CurrentVersion {
 		return File{}, fmt.Errorf("unsupported state version %d", file.Version)
 	}
+	if err := ctx.Err(); err != nil {
+		return File{}, err
+	}
 	file.Normalize()
 	return file, nil
 }
 
 // Save writes the state file to disk.
 func (s *Store) Save(ctx context.Context, file File) error {
-	_ = ctx
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	file.Normalize()
 	file.Version = CurrentVersion
 	file.UpdatedAt = time.Now().UTC()
@@ -78,6 +85,9 @@ func (s *Store) Save(ctx context.Context, file File) error {
 	data, err := json.MarshalIndent(file, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal state file: %w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	data = append(data, '\n')
 	return fsutil.AtomicWriteFile(s.guard, s.path, data, 0o600)
