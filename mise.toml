@@ -2,6 +2,7 @@
 go = "1.27.2"
 golangci-lint = "2.14.0"
 hk = "latest"
+gitleaks = "latest"
 goreleaser = "2.18.2"
 syft = "1.54.1"
 
@@ -52,13 +53,13 @@ alias = ["dr"]
 
 [tasks.release-snapshot]
 description = "Build a local GoReleaser snapshot"
-depends = ["check"]
+depends = ["verify"]
 run = "DOCKER_IMAGE=${DOCKER_IMAGE:-ret2hell/i18n-mcp} goreleaser release --snapshot --clean --skip=docker,publish"
 alias = ["rs"]
 
 [tasks.fmt]
 description = "Format Go files"
-run = "gofmt -w ."
+run = "gofmt -s -w ."
 alias = ["f"]
 
 [tasks.tidy]
@@ -68,7 +69,7 @@ alias = ["td"]
 
 [tasks.fmt-check]
 description = "Check Go formatting"
-run = "test -z \"$(gofmt -l .)\""
+run = "test -z \"$(gofmt -s -l .)\""
 alias = ["fc"]
 
 [tasks.tidy-check]
@@ -88,13 +89,17 @@ alias = ["t"]
 
 [tasks.lint]
 description = "Run golangci-lint"
-run = "golangci-lint run"
+run = "golangci-lint run --fix=false ./..."
 alias = ["l"]
 
 [tasks.check]
+description = "Check modified files without modifying them"
+run = "hk check --check"
+alias = ["c"]
+
+[tasks.verify]
 description = "Run all validation checks"
 depends = ["build", "fmt-check", "tidy-check", "vet", "lint", "test"]
-alias = ["c"]
 
 [tasks.clean]
 description = "Remove generated artifacts"
