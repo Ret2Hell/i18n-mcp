@@ -47,15 +47,24 @@ func runAudit(cmd *cobra.Command, opts *RootOptions, refreshUsage, full bool) er
 		format = report.FormatMarkdown
 	}
 
-	out, err := application.Reports.Generate(ctx, report.GenerateInput{Format: format, RefreshUsage: refreshUsage, Full: full})
-	if err != nil {
-		return err
-	}
-	if _, err := fmt.Fprint(cmd.OutOrStdout(), out.Text); err != nil {
-		return err
+	var auditReport report.Report
+	if full && format == report.FormatJSON {
+		auditReport, err = application.Reports.WriteFullJSON(ctx, cmd.OutOrStdout())
+		if err != nil {
+			return err
+		}
+	} else {
+		out, err := application.Reports.Generate(ctx, report.GenerateInput{Format: format, RefreshUsage: refreshUsage, Full: full})
+		if err != nil {
+			return err
+		}
+		if _, err := fmt.Fprint(cmd.OutOrStdout(), out.Text); err != nil {
+			return err
+		}
+		auditReport = out.Report
 	}
 
-	failures := report.EvaluatePolicy(out.Report, out.Report.Config.CI)
+	failures := report.EvaluatePolicy(auditReport, auditReport.Config.CI)
 	if len(failures) > 0 {
 		for _, failure := range failures {
 			if _, err := fmt.Fprintf(cmd.ErrOrStderr(), "audit failure: %s (%d)\n", failure.Message, failure.Count); err != nil {
