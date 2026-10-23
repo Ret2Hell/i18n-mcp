@@ -22,17 +22,19 @@ type RebuildOptions struct {
 
 // RebuildResult describes the result of rebuilding state.
 type RebuildResult struct {
-	DryRun            bool             `json:"dryRun"`
-	Applied           bool             `json:"applied"`
-	StatePath         string           `json:"statePath"`
-	SourceLocale      string           `json:"sourceLocale"`
-	Entries           int              `json:"entries"`
-	Created           int              `json:"created"`
-	Updated           int              `json:"updated"`
-	Skipped           int              `json:"skipped"`
-	Assumptions       []string         `json:"assumptions"`
-	InventoryWarnings []locale.Warning `json:"inventoryWarnings,omitzero"`
-	PreviewState      File             `json:"previewState"`
+	DryRun                 bool             `json:"dryRun"`
+	Applied                bool             `json:"applied"`
+	StatePath              string           `json:"statePath"`
+	SourceLocale           string           `json:"sourceLocale"`
+	Entries                int              `json:"entries"`
+	Created                int              `json:"created"`
+	Updated                int              `json:"updated"`
+	Skipped                int              `json:"skipped"`
+	Assumptions            []string         `json:"assumptions"`
+	InventoryWarningsTotal int              `json:"inventoryWarningsTotal"`
+	InventoryWarnings      []locale.Warning `json:"inventoryWarnings,omitzero"`
+	// PreviewState is internal only: never serialize the entire state in MCP responses.
+	PreviewState File `json:"-"`
 }
 
 // NewService creates a state service.
@@ -122,6 +124,10 @@ func (s *Service) Rebuild(ctx context.Context, opts RebuildOptions) (RebuildResu
 		Assumptions:       rebuildAssumptions(),
 		InventoryWarnings: inv.Warnings,
 		PreviewState:      next,
+	}
+	result.InventoryWarningsTotal = len(result.InventoryWarnings)
+	if len(result.InventoryWarnings) > 20 {
+		result.InventoryWarnings = result.InventoryWarnings[:20]
 	}
 	if opts.Apply {
 		if err := s.store.Save(ctx, next); err != nil {

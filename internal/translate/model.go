@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
+	"github.com/Ret2Hell/i18n-mcp/internal/pagination"
 	"github.com/Ret2Hell/i18n-mcp/internal/validate"
 )
 
@@ -13,25 +14,27 @@ type PlanInput struct {
 	Namespaces     []string         `json:"namespaces,omitzero" jsonschema:"namespaces to include; empty means all namespaces"`
 	Keys           []string         `json:"keys,omitzero" jsonschema:"translation keys to include; empty means all keys"`
 	Statuses       []diff.KeyStatus `json:"statuses,omitzero" jsonschema:"diff statuses to include; defaults to missing and stale"`
-	MaxItems       int              `json:"maxItems,omitzero" jsonschema:"maximum translation units to include"`
+	MaxItems       int              `json:"maxItems,omitzero" jsonschema:"maximum translation units to include; default 50; maximum 200"`
+	Cursor         string           `json:"cursor,omitzero" jsonschema:"nextCursor from the previous plan page; keep filters and maxItems unchanged"`
 	IncludeContext bool             `json:"includeContext,omitzero" jsonschema:"include configured style guide and glossary content"`
 }
 
 // Batch contains translation work items and context.
 type Batch struct {
-	BatchID            string           `json:"batchId"`
-	SourceLocale       string           `json:"sourceLocale"`
-	TargetLocales      []string         `json:"targetLocales"`
-	Items              []Item           `json:"items"`
-	StyleGuide         string           `json:"styleGuide,omitzero"`
-	GlossaryText       string           `json:"glossaryText,omitzero"`
-	Glossary           []GlossaryEntry  `json:"glossary,omitzero"`
-	GlossaryReferences []string         `json:"glossaryReferences,omitzero"`
-	ContextFiles       []ContextFileRef `json:"contextFiles,omitzero"`
-	ValidationRules    []string         `json:"validationRules"`
-	ResourceLinks      []string         `json:"resourceLinks,omitzero"`
-	Warnings           []string         `json:"warnings,omitzero"`
-	CreatedAt          time.Time        `json:"createdAt"`
+	Page               *pagination.Metadata `json:"page,omitzero"`
+	BatchID            string               `json:"batchId"`
+	SourceLocale       string               `json:"sourceLocale"`
+	TargetLocales      []string             `json:"targetLocales"`
+	Items              []Item               `json:"items"`
+	StyleGuide         string               `json:"styleGuide,omitzero"`
+	GlossaryText       string               `json:"glossaryText,omitzero"`
+	Glossary           []GlossaryEntry      `json:"glossary,omitzero"`
+	GlossaryReferences []string             `json:"glossaryReferences,omitzero"`
+	ContextFiles       []ContextFileRef     `json:"contextFiles,omitzero"`
+	ValidationRules    []string             `json:"validationRules"`
+	ResourceLinks      []string             `json:"resourceLinks,omitzero"`
+	Warnings           []string             `json:"warnings,omitzero"`
+	CreatedAt          time.Time            `json:"createdAt"`
 }
 
 // Item describes one planned translation unit.
