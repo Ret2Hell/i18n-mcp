@@ -23,13 +23,13 @@ defaults:
     shell: bash
 
 env:
-  ACTIONLINT_VERSION: v1.7.7
+  JACTIONLINT_VERSION: v2.3.0
   GORELEASER_VERSION: v2.19.0
   GOVULNCHECK_VERSION: v1.7.0
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -111,15 +111,15 @@ jobs:
       - name: Install Go security tools
         run: |
           go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
-          go install "github.com/rhysd/actionlint/cmd/actionlint@${ACTIONLINT_VERSION}"
+          go install "github.com/jdx/jactionlint/v2/cmd/jactionlint@${JACTIONLINT_VERSION}"
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: govulncheck
         if: github.event_name != 'pull_request'
         run: govulncheck ./...
 
-      - name: actionlint
-        run: actionlint
+      - name: jactionlint
+        run: jactionlint
 
       - name: zizmor
         run: |

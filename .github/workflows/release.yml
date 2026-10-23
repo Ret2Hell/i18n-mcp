@@ -35,6 +35,8 @@ jobs:
           fetch-depth: 0
 
       - uses: $/.github/actions/setup-go
+        with:
+          cache: "false"
 
       - name: Validate release tag
         run: |

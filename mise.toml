@@ -1,6 +1,7 @@
 [tools]
 go = "1.27.3"
 golangci-lint = "2.15.0"
+jactionlint = "2.3.0"
 hk = "latest"
 gitleaks = "latest"
 goreleaser = "2.19.0"
@@ -92,6 +93,10 @@ description = "Run golangci-lint"
 run = "golangci-lint run --fix=false ./..."
 alias = ["l"]
 
+[tasks.ci-lint]
+description = "Lint GitHub Actions workflows and configuration"
+run = "jactionlint"
+
 [tasks.check]
 description = "Check modified files without modifying them"
 run = "hk check --check"
@@ -99,7 +104,7 @@ alias = ["c"]
 
 [tasks.verify]
 description = "Run all validation checks"
-depends = ["build", "fmt-check", "tidy-check", "vet", "lint", "test"]
+depends = ["build", "fmt-check", "tidy-check", "vet", "lint", "test", "ci-lint"]
 
 [tasks.clean]
 description = "Remove generated artifacts"
