@@ -1,6 +1,6 @@
 module github.com/Ret2Hell/i18n-mcp
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/Ret2Hell/detect4nextjs v0.1.1
