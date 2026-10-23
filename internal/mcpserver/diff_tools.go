@@ -22,6 +22,7 @@ func keysDiffTool(a *app.App) func(context.Context, *mcp.CallToolRequest, KeysDi
 		if err != nil {
 			return nil, KeysDiffOutput{}, err
 		}
+		setDiffContinuation(&report, in)
 		return nil, KeysDiffOutput{Report: report}, nil
 	}
 }

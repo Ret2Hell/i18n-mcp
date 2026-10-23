@@ -2,17 +2,19 @@ package mcpserver
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
+	"github.com/Ret2Hell/i18n-mcp/internal/pagination"
 	resourceuri "github.com/Ret2Hell/i18n-mcp/internal/resources"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func registerResources(s *mcp.Server, a *app.App) {
+	registerPageResources(s, a)
 	s.AddResource(&mcp.Resource{
 		URI:         resourceuri.LocalesURI,
 		Name:        "locales",
@@ -66,27 +68,33 @@ func readLocalesResource(a *app.App) mcp.ResourceHandler {
 		if req.Params.URI != resourceuri.LocalesURI {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
-		inv, err := a.Locales.Inventory(ctx)
-		if err != nil {
-			return nil, err
-		}
-		inv.Units = nil
-		return jsonResource(req.Params.URI, inv)
+		return localePageResource(ctx, a, req.Params.URI, locale.PageInput{})
 	}
 }
 
 func jsonResource(uri string, value any) (*mcp.ReadResourceResult, error) {
-	data, err := json.MarshalIndent(value, "", "  ")
+	data, err := json.Marshal(value)
 	if err != nil {
 		return nil, err
 	}
-	return &mcp.ReadResourceResult{
+	if len(data) > pagination.ResponseBudget {
+		return nil, fmt.Errorf("resource exceeds %d-byte response budget; request a smaller filtered page", pagination.ResponseBudget)
+	}
+	result := &mcp.ReadResourceResult{
 		Contents: []*mcp.ResourceContents{{
 			URI:      uri,
 			MIMEType: "application/json",
 			Text:     string(data),
 		}},
-	}, nil
+	}
+	envelope, err := json.Marshal(result)
+	if err != nil {
+		return nil, err
+	}
+	if len(envelope) > pagination.ResponseBudget {
+		return nil, fmt.Errorf("resource envelope exceeds response budget; request a smaller filtered page")
+	}
+	return result, nil
 }
 
 func readLocaleNamespaceResource(a *app.App) mcp.ResourceHandler {
@@ -96,14 +104,7 @@ func readLocaleNamespaceResource(a *app.App) mcp.ResourceHandler {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
 
-		content, err := a.Locales.Namespace(ctx, localeCode, namespace)
-		if err != nil {
-			if errors.Is(err, locale.ErrNamespaceNotFound) {
-				return nil, mcp.ResourceNotFoundError(req.Params.URI)
-			}
-			return nil, err
-		}
-		return jsonResource(req.Params.URI, content)
+		return localePageResource(ctx, a, req.Params.URI, locale.PageInput{IncludeUnits: true, Locales: []string{localeCode}, Namespaces: []string{namespace}})
 	}
 }
 
@@ -120,6 +121,7 @@ func readDiffResource(a *app.App) mcp.ResourceHandler {
 		if err != nil {
 			return nil, err
 		}
+		setDiffContinuation(&report, diff.PageInput{})
 		return jsonResource(req.Params.URI, report)
 	}
 }

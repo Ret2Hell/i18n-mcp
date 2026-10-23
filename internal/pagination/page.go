@@ -34,6 +34,7 @@ type Metadata struct {
 	TotalMatched int    `json:"totalMatched"`
 	Truncated    bool   `json:"truncated"`
 	NextCursor   string `json:"nextCursor,omitzero"`
+	NextResource string `json:"nextResource,omitzero"`
 }
 
 type cursorData struct {

@@ -31,11 +31,9 @@ func TestLocaleNamespaceResourceTemplate(t *testing.T) {
 	require.Len(t, res.Contents, 1)
 	require.Equal(t, "application/json", res.Contents[0].MIMEType)
 
-	var content locale.NamespaceContent
+	var content locale.Inventory
 	require.NoError(t, json.Unmarshal([]byte(res.Contents[0].Text), &content))
-	require.Equal(t, "en", content.Locale)
-	require.Equal(t, "common", content.Namespace)
-	require.Len(t, content.Files, 1)
-	require.Len(t, content.RawFiles, 1)
+	require.Equal(t, "en", content.SourceLocale)
+	require.NotNil(t, content.Page)
 	require.Len(t, content.Units, 2)
 }
