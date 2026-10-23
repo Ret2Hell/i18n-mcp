@@ -6,6 +6,7 @@ import (
 	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
+	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	resourceuri "github.com/Ret2Hell/i18n-mcp/internal/resources"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -115,7 +116,7 @@ func readDiffResource(a *app.App) mcp.ResourceHandler {
 		if req.Params.URI != resourceuri.DiffURI {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
-		report, err := a.Diff.Analyze(ctx)
+		report, err := a.Diff.Page(ctx, a.RequestStateSigner, a.ProjectRoot, diff.PageInput{})
 		if err != nil {
 			return nil, err
 		}

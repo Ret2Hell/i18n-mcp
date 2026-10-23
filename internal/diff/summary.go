@@ -1,5 +1,17 @@
 package diff
 
+// Add counts one record without retaining its payload.
+func (s *Summary) Add(item KeyDiff) {
+	if s.ByLocale == nil {
+		s.ByLocale = map[string]StatusCounts{}
+	}
+	s.Total++
+	addStatus(s, item.Status)
+	counts := s.ByLocale[item.Locale]
+	addStatusCounts(&counts, item.Status)
+	s.ByLocale[item.Locale] = counts
+}
+
 // Summarize counts key diff statuses across items.
 func Summarize(items []KeyDiff) Summary {
 	summary := Summary{ByLocale: make(map[string]StatusCounts, len(items))}
