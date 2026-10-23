@@ -6,10 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Ret2Hell/i18n-mcp/internal/deadkey"
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
-	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
 	"github.com/stretchr/testify/require"
 )
 
@@ -64,26 +62,16 @@ func makeGoldenReport() Report {
 				{Locale: "fr", Namespace: "common", Key: "bye", Status: diff.Missing, SourceValue: "Bye"},
 			},
 		},
-		Usage: scanner.Report{GeneratedAt: goldenTime()},
-		DeadKeys: deadkey.Report{
-			SourceLocale: "en",
-			GeneratedAt:  goldenTime(),
-			Summary:      deadkey.Summary{Total: 1, ProbablyUnused: 1},
-			Items: []deadkey.Item{
-				{Namespace: "common", Key: "unused", FullKey: "common:unused", Status: deadkey.StatusProbablyUnused, Confidence: scanner.ConfidenceHigh, Reasons: []string{"not referenced"}},
-			},
-		},
 		Summary: Summary{
-			Locales:        2,
-			Namespaces:     1,
-			SourceKeys:     2,
-			TargetKeys:     1,
-			Missing:        1,
-			Stale:          0,
-			Invalid:        0,
-			Extra:          0,
-			ProbablyUnused: 1,
-			Warnings:       1,
+			Locales:    2,
+			Namespaces: 1,
+			SourceKeys: 2,
+			TargetKeys: 1,
+			Missing:    1,
+			Stale:      0,
+			Invalid:    0,
+			Extra:      0,
+			Warnings:   1,
 		},
 		Warnings: []string{"fixture warning"},
 	}

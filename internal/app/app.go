@@ -70,7 +70,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	translationService := translate.NewService(configService, guard, localeService, stateService, diffService, validatorService)
 	scannerService := scanner.NewService(guard, configService)
 	deadKeyService := deadkey.NewService(configService, guard, localeService, scannerService)
-	reportService := report.NewService(guard.Root(), configService, localeService, diffService, scannerService, deadKeyService)
+	reportService := report.NewService(guard.Root(), configService, localeService, diffService)
 	keyOpsService := keyops.NewService(configService, guard, localeService, stateService)
 	requestStateSigner, err := newRequestStateSigner(opts.RequestStateSecret)
 	if err != nil {

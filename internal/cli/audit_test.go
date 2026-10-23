@@ -72,7 +72,7 @@ func auditConfig(failOnMissing bool) string {
   "targetLocales": ["fr"],
   "localeFiles": ["messages/{locale}.json"],
   "defaultNamespace": "common",
-  "ci": {"failOnMissing": ` + strconv.FormatBool(failOnMissing) + `, "failOnInvalid": false}
+  "ci": {"failOnMissing": ` + strconv.FormatBool(failOnMissing) + `, "failOnInvalid": false, "failOnDeadKeys": true}
 }`
 }
 

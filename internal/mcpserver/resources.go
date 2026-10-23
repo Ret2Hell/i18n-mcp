@@ -39,23 +39,7 @@ func registerResources(s *mcp.Server, a *app.App) {
 		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.9},
 	}, readDiffResource(a))
 
-	s.AddResource(&mcp.Resource{
-		URI:         resourceuri.UsageURI,
-		Name:        "analysis_usage",
-		Title:       "i18n Usage Analysis",
-		Description: "Latest static translation key usage scan with evidence and dynamic hints.",
-		MIMEType:    "application/json",
-		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.8},
-	}, readUsageResource(a))
-
-	s.AddResource(&mcp.Resource{
-		URI:         resourceuri.DeadKeysURI,
-		Name:        "analysis_dead_keys",
-		Title:       "i18n Dead-Key Analysis",
-		Description: "Latest dead-key classification report with confidence and evidence.",
-		MIMEType:    "application/json",
-		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.8},
-	}, readDeadKeysResource(a))
+	// Dead-key features are temporarily unregistered pending safer analysis.
 
 	s.AddResource(&mcp.Resource{
 		URI:         resourceuri.LatestPlanURI,

@@ -42,15 +42,7 @@ func registerPrompts(s *mcp.Server, a *app.App) {
 		},
 	}, reviewTranslationsPrompt(a))
 
-	s.AddPrompt(&mcp.Prompt{
-		Name:        "i18n_audit_dead_keys",
-		Title:       "Audit Dead i18n Keys",
-		Description: "Review dead-key candidates and dynamic hints before creating a prune preview.",
-		Arguments: []*mcp.PromptArgument{
-			{Name: "confidenceThreshold", Title: "Confidence Threshold", Description: "minimum confidence to consider, such as medium or high"},
-			{Name: "includeDynamic", Title: "Include Dynamic", Description: "whether maybe_dynamic keys should be included in review"},
-		},
-	}, auditDeadKeysPrompt(a))
+	// Dead-key features are temporarily unregistered pending safer analysis.
 
 	s.AddPrompt(new(mcp.Prompt{
 		Name:        "i18n_ci_report_summary",
@@ -158,7 +150,8 @@ Report resource: %s
 
 Summary requirements:
 - Lead with blocking issues that should fail CI.
-- Include counts for missing, stale, invalid, extra, and probably unused keys.
+- Include counts for missing, stale, invalid, and extra keys.
+- Explain that source usage scanning and dead-key analysis are temporarily disabled.
 - Separate warnings from errors.
 - Mention affected locales and namespaces.
 - Include exact tool or command suggestions for remediation.

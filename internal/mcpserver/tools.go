@@ -55,26 +55,7 @@ func registerTools(s *mcp.Server, a *app.App) {
 		Annotations: readOnly("Diff Locale Keys"),
 	}, keysDiffTool(a))
 
-	mcp.AddTool(s, &mcp.Tool{
-		Name:        "i18n.keys.usage_scan",
-		Title:       "Scan i18n Key Usage",
-		Description: "Scan TS, TSX, JS, JSX, MJS, and CJS source files for translation key usage evidence and dynamic key hints.",
-		Annotations: readOnly("Scan i18n Key Usage"),
-	}, usageScanTool(a))
-
-	mcp.AddTool(s, &mcp.Tool{
-		Name:        "i18n.keys.dead_report",
-		Title:       "Report Dead i18n Keys",
-		Description: "Classify source locale keys as used, probably unused, maybe dynamic, ignored, or kept using static usage evidence.",
-		Annotations: readOnly("Report Dead i18n Keys"),
-	}, deadReportTool(a))
-
-	mcp.AddTool(s, &mcp.Tool{
-		Name:        "i18n.keys.prune",
-		Title:       "Prune Dead i18n Keys",
-		Description: "Remove exact selected dead keys from locale JSON files. Dry-run by default; writes only with apply true.",
-		Annotations: writeOp("Prune Dead i18n Keys", true, true),
-	}, keysPruneTool(a))
+	// Dead-key features are temporarily unregistered pending safer analysis.
 
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.keys.rename",
@@ -114,7 +95,7 @@ func registerTools(s *mcp.Server, a *app.App) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.report.generate",
 		Title:       "Generate i18n Audit Report",
-		Description: "Generate a deterministic JSON or Markdown i18n audit report from config, inventory, diff, usage, and dead-key analysis.",
+		Description: "Generate a deterministic JSON or Markdown i18n audit report from config, inventory, and translation diff. Source usage and dead-key analysis are temporarily disabled.",
 		Annotations: readOnly("Generate i18n Audit Report"),
 	}, reportGenerateTool(a))
 }

@@ -8,11 +8,9 @@ import (
 	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
-	"github.com/Ret2Hell/i18n-mcp/internal/deadkey"
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/resources"
-	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
 	"github.com/Ret2Hell/i18n-mcp/internal/security"
 )
 
@@ -27,16 +25,14 @@ type Service struct {
 	config      *config.Service
 	locales     *locale.Service
 	diff        *diff.Service
-	scanner     *scanner.Service
-	deadKeys    *deadkey.Service
 	Notifier    Notifier
 
 	latest security.Store[GenerateOutput]
 }
 
 // NewService creates a report generation service.
-func NewService(projectRoot string, configService *config.Service, localeService *locale.Service, diffService *diff.Service, scannerService *scanner.Service, deadKeyService *deadkey.Service) *Service {
-	return &Service{projectRoot: projectRoot, config: configService, locales: localeService, diff: diffService, scanner: scannerService, deadKeys: deadKeyService}
+func NewService(projectRoot string, configService *config.Service, localeService *locale.Service, diffService *diff.Service) *Service {
+	return &Service{projectRoot: projectRoot, config: configService, locales: localeService, diff: diffService}
 }
 
 // Generate builds and renders an audit report.
@@ -46,7 +42,7 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 	if progress == nil {
 		progress = noopProgress{}
 	}
-	const totalProgressSteps = 5
+	const totalProgressSteps = 3
 
 	cfg, err := s.config.Resolve(ctx)
 	if err != nil {
@@ -62,16 +58,8 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 	if err != nil {
 		return GenerateOutput{}, err
 	}
-	progress.Step(ctx, "scanning source usage", 3, totalProgressSteps)
-	usageReport, err := s.usage(ctx, in.RefreshUsage)
-	if err != nil {
-		return GenerateOutput{}, err
-	}
-	progress.Step(ctx, "building dead-key report", 4, totalProgressSteps)
-	deadReport, err := s.deadKeys.Report(ctx, deadkey.ReportInput{RefreshUsage: in.RefreshUsage})
-	if err != nil {
-		return GenerateOutput{}, err
-	}
+	// Source scanning and dead-key analysis are intentionally disabled. In
+	// particular, never reuse a partial usage scan for audit or prune decisions.
 
 	report := Report{
 		GeneratedAt: time.Now().UTC(),
@@ -79,13 +67,11 @@ func (s *Service) Generate(ctx context.Context, in GenerateInput) (GenerateOutpu
 		Config:      cfg,
 		Inventory:   inv,
 		Diff:        diffReport,
-		Usage:       usageReport,
-		DeadKeys:    deadReport,
-		Warnings:    collectWarnings(inv, diffReport, usageReport, deadReport),
+		Warnings:    collectWarnings(inv, diffReport),
 	}
 	report.Summary = summarize(report)
 	out := GenerateOutput{Report: report, Format: format}
-	progress.Step(ctx, "rendering report", 5, totalProgressSteps)
+	progress.Step(ctx, "rendering report", 3, totalProgressSteps)
 	switch format {
 	case FormatJSON:
 		out.Text, err = RenderJSON(report)
@@ -118,42 +104,25 @@ func (s *Service) storeLatest(ctx context.Context, out GenerateOutput) {
 	s.latest.Put(ctx, "latest", cloneOutput(out))
 }
 
-func (s *Service) usage(ctx context.Context, refresh bool) (scanner.Report, error) {
-	if !refresh {
-		usage, ok, err := s.scanner.Latest(ctx)
-		if err != nil {
-			return scanner.Report{}, err
-		}
-		if ok {
-			return usage, nil
-		}
-	}
-	return s.scanner.Scan(ctx, scanner.ScanInput{})
-}
-
-func collectWarnings(inv locale.Inventory, diffReport diff.Report, usage scanner.Report, deadReport deadkey.Report) []string {
-	var warnings []string
+func collectWarnings(inv locale.Inventory, diffReport diff.Report) []string {
+	warnings := []string{"Source usage scanning and dead-key analysis are temporarily disabled; failOnDeadKeys is not evaluated."}
 	for _, warning := range inv.Warnings {
 		warnings = append(warnings, warning.Code+": "+warning.Message)
 	}
 	warnings = append(warnings, diffReport.Warnings...)
-	warnings = append(warnings, usage.Warnings...)
-	warnings = append(warnings, deadReport.Warnings...)
 	return uniqueSorted(warnings)
 }
 
 func summarize(r Report) Summary {
 	summary := Summary{
-		Locales:        len(r.Inventory.Locales),
-		Namespaces:     len(r.Inventory.Namespaces),
-		Missing:        r.Diff.Summary.Missing,
-		Stale:          r.Diff.Summary.Stale,
-		Invalid:        r.Diff.Summary.Invalid,
-		Extra:          r.Diff.Summary.Extra,
-		Unknown:        r.Diff.Summary.Unknown,
-		ProbablyUnused: r.DeadKeys.Summary.ProbablyUnused,
-		MaybeDynamic:   r.DeadKeys.Summary.MaybeDynamic,
-		Warnings:       len(r.Warnings),
+		Locales:    len(r.Inventory.Locales),
+		Namespaces: len(r.Inventory.Namespaces),
+		Missing:    r.Diff.Summary.Missing,
+		Stale:      r.Diff.Summary.Stale,
+		Invalid:    r.Diff.Summary.Invalid,
+		Extra:      r.Diff.Summary.Extra,
+		Unknown:    r.Diff.Summary.Unknown,
+		Warnings:   len(r.Warnings),
 	}
 	for _, unit := range r.Inventory.Units {
 		if unit.Locale == r.Inventory.SourceLocale {

@@ -13,8 +13,6 @@ Generated: 2026-01-02T03:04:05Z
 | Stale | 0 |
 | Invalid | 0 |
 | Extra | 0 |
-| Probably unused | 1 |
-| Maybe dynamic | 0 |
 | Warnings | 1 |
 
 ## Locale Inventory
@@ -45,12 +43,6 @@ None.
 ## Extra Keys
 
 None.
-
-## Dead-Key Candidates
-
-| Namespace | Key | Status | Confidence | Reasons |
-| --- | --- | --- | --- | --- |
-| `common` | `unused` | `probably_unused` | `high` | not referenced |
 
 ## Changed Files
 

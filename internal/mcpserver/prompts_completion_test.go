@@ -17,7 +17,6 @@ func TestListAndGetCorePrompts(t *testing.T) {
 	requirePromptNames(t, list, []string{
 		"i18n_translate_batch",
 		"i18n_review_translations",
-		"i18n_audit_dead_keys",
 		"i18n_ci_report_summary",
 		"i18n_project_bootstrap",
 		"i18n_add_feature_keys",

@@ -28,7 +28,8 @@ func newAuditCommand(opts *RootOptions) *cobra.Command {
 			return runAudit(cmd, opts, refreshUsage)
 		},
 	}
-	cmd.Flags().BoolVar(&refreshUsage, "refresh-usage", true, "rerun usage scan before generating the report")
+	cmd.Flags().BoolVar(&refreshUsage, "refresh-usage", false, "deprecated: source usage scanning is temporarily disabled")
+	_ = cmd.Flags().MarkDeprecated("refresh-usage", "source usage scanning and dead-key analysis are temporarily disabled; this flag has no effect")
 	return cmd
 }
 

@@ -27,7 +27,16 @@ func TestGenerateJSONStoresLatestAndSummarizesReports(t *testing.T) {
 	require.Equal(t, 2, out.Report.Summary.SourceKeys)
 	require.Equal(t, 1, out.Report.Summary.TargetKeys)
 	require.Equal(t, 1, out.Report.Summary.Missing)
-	require.Equal(t, 1, out.Report.Summary.ProbablyUnused)
+	require.Contains(t, out.Report.Warnings, "Source usage scanning and dead-key analysis are temporarily disabled; failOnDeadKeys is not evaluated.")
+	_, scanned, err := a.Scanner.Latest(t.Context())
+	require.NoError(t, err)
+	require.False(t, scanned)
+	_, classified, err := a.DeadKeys.Latest(t.Context())
+	require.NoError(t, err)
+	require.False(t, classified)
+	require.NotContains(t, out.Text, `"usage":`)
+	require.NotContains(t, out.Text, `"deadKeys":`)
+	require.NotContains(t, out.Text, `"probablyUnused":`)
 
 	latest, ok, err := a.Reports.Latest(t.Context())
 	require.NoError(t, err)
@@ -62,16 +71,14 @@ func TestGenerateEmitsStableProgressStages(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, []progressStep{
-		{message: "loading locale inventory", current: 1, total: 5},
-		{message: "computing translation diff", current: 2, total: 5},
-		{message: "scanning source usage", current: 3, total: 5},
-		{message: "building dead-key report", current: 4, total: 5},
-		{message: "rendering report", current: 5, total: 5},
+		{message: "loading locale inventory", current: 1, total: 3},
+		{message: "computing translation diff", current: 2, total: 3},
+		{message: "rendering report", current: 3, total: 3},
 	}, progress.steps)
 }
 
 func TestEvaluatePolicyReportsEnabledFailuresOnly(t *testing.T) {
-	r := report.Report{Summary: report.Summary{Missing: 2, Stale: 3, Invalid: 4, ProbablyUnused: 5}}
+	r := report.Report{Summary: report.Summary{Missing: 2, Stale: 3, Invalid: 4}}
 	policy := config.CIConfig{FailOnMissing: true, FailOnInvalid: true, FailOnDeadKeys: true}
 
 	got := report.EvaluatePolicy(r, policy)
@@ -79,12 +86,11 @@ func TestEvaluatePolicyReportsEnabledFailuresOnly(t *testing.T) {
 	require.Equal(t, []report.Failure{
 		{Code: "missing", Message: "missing translations detected", Count: 2},
 		{Code: "invalid", Message: "invalid translations detected", Count: 4},
-		{Code: "dead_keys", Message: "probably unused keys detected", Count: 5},
 	}, got)
 }
 
 func TestEvaluatePolicyIgnoresZeroCountsAndDisabledRules(t *testing.T) {
-	r := report.Report{Summary: report.Summary{Missing: 0, Stale: 3, Invalid: 0, ProbablyUnused: 5}}
+	r := report.Report{Summary: report.Summary{Missing: 0, Stale: 3, Invalid: 0}}
 	policy := config.CIConfig{FailOnMissing: true, FailOnInvalid: true, FailOnDeadKeys: false}
 
 	got := report.EvaluatePolicy(r, policy)
