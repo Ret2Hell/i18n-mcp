@@ -41,7 +41,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: ./.github/actions/setup-go
+      - uses: $/.github/actions/setup-go
 
       - name: Verify go mod tidy
         run: |
@@ -90,7 +90,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: ./.github/actions/setup-go
+      - uses: $/.github/actions/setup-go
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a  # v9.3.0
@@ -106,7 +106,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: ./.github/actions/setup-go
+      - uses: $/.github/actions/setup-go
 
       - name: Install Go security tools
         run: |
@@ -137,7 +137,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - uses: ./.github/actions/setup-go
+      - uses: $/.github/actions/setup-go
 
       - name: Install GoReleaser
         run: |

@@ -34,7 +34,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
-      - uses: ./.github/actions/setup-go
+      - uses: $/.github/actions/setup-go
 
       - name: Validate release tag
         run: |
