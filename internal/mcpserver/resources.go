@@ -28,7 +28,7 @@ func registerResources(s *mcp.Server, a *app.App) {
 		URITemplate: "i18n://locales/{locale}/{namespace}",
 		Name:        "locale_namespace",
 		Title:       "Locale Namespace",
-		Description: "Read one locale namespace as raw JSON files and flattened translation units.",
+		Description: "Read one bounded page of flattened locale namespace units; follow page.nextResource for remaining units.",
 		MIMEType:    "application/json",
 		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.9},
 	}, readLocaleNamespaceResource(a))
@@ -37,7 +37,7 @@ func registerResources(s *mcp.Server, a *app.App) {
 		URI:         resourceuri.DiffURI,
 		Name:        "analysis_diff",
 		Title:       "i18n Key Diff Analysis",
-		Description: "Latest key diff report with missing, stale, extra, invalid, unknown, and current statuses.",
+		Description: "First bounded diff page with complete summary counts; follow page.nextResource for more.",
 		MIMEType:    "application/json",
 		Annotations: &mcp.Annotations{Audience: []mcp.Role{"assistant"}, Priority: 0.9},
 	}, readDiffResource(a))

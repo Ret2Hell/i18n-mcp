@@ -51,7 +51,7 @@ func registerTools(s *mcp.Server, a *app.App) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.keys.diff",
 		Title:       "Diff Locale Keys",
-		Description: "Compare source and target locales for missing, stale, extra, invalid, unknown, and current keys.",
+		Description: "Return a bounded, filtered page of missing, stale, extra, invalid, unknown, and current keys with complete matching summary counts. Follow page.nextCursor or page.nextResource.",
 		Annotations: readOnly("Diff Locale Keys"),
 	}, keysDiffTool(a))
 
@@ -67,7 +67,7 @@ func registerTools(s *mcp.Server, a *app.App) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.translation.plan",
 		Title:       "Plan Translations",
-		Description: "Build a deterministic translation batch from missing and stale locale keys. Does not generate translations.",
+		Description: "Build a bounded translation batch (default 50, maximum 200) from missing and stale keys. Follow page.nextCursor or re-plan after apply. Does not generate translations.",
 		Annotations: readOnly("Plan Translations"),
 	}, translationPlanTool(a))
 
@@ -88,14 +88,14 @@ func registerTools(s *mcp.Server, a *app.App) {
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.state.rebuild",
 		Title:       "Rebuild i18n State",
-		Description: "Rebuild .i18n-mcp/state.json from existing locale files. Dry-run by default; writes only with apply true.",
+		Description: "Preview state rebuild counts without embedding state entries; write .i18n-mcp/state.json only with apply true.",
 		Annotations: writeOp("Rebuild i18n State", false, true),
 	}, stateRebuildTool(a))
 
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.report.generate",
 		Title:       "Generate i18n Audit Report",
-		Description: "Generate a deterministic JSON or Markdown i18n audit report from config, inventory, and translation diff. Source usage and dead-key analysis are temporarily disabled.",
+		Description: "Generate a compact JSON or Markdown audit summary with a link to bounded diff details. Source usage and dead-key analysis are temporarily disabled.",
 		Annotations: readOnly("Generate i18n Audit Report"),
 	}, reportGenerateTool(a))
 }
