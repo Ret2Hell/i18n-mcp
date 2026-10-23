@@ -155,7 +155,7 @@ func makeTranslationMCPFixture(t *testing.T) string {
   "localeFiles": ["messages/{locale}/{namespace}.json"],
   "defaultNamespace": "common",
   "format": {"sortKeys": false, "indent": 2, "trailingNewline": true},
-  "translation": {"mode": "agent"}
+  "translation": {}
 }`)
 	writeFile(t, root, "messages/en/auth.json", `{
   "login": {

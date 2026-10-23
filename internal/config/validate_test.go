@@ -35,7 +35,6 @@ func TestValidateRejectsBadConfig(t *testing.T) {
 			TargetLocales: []string{"en"},
 			LocaleFiles:   []string{"messages/*.json"},
 			Format:        FormatConfig{Indent: 20},
-			Translation:   TranslationConfig{Mode: "bad"},
 		},
 		ProjectRoot: root,
 	}
@@ -47,7 +46,6 @@ func TestValidateRejectsBadConfig(t *testing.T) {
 	requireDiagnostic(t, got.Errors, "target_contains_source", "targetLocales")
 	requireDiagnostic(t, got.Errors, "locale_pattern_missing_locale", "localeFiles[0]")
 	requireDiagnostic(t, got.Errors, "invalid_indent", "format.indent")
-	requireDiagnostic(t, got.Errors, "invalid_translation_mode", "translation.mode")
 }
 
 func TestValidateRejectsProjectPathsOutsideRoot(t *testing.T) {

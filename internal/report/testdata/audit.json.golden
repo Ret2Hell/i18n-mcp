@@ -10,9 +10,7 @@
       "indent": 0,
       "trailingNewline": false
     },
-    "translation": {
-      "mode": ""
-    },
+    "translation": {},
     "ci": {
       "failOnMissing": false,
       "failOnStale": false,

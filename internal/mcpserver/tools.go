@@ -90,13 +90,6 @@ func registerTools(s *mcp.Server, a *app.App) {
 		Annotations: readOnly("Plan Translations"),
 	}, translationPlanTool(a))
 
-	mcp.AddTool(s, new(mcp.Tool{
-		Name:        "i18n.translation.generate",
-		Title:       "Generate Translation Proposals",
-		Description: "Generate validated translation proposals using a configured direct provider without writing locale files or state.",
-		Annotations: readOnly("Generate Translation Proposals"),
-	}), translationGenerateTool(a))
-
 	mcp.AddTool(s, &mcp.Tool{
 		Name:        "i18n.translation.validate",
 		Title:       "Validate Translations",

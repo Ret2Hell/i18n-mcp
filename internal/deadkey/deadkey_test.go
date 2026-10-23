@@ -112,7 +112,7 @@ func TestPruneNotifiesWhenExactlyOneFileWasWritten(t *testing.T) {
   "localeFiles": ["messages/{locale}/{namespace}.json"],
   "defaultNamespace": "common",
   "format": {"sortKeys": false, "indent": 2, "trailingNewline": true},
-  "translation": {"mode": "agent"}
+  "translation": {}
 }
 `)
 	require.NoError(t, os.Remove(filepath.Join(a.ProjectRoot, "messages/fr/common.json")))
@@ -190,7 +190,7 @@ func newDeadKeyFixtureApp(t *testing.T) *app.App {
   "keptKeyPatterns": ["common.kept"],
   "dynamicKeyHints": ["routes.*"],
   "format": {"sortKeys": false, "indent": 2, "trailingNewline": true},
-  "translation": {"mode": "agent"}
+  "translation": {}
 }
 `)
 	writeDeadKeyFile(t, root, "messages/en/common.json", `{

@@ -107,6 +107,6 @@ func validWriteConfig() File {
 			Indent:          2,
 			TrailingNewline: true,
 		},
-		Translation: TranslationConfig{Mode: "agent"},
+		Translation: TranslationConfig{},
 	}
 }

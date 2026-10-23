@@ -99,6 +99,10 @@ func TestServerCatalogOrderingIsDeterministic(t *testing.T) {
 	first := serverCatalogSnapshot(t)
 	second := serverCatalogSnapshot(t)
 	require.Equal(t, first, second)
+	require.NotContains(t, first.Tools, "i18n.translation.generate")
+	require.Contains(t, first.Tools, "i18n.translation.plan")
+	require.Contains(t, first.Tools, "i18n.translation.validate")
+	require.Contains(t, first.Tools, "i18n.translation.apply")
 }
 
 type catalogSnapshot struct {

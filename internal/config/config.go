@@ -13,7 +13,7 @@ type File struct {
 	KeptKeyPatterns      []string          `json:"keptKeyPatterns,omitzero" jsonschema:"dead-key patterns to always keep"`
 	DynamicKeyHints      []string          `json:"dynamicKeyHints,omitzero" jsonschema:"patterns that may be used dynamically"`
 	Format               FormatConfig      `json:"format" jsonschema:"locale JSON formatting preferences"`
-	Translation          TranslationConfig `json:"translation" jsonschema:"translation mode and optional context files"`
+	Translation          TranslationConfig `json:"translation" jsonschema:"optional translation context files"`
 	CI                   CIConfig          `json:"ci" jsonschema:"CI audit failure policy"`
 }
 
@@ -24,10 +24,8 @@ type FormatConfig struct {
 	TrailingNewline bool `json:"trailingNewline" jsonschema:"write trailing newline at end of JSON files"`
 }
 
-// TranslationConfig controls translation behavior and context files.
+// TranslationConfig specifies optional context files for translation plans.
 type TranslationConfig struct {
-	Mode           string `json:"mode" jsonschema:"translation mode: agent or provider"`
-	Provider       string `json:"provider,omitzero" jsonschema:"optional provider name for provider mode"`
 	StyleGuidePath string `json:"styleGuidePath,omitzero" jsonschema:"optional project-relative style guide path"`
 	GlossaryPath   string `json:"glossaryPath,omitzero" jsonschema:"optional project-relative glossary path"`
 }

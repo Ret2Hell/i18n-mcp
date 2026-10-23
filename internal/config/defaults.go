@@ -17,7 +17,6 @@ func Defaults() File {
 			Indent:          2,
 			TrailingNewline: true,
 		},
-		Translation: TranslationConfig{Mode: "agent"},
 		CI: CIConfig{
 			FailOnMissing:  true,
 			FailOnStale:    false,

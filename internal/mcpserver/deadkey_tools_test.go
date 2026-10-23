@@ -141,7 +141,7 @@ func makeDeadKeyMCPFixture(t *testing.T) string {
   "defaultNamespace": "common",
   "dynamicKeyHints": ["routes.*"],
   "format": {"sortKeys": false, "indent": 2, "trailingNewline": true},
-  "translation": {"mode": "agent"}
+  "translation": {}
 }
 `)
 	writeMCPDeadKeyFile(t, root, "messages/en/common.json", `{"used":"Used","unused":"Unused"}

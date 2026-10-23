@@ -29,7 +29,6 @@ func (s *Service) Validate(ctx context.Context, cfg Resolved) ValidationResult {
 	validateLocales(cfg, &result)
 	validateLocaleFiles(cfg, &result)
 	validateFormat(cfg, &result)
-	validateTranslationMode(cfg, &result)
 	s.validateTranslationPaths(cfg, &result)
 
 	result.Valid = len(result.Errors) == 0
@@ -64,16 +63,6 @@ func validateLocaleFiles(cfg Resolved, result *ValidationResult) {
 func validateFormat(cfg Resolved, result *ValidationResult) {
 	if cfg.Format.Indent < 0 || cfg.Format.Indent > 8 {
 		result.Errors = append(result.Errors, Diagnostic{Code: "invalid_indent", Field: "format.indent", Message: "format.indent must be between 0 and 8"})
-	}
-}
-
-func validateTranslationMode(cfg Resolved, result *ValidationResult) {
-	switch cfg.Translation.Mode {
-	case "agent", "provider":
-	case "":
-		result.Errors = append(result.Errors, Diagnostic{Code: "translation_mode_required", Field: "translation.mode", Message: "translation.mode is required"})
-	default:
-		result.Errors = append(result.Errors, Diagnostic{Code: "invalid_translation_mode", Field: "translation.mode", Message: "translation.mode must be agent or provider"})
 	}
 }
 

@@ -501,7 +501,7 @@ func statelessPruneFixture(t *testing.T) string {
 			"targetLocales":["fr"],
 			"localeFiles":["messages/{locale}/{namespace}.json"],
 			"defaultNamespace":"common",
-			"translation":{"mode":"agent"}
+			"translation":{}
 		}`,
 		"messages/en/common.json": `{"used":"Used","unused":"Unused"}`,
 		"messages/fr/common.json": `{"used":"Utilise","unused":"Inutilise"}`,

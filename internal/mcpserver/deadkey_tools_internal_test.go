@@ -140,7 +140,7 @@ func internalPruneFixture(t *testing.T) string {
 		"targetLocales":["fr"],
 		"localeFiles":["messages/{locale}/{namespace}.json"],
 		"defaultNamespace":"common",
-		"translation":{"mode":"agent"}
+		"translation":{}
 	}`)
 	writeInternalPruneFile(t, root, "messages/en/common.json", `{"used":"Used","unused":"Unused"}`)
 	writeInternalPruneFile(t, root, "messages/fr/common.json", `{"used":"Utilise","unused":"Inutilise"}`)

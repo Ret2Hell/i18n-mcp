@@ -24,7 +24,7 @@ func TestConfigGetToolOverInMemoryMCP(t *testing.T) {
   "targetLocales": ["fr", "de"],
   "localeFiles": ["messages/{locale}/{namespace}.json"],
   "format": {"sortKeys": true},
-  "translation": {"mode": "provider", "provider": "test-provider"}
+  "translation": {"styleGuidePath": "docs/style.md", "glossaryPath": "docs/glossary.md"}
 }`), 0o600))
 
 	clientSession := newInMemoryMCPClientSession(t, ctx, projectRoot)
@@ -46,8 +46,8 @@ func TestConfigGetToolOverInMemoryMCP(t *testing.T) {
 	require.True(t, out.Config.Format.SortKeys)
 	require.Equal(t, 2, out.Config.Format.Indent)
 	require.True(t, out.Config.Format.TrailingNewline)
-	require.Equal(t, "provider", out.Config.Translation.Mode)
-	require.Equal(t, "test-provider", out.Config.Translation.Provider)
+	require.Equal(t, "docs/style.md", out.Config.Translation.StyleGuidePath)
+	require.Equal(t, "docs/glossary.md", out.Config.Translation.GlossaryPath)
 }
 
 func TestConfigGetToolReturnsDefaultsWhenConfigFileIsMissingOverInMemoryMCP(t *testing.T) {
@@ -74,7 +74,7 @@ func TestConfigGetToolReturnsDefaultsWhenConfigFileIsMissingOverInMemoryMCP(t *t
 	require.Equal(t, []string{"t", "i18n.t"}, out.Config.TranslationFunctions)
 	require.Equal(t, []string{"useTranslations", "getTranslations"}, out.Config.NamespaceFunctions)
 	require.Equal(t, 2, out.Config.Format.Indent)
-	require.Equal(t, "agent", out.Config.Translation.Mode)
+	require.Empty(t, out.Config.Translation)
 }
 
 func TestConfigValidateToolOverInMemoryMCP(t *testing.T) {
@@ -85,7 +85,7 @@ func TestConfigValidateToolOverInMemoryMCP(t *testing.T) {
   "targetLocales": ["en"],
   "localeFiles": ["messages/*.json"],
   "format": {"indent": 20},
-  "translation": {"mode": "bad"}
+  "translation": {}
 }`), 0o600))
 
 	clientSession := newInMemoryMCPClientSession(t, ctx, projectRoot)
@@ -107,7 +107,6 @@ func TestConfigValidateToolOverInMemoryMCP(t *testing.T) {
 	requireValidationCode(t, out.Validation.Errors, "target_contains_source")
 	requireValidationCode(t, out.Validation.Errors, "locale_pattern_missing_locale")
 	requireValidationCode(t, out.Validation.Errors, "invalid_indent")
-	requireValidationCode(t, out.Validation.Errors, "invalid_translation_mode")
 }
 
 func requireValidationCode(t *testing.T, diagnostics []config.Diagnostic, code string) {
