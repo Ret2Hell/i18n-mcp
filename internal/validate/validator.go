@@ -40,10 +40,14 @@ func validatePairIssues(ctx context.Context, pair Pair) []Issue {
 	}
 
 	var messageIssues []Issue
-	if LooksLikeICU(pair.Source) || LooksLikeICU(pair.Target) {
+	format := pair.Options.MessageFormat
+	if format == "icu" || ((format == "" || format == "auto") && (LooksLikeICU(pair.Source) || LooksLikeICU(pair.Target))) {
 		messageIssues = compareICUMessages(ctx, pair.Source, pair.Target)
 	} else {
-		messageIssues = comparePlaceholders(pair.Source, pair.Target)
+		messageIssues = comparePlaceholders(pair.Source, pair.Target, pair.Options)
+	}
+	if pair.Options.Printf {
+		messageIssues = append(messageIssues, comparePrintf(pair.Source, pair.Target)...)
 	}
 	return slices.Concat(
 		issues,

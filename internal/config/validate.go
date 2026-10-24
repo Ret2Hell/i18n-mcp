@@ -29,6 +29,9 @@ func (s *Service) Validate(ctx context.Context, cfg Resolved) ValidationResult {
 	validateLocales(cfg, &result)
 	validateLocaleFiles(cfg, &result)
 	validateFormat(cfg, &result)
+	if !slices.Contains([]string{"", "auto", "icu", "interpolation", "i18next"}, cfg.Validation.MessageFormat) {
+		result.Errors = append(result.Errors, Diagnostic{Code: "invalid_message_format", Field: "validation.messageFormat", Message: "messageFormat must be auto, icu, interpolation, or i18next"})
+	}
 	s.validateTranslationPaths(cfg, &result)
 
 	result.Valid = len(result.Errors) == 0

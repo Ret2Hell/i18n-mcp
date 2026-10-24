@@ -13,6 +13,7 @@ type File struct {
 	KeptKeyPatterns      []string          `json:"keptKeyPatterns,omitzero" jsonschema:"reserved while dead-key analysis is disabled"`
 	DynamicKeyHints      []string          `json:"dynamicKeyHints,omitzero" jsonschema:"reserved while dead-key analysis is disabled"`
 	Format               FormatConfig      `json:"format" jsonschema:"locale JSON formatting preferences"`
+	Validation           ValidationConfig  `json:"validation,omitzero" jsonschema:"message format and optional printf validation"`
 	Translation          TranslationConfig `json:"translation" jsonschema:"optional translation context files"`
 	CI                   CIConfig          `json:"ci" jsonschema:"CI audit failure policy"`
 }

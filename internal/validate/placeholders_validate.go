@@ -6,10 +6,10 @@ import (
 	"slices"
 )
 
-func comparePlaceholders(source string, target string) []Issue {
+func comparePlaceholders(source string, target string, options Options) []Issue {
 	return compareTokenCounts(
-		placeholderCounts(source),
-		placeholderCounts(target),
+		placeholderCounts(source, options),
+		placeholderCounts(target, options),
 		"placeholder",
 		"placeholder_missing",
 		"placeholder_extra",

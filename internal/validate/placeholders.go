@@ -2,7 +2,7 @@ package validate
 
 import (
 	"cmp"
-	"maps"
+	"context"
 	"regexp"
 	"slices"
 	"strings"
@@ -29,10 +29,6 @@ var placeholderPatterns = []placeholderPattern{
 		normalize: identityPlaceholder,
 	},
 	{
-		re:        regexp.MustCompile(`%([0-9]+\$)?[-+#0 ]*(\*|[0-9]+)?(\.(\*|[0-9]+))?[sdif]`),
-		normalize: identityPlaceholder,
-	},
-	{
 		re:        regexp.MustCompile(`\{[A-Za-z_][A-Za-z0-9_]*\}`),
 		normalize: identityPlaceholder,
 	},
@@ -40,25 +36,56 @@ var placeholderPatterns = []placeholderPattern{
 
 // ExtractPlaceholders returns unique placeholder tokens found in s.
 func ExtractPlaceholders(s string) []string {
-	if LooksLikeICU(s) {
-		names := ExtractICUArguments(s)
-		for i := range names {
-			names[i] = "{" + names[i] + "}"
+	tokens, _ := ExtractPlaceholdersFor(context.Background(), s, Options{})
+	return tokens
+}
+
+// ExtractPlaceholdersFor uses the same syntax policy as validation, including ICU parsing.
+func ExtractPlaceholdersFor(ctx context.Context, s string, options Options) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	var tokens []string
+	format := options.MessageFormat
+	if format == "icu" || ((format == "" || format == "auto") && LooksLikeICU(s)) {
+		nodes, err := parseICU(ctx, s)
+		if err != nil {
+			return nil, err
 		}
-		return names
+		for name := range icuArguments(nodes) {
+			tokens = append(tokens, "{"+name+"}")
+		}
+	} else {
+		for _, span := range collectInterpolationSpans(s, options) {
+			tokens = append(tokens, span.value)
+		}
 	}
-	spans := collectPlaceholderSpans(s)
-	seen := make(map[string]struct{}, len(spans))
-	for _, span := range spans {
-		seen[span.value] = struct{}{}
+	if options.Printf {
+		printf, err := printfTokens(s)
+		if err != nil {
+			return nil, err
+		}
+		for _, token := range printf {
+			tokens = append(tokens, token.raw)
+		}
 	}
-	return slices.Sorted(maps.Keys(seen))
+	slices.Sort(tokens)
+	tokens = slices.Compact(tokens)
+	return tokens, nil
 }
 
 func collectPlaceholderSpans(s string) []placeholderSpan {
+	return collectInterpolationSpans(s, Options{})
+}
+
+func collectInterpolationSpans(s string, options Options) []placeholderSpan {
 	var spans []placeholderSpan
 	occupied := make([]bool, len(s))
-	for _, pattern := range placeholderPatterns {
+	patterns := placeholderPatterns
+	if options.MessageFormat == "i18next" {
+		patterns = patterns[:1]
+	}
+	for _, pattern := range patterns {
 		for _, loc := range pattern.re.FindAllStringIndex(s, -1) {
 			if loc == nil || overlapsOccupied(occupied, loc[0], loc[1]) {
 				continue
@@ -82,8 +109,8 @@ func collectPlaceholderSpans(s string) []placeholderSpan {
 	return spans
 }
 
-func placeholderCounts(s string) map[string]int {
-	spans := collectPlaceholderSpans(s)
+func placeholderCounts(s string, options Options) map[string]int {
+	spans := collectInterpolationSpans(s, options)
 	counts := make(map[string]int, len(spans))
 	for _, span := range spans {
 		counts[span.value]++

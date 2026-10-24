@@ -1,6 +1,7 @@
 package locale
 
 import (
+	"github.com/Ret2Hell/i18n-mcp/internal/config"
 	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/pagination"
 )
@@ -42,6 +43,7 @@ type FlattenResult struct {
 
 // Inventory summarizes discovered locale files and translation units.
 type Inventory struct {
+	Validation        config.ValidationConfig   `json:"-"`
 	Page              *pagination.Metadata      `json:"page,omitzero"`
 	SourceLocale      string                    `json:"sourceLocale"`
 	TargetLocales     []string                  `json:"targetLocales"`

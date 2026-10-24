@@ -69,6 +69,15 @@ func (s *Service) ResolveBatch(ctx context.Context, batchID string) (Batch, erro
 }
 
 func (s *Service) buildBatch(ctx context.Context, in PlanInput) (Batch, error) {
+	cfg, err := s.config.Resolve(ctx)
+	if err != nil {
+		return Batch{}, err
+	}
+	validation, err := s.config.ResolveValidation(ctx, cfg.Validation)
+	if err != nil {
+		return Batch{}, err
+	}
+	options := validate.Options{MessageFormat: validation.MessageFormat, Printf: validation.Printf}
 	limit := in.MaxItems
 	if limit == 0 {
 		limit = pagination.DefaultLimit
@@ -84,11 +93,13 @@ func (s *Service) buildBatch(ctx context.Context, in PlanInput) (Batch, error) {
 	if len(statuses) == 0 {
 		statuses = []diff.KeyStatus{diff.Missing, diff.Stale}
 	}
-	report, err := s.diff.Walk(ctx, diff.Filter{Locales: in.Locales, Namespaces: in.Namespaces, Keys: in.Keys, Statuses: statuses}, func(record diff.KeyDiff) error { return builder.Add(planItem(record)) })
-	if err != nil {
-		return Batch{}, err
-	}
-	cfg, err := s.config.Resolve(ctx)
+	report, err := s.diff.Walk(ctx, diff.Filter{Locales: in.Locales, Namespaces: in.Namespaces, Keys: in.Keys, Statuses: statuses}, func(record diff.KeyDiff) error {
+		item, err := planItem(ctx, record, options)
+		if err != nil {
+			return err
+		}
+		return builder.Add(item)
+	})
 	if err != nil {
 		return Batch{}, err
 	}
@@ -141,14 +152,18 @@ func (s *Service) signBatch(ctx context.Context, in PlanInput, batch Batch) (str
 	})
 }
 
-func planItem(record diff.KeyDiff) Item {
+func planItem(ctx context.Context, record diff.KeyDiff, options validate.Options) (Item, error) {
+	placeholders, err := validate.ExtractPlaceholdersFor(ctx, record.SourceValue, options)
+	if err != nil {
+		return Item{}, fmt.Errorf("parse source %s/%s: %w", record.Namespace, record.Key, err)
+	}
 	return Item{
 		ID:     itemID(record.Locale, record.Namespace, record.Key),
 		Locale: record.Locale, Namespace: record.Namespace, Key: record.Key, Status: record.Status,
 		SourceValue: record.SourceValue, OldValue: record.TargetValue, SourceHash: record.SourceHash, TargetHash: record.TargetHash,
-		Placeholders: validate.ExtractPlaceholders(record.SourceValue), Tags: validate.ExtractTags(record.SourceValue), Notes: planNotes(record),
+		Placeholders: placeholders, Tags: validate.ExtractTags(record.SourceValue), Notes: planNotes(record),
 		SourceFilePath: record.SourceFilePath, TargetFilePath: record.TargetFilePath,
-	}
+	}, nil
 }
 
 func planNotes(record diff.KeyDiff) []string {

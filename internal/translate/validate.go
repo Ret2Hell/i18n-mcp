@@ -39,7 +39,7 @@ func (s *Service) Validate(ctx context.Context, in ValidationInput) (ValidationO
 		if err := ctx.Err(); err != nil {
 			return ValidationOutput{}, err
 		}
-		accepted, rejected := s.validateProposal(inv.SourceLocale, sources, targetFiles, allowed, in, proposal)
+		accepted, rejected := s.validateProposal(ctx, inv, sources, targetFiles, allowed, in, proposal)
 		if len(rejected.Issues) > 0 {
 			out.Rejected = append(out.Rejected, rejected)
 			continue
@@ -51,7 +51,7 @@ func (s *Service) Validate(ctx context.Context, in ValidationInput) (ValidationO
 	return out, nil
 }
 
-func (s *Service) validateProposal(sourceLocale string, sources map[string]locale.Unit, targetFiles map[string]string, allowed map[string]Item, in ValidationInput, proposal ProposedTranslation) (ValidatedTranslation, RejectedTranslation) {
+func (s *Service) validateProposal(ctx context.Context, inv locale.Inventory, sources map[string]locale.Unit, targetFiles map[string]string, allowed map[string]Item, in ValidationInput, proposal ProposedTranslation) (ValidatedTranslation, RejectedTranslation) {
 	rejected := RejectedTranslation{ProposedTranslation: proposal}
 	identity := proposalIdentity(proposal.Locale, proposal.Namespace, proposal.Key)
 
@@ -74,8 +74,9 @@ func (s *Service) validateProposal(sourceLocale string, sources map[string]local
 		return ValidatedTranslation{}, rejected
 	}
 
-	result := s.validator.ValidatePair(validate.Pair{
-		SourceLocale: sourceLocale,
+	result := s.validator.ValidatePairContext(ctx, validate.Pair{
+		Options:      validate.Options{MessageFormat: inv.Validation.MessageFormat, Printf: inv.Validation.Printf},
+		SourceLocale: inv.SourceLocale,
 		Locale:       proposal.Locale,
 		Namespace:    proposal.Namespace,
 		Key:          proposal.Key,
