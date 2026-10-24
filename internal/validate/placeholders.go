@@ -40,6 +40,13 @@ var placeholderPatterns = []placeholderPattern{
 
 // ExtractPlaceholders returns unique placeholder tokens found in s.
 func ExtractPlaceholders(s string) []string {
+	if LooksLikeICU(s) {
+		names := ExtractICUArguments(s)
+		for i := range names {
+			names[i] = "{" + names[i] + "}"
+		}
+		return names
+	}
 	spans := collectPlaceholderSpans(s)
 	seen := make(map[string]struct{}, len(spans))
 	for _, span := range spans {
