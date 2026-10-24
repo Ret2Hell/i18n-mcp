@@ -76,6 +76,47 @@ func compareICUMessages(ctx context.Context, source, target string) []Issue {
 			}
 		}
 	}
+	return append(issues, compareICUMessageCounts(sourceNodes, targetNodes)...)
+}
+
+// Counts are compared within corresponding message bodies, never summed over
+// mutually exclusive plural categories. Added locale-specific branches are valid.
+func compareICUMessageCounts(source, target []icuNode) []Issue {
+	counts := func(nodes []icuNode) map[string]int {
+		out := map[string]int{}
+		for _, node := range nodes {
+			if node.name != "" {
+				out[node.name+" ("+node.kind+")"]++
+			}
+		}
+		return out
+	}
+	a, b := counts(source), counts(target)
+	var issues []Issue
+	for _, key := range slices.Sorted(maps.Keys(a)) {
+		if b[key] > 0 && a[key] != b[key] {
+			issues = append(issues, icuIssue("icu_argument_count_changed", key, "target changes argument count within a message body"))
+		}
+	}
+	for _, node := range source {
+		if len(node.branches) == 0 {
+			continue
+		}
+		candidates := []icuNode{}
+		for _, other := range target {
+			if other.name == node.name && other.kind == node.kind {
+				candidates = append(candidates, other)
+			}
+		}
+		if len(candidates) != 1 {
+			continue
+		}
+		for _, selector := range slices.Sorted(maps.Keys(node.branches)) {
+			if body, ok := candidates[0].branches[selector]; ok {
+				issues = append(issues, compareICUMessageCounts(node.branches[selector], body)...)
+			}
+		}
+	}
 	return issues
 }
 

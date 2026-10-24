@@ -11,6 +11,7 @@ import (
 
 const maxICUBytes = 1 << 20
 const maxICUDepth = 32
+const maxICUNodes = 4096
 
 // icuNode is an argument or literal message fragment. Branch bodies are parsed
 // as messages, never reinterpreted as standalone brace placeholders.
@@ -25,6 +26,7 @@ type icuParser struct {
 	ctx   context.Context
 	input string
 	pos   int
+	nodes int
 }
 
 func parseICU(ctx context.Context, input string) ([]icuNode, error) {
@@ -145,6 +147,10 @@ func (p *icuParser) quoted(plural bool) {
 }
 
 func (p *icuParser) argument(depth int, inPlural bool) (icuNode, error) {
+	p.nodes++
+	if p.nodes > maxICUNodes {
+		return icuNode{}, p.fail("ICU node limit exceeded")
+	}
 	p.pos++
 	p.space()
 	node := icuNode{name: p.identifier(), kind: "argument"}
@@ -219,8 +225,12 @@ func (p *icuParser) argument(depth int, inPlural bool) (icuNode, error) {
 			break
 		}
 		start := p.pos
-		for p.pos < len(p.input) && p.input[p.pos] != '{' && p.input[p.pos] != '}' && !unicode.IsSpace(rune(p.input[p.pos])) {
-			p.pos++
+		for p.pos < len(p.input) && p.input[p.pos] != '{' && p.input[p.pos] != '}' {
+			r, size := utf8.DecodeRuneInString(p.input[p.pos:])
+			if unicode.IsSpace(r) {
+				break
+			}
+			p.pos += size
 		}
 		selector := p.input[start:p.pos]
 		if selector == "" {
@@ -247,6 +257,10 @@ func (p *icuParser) argument(depth int, inPlural bool) (icuNode, error) {
 		body, err := p.message(depth+1, true, inPlural || node.kind != "select")
 		if err != nil {
 			return node, err
+		}
+		p.nodes++
+		if p.nodes > maxICUNodes {
+			return node, p.fail("ICU node limit exceeded")
 		}
 		node.branches[selector] = body
 	}

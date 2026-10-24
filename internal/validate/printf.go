@@ -9,9 +9,9 @@ import (
 
 // Supported portable printf conversions, positional arguments and dynamic width/
 // precision. Escaped percents are consumed left-to-right, not guessed from prose.
-var printfPattern = regexp.MustCompile(`^%([0-9]+\$)?[-+#0 ']*(?:[0-9]+|(\*)([0-9]+\$)?)?(?:\.(?:[0-9]+|(\*)([0-9]+\$)?))?(?:hh|ll|[hlLjzt])?([sdiuoxXfFeEgGc])`)
+var printfPattern = regexp.MustCompile(`^%([0-9]+\$)?[-+#0 ']*(?:[0-9]+|(\*)([0-9]+\$)?)?(?:\.(?:[0-9]+|(\*)([0-9]+\$)?))?(hh|ll|[hlLjzt])?([sdiuoxXfFeEgGc])`)
 
-type printfToken struct{ raw, position, width, widthPosition, precision, precisionPosition, conversion string }
+type printfToken struct{ raw, position, width, widthPosition, precision, precisionPosition, length, conversion string }
 
 func printfTokens(s string) ([]printfToken, error) {
 	var out []printfToken
@@ -35,7 +35,11 @@ func printfTokens(s string) ([]printfToken, error) {
 				}
 			}
 		}
-		out = append(out, printfToken{match[0], match[1], match[2], match[3], match[4], match[5], match[6]})
+		modifier, conversion := match[6], match[7]
+		if (strings.ContainsAny(conversion, "sc") && modifier != "" && modifier != "l") || (strings.ContainsAny(conversion, "diuoxX") && modifier == "L") || (strings.ContainsAny(conversion, "fFeEgG") && modifier != "" && modifier != "l" && modifier != "L") {
+			return nil, fmt.Errorf("unsupported printf length modifier %q for %s", modifier, conversion)
+		}
+		out = append(out, printfToken{match[0], match[1], match[2], match[3], match[4], match[5], match[6], match[7]})
 		i += len(match[0]) - 1
 	}
 	return out, nil
@@ -57,19 +61,23 @@ func printfCounts(tokens []printfToken) map[string]int {
 	}
 	for _, token := range tokens {
 		if token.width != "" {
-			add(token.widthPosition, "integer")
+			add(token.widthPosition, ":integer")
 		}
 		if token.precision != "" {
-			add(token.precisionPosition, "integer")
+			add(token.precisionPosition, ":integer")
 		}
 		kind := "integer"
 		switch token.conversion {
 		case "s":
 			kind = "string"
+		case "u", "o", "x", "X":
+			kind = "unsigned"
+		case "c":
+			kind = "character"
 		case "f", "F", "e", "E", "g", "G":
 			kind = "float"
 		}
-		add(token.position, kind)
+		add(token.position, token.length+":"+kind)
 	}
 	return counts
 }

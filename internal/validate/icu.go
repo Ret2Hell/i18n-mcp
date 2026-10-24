@@ -9,7 +9,7 @@ import (
 
 // This pattern routes legacy auto-format callers to the parser. It is not used
 // to extract arguments or validate ICU syntax.
-var icuHeadPattern = regexp.MustCompile(`\{\s*[^{}\s,]+\s*,\s*(plural|select|selectordinal|number|date|time)\b`)
+var icuHeadPattern = regexp.MustCompile(`\{\s*[^{}\s,]+\s*,`)
 
 // LooksLikeICU reports whether a message contains an ICU formatted argument.
 func LooksLikeICU(s string) bool { return icuHeadPattern.MatchString(s) }

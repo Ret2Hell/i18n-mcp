@@ -34,6 +34,10 @@ func TestPrintfPositionsWidthPrecisionAndEscapes(t *testing.T) {
 		{`%%%s`, `%%%s`, true},
 		{`%02d`, `%d`, true},
 		{`%0$s`, `%s`, false},
+		{`%ld`, `%d`, false},
+		{`%d`, `%u`, false},
+		{`%Lf`, `%f`, false},
+		{`%Ls`, `%Ls`, false},
 		{`%s`, `%q`, false},
 	} {
 		r := NewService().ValidatePair(Pair{Source: c.source, Target: c.target, Options: Options{Printf: true}})
@@ -50,6 +54,12 @@ func TestExplicitMessageSyntax(t *testing.T) {
 	r = NewService().ValidatePair(Pair{Source: `Hello {name}`, Target: `Bonjour {user}`, Options: Options{MessageFormat: "icu"}})
 	require.False(t, r.OK)
 	requireIssueCode(t, r.Issues, "icu_argument_missing")
+	r = NewService().ValidatePair(Pair{Source: `{name} invited {name}`, Target: `{name} a invité`, Options: Options{MessageFormat: "icu"}})
+	require.False(t, r.OK)
+	requireIssueCode(t, r.Issues, "icu_argument_count_changed")
+	r = NewService().ValidateStrings(`{n, unsupported}`, `{n, unsupported}`)
+	require.False(t, r.OK)
+	requireIssueCode(t, r.Issues, "icu_source_invalid")
 	r = NewService().ValidatePair(Pair{Source: `Hello {name}`, Target: `Bonjour {name`, Options: Options{MessageFormat: "icu"}})
 	require.False(t, r.OK)
 	requireIssueCode(t, r.Issues, "icu_target_invalid")
