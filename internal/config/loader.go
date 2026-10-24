@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"os"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
@@ -41,9 +40,11 @@ func (s *Service) Resolve(ctx context.Context) (Resolved, error) {
 		return Resolved{}, fmt.Errorf("read config: %w", err)
 	}
 
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	input, err := decodeInput(data)
+	if err != nil {
 		return Resolved{}, fmt.Errorf("parse config %s: %w", resolvedPath, err)
 	}
 
+	cfg = NormalizeInput(input)
 	return Resolved{File: cfg, ProjectRoot: s.guard.Root(), ConfigPath: resolvedPath, Exists: true}, nil
 }

@@ -14,9 +14,9 @@ import (
 
 // WriteInput describes a requested configuration write.
 type WriteInput struct {
-	Config File  `json:"config" jsonschema:"complete .i18n-mcp.json config to write"`
-	DryRun *bool `json:"dryRun,omitzero" jsonschema:"when true, preview changes without writing"`
-	Apply  bool  `json:"apply,omitzero" jsonschema:"must be true to write .i18n-mcp.json"`
+	Config FileInput `json:"config" jsonschema:"replacement config; sourceLocale and localeFiles required; omitted optional fields use defaults"`
+	DryRun *bool     `json:"dryRun,omitzero" jsonschema:"when true, preview changes without writing"`
+	Apply  bool      `json:"apply,omitzero" jsonschema:"must be true to write .i18n-mcp.json"`
 }
 
 // WriteOutput describes the outcome of a configuration write.
@@ -52,7 +52,8 @@ func (s *Service) Write(ctx context.Context, in WriteInput) (WriteOutput, error)
 	if err != nil {
 		return WriteOutput{}, err
 	}
-	after, err := renderConfig(in.Config)
+	cfg := NormalizeInput(in.Config)
+	after, err := renderConfig(cfg)
 	if err != nil {
 		return WriteOutput{}, err
 	}
@@ -65,7 +66,7 @@ func (s *Service) Write(ctx context.Context, in WriteInput) (WriteOutput, error)
 	if err != nil {
 		return WriteOutput{}, err
 	}
-	proposed := Resolved{File: in.Config, ProjectRoot: s.guard.Root(), ConfigPath: resolvedPath, Exists: true}
+	proposed := Resolved{File: cfg, ProjectRoot: s.guard.Root(), ConfigPath: resolvedPath, Exists: true}
 	validation := s.Validate(ctx, proposed)
 	out := WriteOutput{
 		DryRun:     dryRun,

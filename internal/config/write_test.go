@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,7 +18,7 @@ func TestWriteDryRunPreviewsWithoutWriting(t *testing.T) {
 	service := NewService(guard, "")
 	cfg := validWriteConfig()
 
-	out, err := service.Write(ctx, WriteInput{Config: cfg})
+	out, err := service.Write(ctx, WriteInput{Config: inputForWrite(t, cfg)})
 
 	require.NoError(t, err)
 	require.True(t, out.DryRun)
@@ -39,7 +40,7 @@ func TestWriteApplyWritesChangedConfig(t *testing.T) {
 	service := NewService(guard, "")
 	cfg := validWriteConfig()
 
-	out, err := service.Write(ctx, WriteInput{Config: cfg, Apply: true})
+	out, err := service.Write(ctx, WriteInput{Config: inputForWrite(t, cfg), Apply: true})
 
 	require.NoError(t, err)
 	require.False(t, out.DryRun)
@@ -66,7 +67,7 @@ func TestWriteApplyUnchangedConfigDoesNotRewrite(t *testing.T) {
 	beforeInfo, err := os.Stat(configPath)
 	require.NoError(t, err)
 
-	out, err := service.Write(ctx, WriteInput{Config: cfg, Apply: true})
+	out, err := service.Write(ctx, WriteInput{Config: inputForWrite(t, cfg), Apply: true})
 
 	require.NoError(t, err)
 	require.False(t, out.DryRun)
@@ -87,7 +88,7 @@ func TestWriteInvalidConfigReturnsValidationWithoutWriting(t *testing.T) {
 	cfg := validWriteConfig()
 	cfg.SourceLocale = ""
 
-	out, err := service.Write(ctx, WriteInput{Config: cfg, Apply: true})
+	out, err := service.Write(ctx, WriteInput{Config: inputForWrite(t, cfg), Apply: true})
 
 	require.NoError(t, err)
 	require.False(t, out.Validation.Valid)
@@ -98,15 +99,18 @@ func TestWriteInvalidConfigReturnsValidationWithoutWriting(t *testing.T) {
 }
 
 func validWriteConfig() File {
-	return File{
-		SourceLocale:     "en",
-		TargetLocales:    []string{"fr"},
-		LocaleFiles:      []string{"messages/{locale}/{namespace}.json"},
-		DefaultNamespace: "common",
-		Format: FormatConfig{
-			Indent:          2,
-			TrailingNewline: true,
-		},
-		Translation: TranslationConfig{},
-	}
+	cfg := Defaults()
+	cfg.SourceLocale = "en"
+	cfg.TargetLocales = []string{"fr"}
+	cfg.LocaleFiles = []string{"messages/{locale}/{namespace}.json"}
+	return cfg
+}
+
+func inputForWrite(t *testing.T, cfg File) FileInput {
+	t.Helper()
+	data, err := json.Marshal(cfg)
+	require.NoError(t, err)
+	input, err := decodeInput(data)
+	require.NoError(t, err)
+	return input
 }
