@@ -32,7 +32,7 @@ func compareICUMessages(ctx context.Context, source, target string) []Issue {
 			matching := false
 			compatible := false
 			for _, targetArg := range targetArgs {
-				if sourceArg.kind != targetArg.kind {
+				if !compatibleICUArgument(sourceArg, targetArg) {
 					continue
 				}
 				compatible = true
@@ -41,6 +41,9 @@ func compareICUMessages(ctx context.Context, source, target string) []Issue {
 				}
 				selectors := true
 				for selector := range sourceArg.branches {
+					if targetArg.kind == "argument" {
+						continue
+					}
 					if sourceArg.kind != "select" && !strings.HasPrefix(selector, "=") && selector != "other" {
 						continue
 					}
@@ -70,7 +73,7 @@ func compareICUMessages(ctx context.Context, source, target string) []Issue {
 			continue
 		}
 		for _, targetArg := range targets[name] {
-			if !slices.ContainsFunc(sources[name], func(sourceArg icuNode) bool { return sourceArg.kind == targetArg.kind }) {
+			if !slices.ContainsFunc(sources[name], func(sourceArg icuNode) bool { return compatibleICUArgument(sourceArg, targetArg) }) {
 				issues = append(issues, icuIssue("icu_argument_type_changed", name, "target introduces an incompatible argument type"))
 				break
 			}
@@ -91,10 +94,18 @@ func compareICUMessageCounts(source, target []icuNode) []Issue {
 		}
 		return out
 	}
+	collapsed := map[string]bool{}
+	for _, a := range source {
+		for _, b := range target {
+			if a.name == b.name && a.kind != b.kind && compatibleICUArgument(a, b) {
+				collapsed[a.name+" (argument)"] = true
+			}
+		}
+	}
 	a, b := counts(source), counts(target)
 	var issues []Issue
 	for _, key := range slices.Sorted(maps.Keys(a)) {
-		if b[key] > 0 && a[key] != b[key] {
+		if !collapsed[key] && b[key] > 0 && a[key] != b[key] {
 			issues = append(issues, icuIssue("icu_argument_count_changed", key, "target changes argument count within a message body"))
 		}
 	}
@@ -118,6 +129,23 @@ func compareICUMessageCounts(source, target []icuNode) []Issue {
 		}
 	}
 	return issues
+}
+
+// Languages without plural inflection may render the same numeric input directly.
+// Explicit numeric cases and offsets carry extra meaning and cannot be dropped.
+func compatibleICUArgument(source, target icuNode) bool {
+	if source.kind == target.kind {
+		return true
+	}
+	if target.kind != "argument" || (source.kind != "plural" && source.kind != "selectordinal") || source.offset != 0 {
+		return false
+	}
+	for selector := range source.branches {
+		if strings.HasPrefix(selector, "=") {
+			return false
+		}
+	}
+	return true
 }
 
 func icuIssue(code, name, message string) Issue {

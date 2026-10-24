@@ -17,6 +17,8 @@ func TestICUBranchTextIsNotAnArgument(t *testing.T) {
 		{`{n, plural, other {'{literal}' and ''quote'' #}}`, `{n, plural, other {'{littéral}' et ''citation'' #}}`},
 		{`{n, number, ::currency/USD} on {date, date, short}`, `{n, number, ::currency/USD} le {date, date, short}`},
 		{`{rank, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}`, `{rank, selectordinal, one {#er} other {#e}}`},
+		{`{count, plural, one {# question} other {# questions}}`, `Ek olarak {count} soru eklenir.`},
+		{`{count}: {count, plural, one {# item} other {# items}}`, `{count}: toplam {count} öğe`},
 	}
 	for _, c := range cases {
 		t.Run(c.source, func(t *testing.T) {
