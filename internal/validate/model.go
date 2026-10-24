@@ -34,12 +34,19 @@ func NewService() *Service {
 	return &Service{}
 }
 
+// Options selects message syntax; printf is always explicitly opt-in.
+type Options struct {
+	MessageFormat string
+	Printf        bool
+}
+
 // Pair contains a source string and target translation to validate.
 type Pair struct {
-	SourceLocale string `json:"sourceLocale,omitzero"`
-	Locale       string `json:"locale,omitzero"`
-	Namespace    string `json:"namespace,omitzero"`
-	Key          string `json:"key,omitzero"`
-	Source       string `json:"source"`
-	Target       string `json:"target"`
+	Options      Options `json:"-"`
+	SourceLocale string  `json:"sourceLocale,omitzero"`
+	Locale       string  `json:"locale,omitzero"`
+	Namespace    string  `json:"namespace,omitzero"`
+	Key          string  `json:"key,omitzero"`
+	Source       string  `json:"source"`
+	Target       string  `json:"target"`
 }

@@ -1,13 +1,19 @@
 package validate
 
 import (
+	"context"
 	"slices"
 	"strings"
 )
 
 // ValidatePair validates a source and target translation pair.
 func (s *Service) ValidatePair(pair Pair) Result {
-	issues := validatePairIssues(pair)
+	return s.ValidatePairContext(context.Background(), pair)
+}
+
+// ValidatePairContext validates a pair with cancellation-aware ICU parsing.
+func (s *Service) ValidatePairContext(ctx context.Context, pair Pair) Result {
+	issues := validatePairIssues(ctx, pair)
 	return classify(pair, issues)
 }
 
@@ -16,7 +22,7 @@ func (s *Service) ValidateStrings(source string, target string) Result {
 	return s.ValidatePair(Pair{Source: source, Target: target})
 }
 
-func validatePairIssues(pair Pair) []Issue {
+func validatePairIssues(ctx context.Context, pair Pair) []Issue {
 	var issues []Issue
 	if pair.Source != "" && strings.TrimSpace(pair.Target) == "" {
 		issues = append(issues, Issue{
@@ -33,12 +39,20 @@ func validatePairIssues(pair Pair) []Issue {
 		})
 	}
 
+	var messageIssues []Issue
+	format := pair.Options.MessageFormat
+	if format == "icu" || ((format == "" || format == "auto") && (LooksLikeICU(pair.Source) || LooksLikeICU(pair.Target))) {
+		messageIssues = compareICUMessages(ctx, pair.Source, pair.Target)
+	} else {
+		messageIssues = comparePlaceholders(pair.Source, pair.Target, pair.Options)
+	}
+	if pair.Options.Printf {
+		messageIssues = append(messageIssues, comparePrintf(pair.Source, pair.Target)...)
+	}
 	return slices.Concat(
 		issues,
-		comparePlaceholders(pair.Source, pair.Target),
+		messageIssues,
 		compareTags(pair.Source, pair.Target),
-		validateICUShape(pair.Source, pair.Target),
-		compareICUArguments(pair.Source, pair.Target),
 		compareMarkdownLinks(pair.Source, pair.Target),
 	)
 }

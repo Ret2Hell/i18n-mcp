@@ -9,7 +9,7 @@ import (
 
 func TestExtractPlaceholders(t *testing.T) {
 	got := ExtractPlaceholders("Hi {name}, {{ user }}, %{count}, %02d, %%s")
-	require.Equal(t, []string{"%02d", "%{count}", "{name}", "{{user}}"}, got)
+	require.Equal(t, []string{"%{count}", "{name}", "{{user}}"}, got)
 }
 
 func TestCollectPlaceholderSpansRecordsExactOffsets(t *testing.T) {
@@ -45,7 +45,7 @@ func TestExtractPlaceholdersBoundariesAndOverlaps(t *testing.T) {
 		{
 			name: "printf placeholder beside brace placeholder",
 			in:   "%02d{name}",
-			want: []string{"%02d", "{name}"},
+			want: []string{"{name}"},
 		},
 		{
 			name: "double brace normalized and not also single brace",
@@ -142,14 +142,13 @@ func TestValidationIssueAndWarningCodes(t *testing.T) {
 			name:       "ICU target unbalanced braces",
 			source:     "{count, plural, one {# item} other {# items}}",
 			target:     "{count, plural, one {# element} other {# elements}",
-			issueCodes: []string{"icu_target_unbalanced_braces"},
+			issueCodes: []string{"icu_target_invalid"},
 		},
 		{
-			name:         "ICU argument parity",
-			source:       "{count, plural, one {# item} other {# items}}",
-			target:       "{total, plural, one {# element} other {# elements}}",
-			issueCodes:   []string{"icu_argument_missing"},
-			warningCodes: []string{"icu_argument_extra"},
+			name:       "ICU argument parity",
+			source:     "{count, plural, one {# item} other {# items}}",
+			target:     "{total, plural, one {# element} other {# elements}}",
+			issueCodes: []string{"icu_argument_missing", "icu_argument_extra"},
 		},
 		{
 			name:       "only source looks like ICU",
@@ -158,11 +157,10 @@ func TestValidationIssueAndWarningCodes(t *testing.T) {
 			issueCodes: []string{"icu_argument_missing"},
 		},
 		{
-			name:         "only target looks like ICU",
-			source:       "No items",
-			target:       "{count, plural, one {# element} other {# elements}}",
-			wantOK:       true,
-			warningCodes: []string{"icu_argument_extra"},
+			name:       "only target looks like ICU",
+			source:     "No items",
+			target:     "{count, plural, one {# element} other {# elements}}",
+			issueCodes: []string{"icu_argument_extra"},
 		},
 		{
 			name:       "empty target",

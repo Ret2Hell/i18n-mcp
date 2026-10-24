@@ -80,7 +80,7 @@ func (s *Service) WalkInventory(ctx context.Context, inv locale.Inventory, filte
 			var item KeyDiff
 			switch {
 			case hasSource && hasTarget:
-				item = s.classifyExisting(inv.SourceLocale, source, target, stateFile)
+				item = s.classifyExisting(ctx, inv, source, target, stateFile)
 			case hasSource:
 				item = KeyDiff{Locale: code, Namespace: namespace, Key: key, Status: Missing, SourceValue: source.Value, SourceHash: state.SourceHash(source.Value), SourceFilePath: source.FilePath}
 			case hasTarget:
@@ -147,7 +147,7 @@ func compareKeyDiff(a, b KeyDiff) int {
 	return cmp.Or(cmp.Compare(a.Locale, b.Locale), cmp.Compare(a.Namespace, b.Namespace), cmp.Compare(a.Key, b.Key), cmp.Compare(a.Status, b.Status))
 }
 
-func (s *Service) classifyExisting(sourceLocale string, sourceUnit locale.Unit, targetUnit locale.Unit, stateFile state.File) KeyDiff {
+func (s *Service) classifyExisting(ctx context.Context, inv locale.Inventory, sourceUnit locale.Unit, targetUnit locale.Unit, stateFile state.File) KeyDiff {
 	currentSourceHash := state.SourceHash(sourceUnit.Value)
 	entry, ok := stateFile.Entries[state.EntryKey(targetUnit.Locale, targetUnit.Namespace, targetUnit.Key)]
 	status := Current
@@ -157,8 +157,9 @@ func (s *Service) classifyExisting(sourceLocale string, sourceUnit locale.Unit, 
 		status = Stale
 	}
 
-	validation := s.validator.ValidatePair(validate.Pair{
-		SourceLocale: sourceLocale,
+	validation := s.validator.ValidatePairContext(ctx, validate.Pair{
+		Options:      validate.Options{MessageFormat: inv.Validation.MessageFormat, Printf: inv.Validation.Printf},
+		SourceLocale: inv.SourceLocale,
 		Locale:       targetUnit.Locale,
 		Namespace:    targetUnit.Namespace,
 		Key:          targetUnit.Key,

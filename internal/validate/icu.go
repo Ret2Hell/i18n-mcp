@@ -1,33 +1,31 @@
 package validate
 
 import (
-	"fmt"
+	"context"
 	"maps"
 	"regexp"
 	"slices"
 )
 
-var icuHeadPattern = regexp.MustCompile(`\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*,\s*(plural|select|selectordinal|number|date|time)\b`)
+// This pattern routes legacy auto-format callers to the parser. It is not used
+// to extract arguments or validate ICU syntax.
+var icuHeadPattern = regexp.MustCompile(`\{\s*[^{}\s,]+\s*,`)
 
-// LooksLikeICU reports whether s appears to contain an ICU message.
-func LooksLikeICU(s string) bool {
-	return icuHeadPattern.MatchString(s)
-}
+// LooksLikeICU reports whether a message contains an ICU formatted argument.
+func LooksLikeICU(s string) bool { return icuHeadPattern.MatchString(s) }
 
-// ExtractICUArguments returns unique ICU argument names found in s.
+// ExtractICUArguments returns real argument names, including nested/simple ones.
+// Malformed messages return no arguments; validation reports the parse error.
 func ExtractICUArguments(s string) []string {
-	matches := icuHeadPattern.FindAllStringSubmatch(s, -1)
-	seen := make(map[string]struct{}, len(matches))
-	for _, match := range matches {
-		if len(match) < 2 {
-			continue
-		}
-		seen[match[1]] = struct{}{}
+	nodes, err := parseICU(context.Background(), s)
+	if err != nil {
+		return nil
 	}
-	return slices.Sorted(maps.Keys(seen))
+	return slices.Sorted(maps.Keys(icuArguments(nodes)))
 }
 
-// HasBalancedBraces reports whether braces in s are balanced.
+// HasBalancedBraces is retained for callers that only need a lexical brace check.
+// Actual message validation uses parseICU, including apostrophe quoting.
 func HasBalancedBraces(s string) bool {
 	depth := 0
 	for _, r := range s {
@@ -44,45 +42,20 @@ func HasBalancedBraces(s string) bool {
 	return depth == 0
 }
 
-func validateICUShape(source string, target string) []Issue {
-	sourceICU := LooksLikeICU(source)
-	targetICU := LooksLikeICU(target)
-	var issues []Issue
-
-	if sourceICU && !targetICU {
-		issues = append(issues, Issue{
-			Code:     "icu_missing",
-			Message:  "source uses ICU formatting but target does not look like ICU",
-			Severity: SeverityError,
-		})
+func icuArguments(nodes []icuNode) map[string][]icuNode {
+	result := map[string][]icuNode{}
+	var walk func([]icuNode)
+	walk = func(nodes []icuNode) {
+		for _, node := range nodes {
+			if node.name == "" {
+				continue
+			}
+			result[node.name] = append(result[node.name], node)
+			for _, selector := range slices.Sorted(maps.Keys(node.branches)) {
+				walk(node.branches[selector])
+			}
+		}
 	}
-	if !sourceICU && targetICU {
-		issues = append(issues, Issue{
-			Code:     "icu_extra",
-			Message:  "target looks like ICU but source does not",
-			Severity: SeverityWarning,
-		})
-	}
-	if sourceICU && !HasBalancedBraces(source) {
-		issues = append(issues, Issue{
-			Code:     "icu_source_unbalanced_braces",
-			Message:  "source ICU message has unbalanced braces",
-			Severity: SeverityError,
-		})
-	}
-	if targetICU && !HasBalancedBraces(target) {
-		issues = append(issues, Issue{
-			Code:     "icu_target_unbalanced_braces",
-			Message:  "target ICU message has unbalanced braces",
-			Severity: SeverityError,
-		})
-	}
-	if sourceICU && targetICU && len(ExtractICUArguments(source)) == 0 {
-		issues = append(issues, Issue{
-			Code:     "icu_no_arguments",
-			Message:  fmt.Sprintf("ICU source was detected but no argument names were extracted from %q", source),
-			Severity: SeverityWarning,
-		})
-	}
-	return issues
+	walk(nodes)
+	return result
 }

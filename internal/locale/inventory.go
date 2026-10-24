@@ -59,6 +59,12 @@ func (s *Service) inventoryForConfig(ctx context.Context, cfg config.Resolved, c
 		CountsByNamespace: map[string]int{},
 	}
 
+	options, err := s.config.ResolveValidation(ctx, cfg.Validation)
+	if err != nil {
+		return Inventory{}, err
+	}
+	inv.Validation = options
+
 	seenPath := map[string]struct{}{}
 	seenLocale := map[string]struct{}{}
 	seenNamespace := map[string]struct{}{}

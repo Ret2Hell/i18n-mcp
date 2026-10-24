@@ -20,12 +20,15 @@ func proposeConfig(d Detection) config.File {
 
 	switch d.DetectedLibrary {
 	case "next-intl":
+		cfg.Validation.MessageFormat = "icu"
 		cfg.TranslationFunctions = []string{"t"}
 		cfg.NamespaceFunctions = []string{"useTranslations", "getTranslations"}
 	case "next-i18next", "react-i18next":
+		cfg.Validation.MessageFormat = "i18next"
 		cfg.TranslationFunctions = []string{"t", "i18n.t"}
 		cfg.NamespaceFunctions = []string{"useTranslation"}
 	case "i18next":
+		cfg.Validation.MessageFormat = "i18next"
 		cfg.TranslationFunctions = []string{"t", "i18n.t"}
 		cfg.NamespaceFunctions = nil
 	case "next-translate":

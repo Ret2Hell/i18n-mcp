@@ -4,7 +4,7 @@ import "github.com/google/jsonschema-go/jsonschema"
 
 // Schema generates the JSON schema for File configuration.
 func Schema() (*jsonschema.Schema, error) {
-	schema, err := jsonschema.For[File](nil)
+	schema, err := jsonschema.For[FileInput](nil)
 	if err != nil {
 		return nil, err
 	}
