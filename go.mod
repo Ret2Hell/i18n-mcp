@@ -4,7 +4,7 @@ go 1.27.3
 
 require (
 	github.com/Ret2Hell/detect4nextjs v0.1.1
-	github.com/bmatcuk/doublestar/v4 v4.10.2
+	github.com/bmatcuk/doublestar/v4 v4.10.3
 	github.com/bytedance/sonic v1.15.4
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/google/jsonschema-go v0.4.3
