@@ -4,9 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"maps"
 	"slices"
-	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
@@ -58,15 +56,9 @@ func (s *Service) WalkInventory(ctx context.Context, inv locale.Inventory, filte
 		return Report{}, err
 	}
 	sources, targets := indexUnits(inv)
-	identities := map[string]struct{}{}
-	for _, unit := range inv.Units {
-		if (len(filter.Namespaces) == 0 || slices.Contains(filter.Namespaces, unit.Namespace)) && (len(filter.Keys) == 0 || slices.Contains(filter.Keys, unit.Key)) && strings.HasPrefix(unit.Key, filter.KeyPrefix) {
-			identities[sourceIdentity(unit.Namespace, unit.Key)] = struct{}{}
-		}
-	}
-	keys := slices.Sorted(maps.Keys(identities))
+	analysis := inventoryAnalysis{service: s, inventory: inv, state: stateFile, sources: sources, targets: targets, checkedSources: map[string][]validate.Issue{}}
+	keys := matchingIdentities(inv, filter)
 	report := Report{SourceLocale: inv.SourceLocale, TargetLocales: targetLocales(inv), Warnings: inventoryWarnings(inv.Warnings)}
-	checkedSources := map[string][]validate.Issue{}
 	for _, code := range report.TargetLocales {
 		if len(filter.Locales) > 0 && !slices.Contains(filter.Locales, code) {
 			continue
@@ -75,41 +67,8 @@ func (s *Service) WalkInventory(ctx context.Context, inv locale.Inventory, filte
 			if err := ctx.Err(); err != nil {
 				return Report{}, err
 			}
-			namespace, key, _ := strings.Cut(id, "\x00")
-			source, hasSource := sources[id]
-			target, hasTarget := targets[targetIdentity(code, namespace, key)]
-			var sourceIssues []validate.Issue
-			if hasSource {
-				var checked bool
-				sourceIssues, checked = checkedSources[id]
-				if !checked {
-					policy := inv.Validation.ForKey(namespace, key)
-					sourceIssues = validate.CheckSource(ctx, source.Value, validate.Options{MessageFormat: policy.MessageFormat, Printf: policy.Printf})
-					for i := range sourceIssues {
-						sourceIssues[i].Locale = inv.SourceLocale
-						sourceIssues[i].Namespace = namespace
-						sourceIssues[i].Key = key
-					}
-					checkedSources[id] = sourceIssues
-					if len(sourceIssues) > 0 {
-						report.SourceIssueCount++
-						if len(report.SourceIssues) < 20 {
-							report.SourceIssues = append(report.SourceIssues, sourceIssues[0])
-						}
-					}
-				}
-			}
-			var item KeyDiff
-			switch {
-			case len(sourceIssues) > 0:
-				item = KeyDiff{Locale: code, Namespace: namespace, Key: key, Status: SourceInvalid, SourceValue: source.Value, TargetValue: target.Value, SourceHash: state.SourceHash(source.Value), SourceFilePath: source.FilePath, TargetFilePath: target.FilePath, SourceValidation: sourceIssues}
-			case hasSource && hasTarget:
-				item = s.classifyExisting(ctx, inv, source, target, stateFile)
-			case hasSource:
-				item = KeyDiff{Locale: code, Namespace: namespace, Key: key, Status: Missing, SourceValue: source.Value, SourceHash: state.SourceHash(source.Value), SourceFilePath: source.FilePath}
-			case hasTarget:
-				item = KeyDiff{Locale: code, Namespace: namespace, Key: key, Status: Extra, TargetValue: target.Value, TargetFilePath: target.FilePath}
-			default:
+			item, ok := analysis.classify(ctx, code, id, &report)
+			if !ok {
 				continue
 			}
 			if len(filter.Statuses) > 0 && !slices.Contains(filter.Statuses, item.Status) {
