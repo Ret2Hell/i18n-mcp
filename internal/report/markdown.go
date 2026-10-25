@@ -39,6 +39,9 @@ func renderSummary(b *strings.Builder, report Report) {
 	fmt.Fprintf(b, "| Missing | %d |\n", report.Summary.Missing)
 	fmt.Fprintf(b, "| Stale | %d |\n", report.Summary.Stale)
 	fmt.Fprintf(b, "| Invalid | %d |\n", report.Summary.Invalid)
+	if report.Summary.SourceInvalid > 0 {
+		fmt.Fprintf(b, "| Source keys needing syntax/policy review | %d |\n", report.Summary.SourceInvalid)
+	}
 	fmt.Fprintf(b, "| Extra | %d |\n", report.Summary.Extra)
 	fmt.Fprintf(b, "| Warnings | %d |\n\n", report.Summary.Warnings)
 }

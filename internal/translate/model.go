@@ -21,6 +21,8 @@ type PlanInput struct {
 
 // Batch contains translation work items and context.
 type Batch struct {
+	SourceIssues       []validate.Issue     `json:"sourceIssues,omitzero"`
+	SourceIssueCount   int                  `json:"sourceIssueCount,omitzero"`
 	Page               *pagination.Metadata `json:"page,omitzero"`
 	BatchID            string               `json:"batchId"`
 	SourceLocale       string               `json:"sourceLocale"`
@@ -39,6 +41,8 @@ type Batch struct {
 
 // Item describes one planned translation unit.
 type Item struct {
+	MessageFormat  string         `json:"messageFormat,omitzero"`
+	Printf         bool           `json:"printf,omitzero"`
 	ID             string         `json:"id"`
 	Locale         string         `json:"locale"`
 	Namespace      string         `json:"namespace"`

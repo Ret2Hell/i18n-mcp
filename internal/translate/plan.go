@@ -77,7 +77,6 @@ func (s *Service) buildBatch(ctx context.Context, in PlanInput) (Batch, error) {
 	if err != nil {
 		return Batch{}, err
 	}
-	options := validate.Options{MessageFormat: validation.MessageFormat, Printf: validation.Printf}
 	limit := in.MaxItems
 	if limit == 0 {
 		limit = pagination.DefaultLimit
@@ -94,7 +93,8 @@ func (s *Service) buildBatch(ctx context.Context, in PlanInput) (Batch, error) {
 		statuses = []diff.KeyStatus{diff.Missing, diff.Stale}
 	}
 	report, err := s.diff.Walk(ctx, diff.Filter{Locales: in.Locales, Namespaces: in.Namespaces, Keys: in.Keys, Statuses: statuses}, func(record diff.KeyDiff) error {
-		item, err := planItem(ctx, record, options)
+		policy := validation.ForKey(record.Namespace, record.Key)
+		item, err := planItem(ctx, record, validate.Options{MessageFormat: policy.MessageFormat, Printf: policy.Printf})
 		if err != nil {
 			return err
 		}
@@ -110,6 +110,7 @@ func (s *Service) buildBatch(ctx context.Context, in PlanInput) (Batch, error) {
 	}
 	items := builder.Items
 	batch := Batch{
+		SourceIssues: report.SourceIssues, SourceIssueCount: report.SourceIssueCount,
 		Page:            &meta,
 		SourceLocale:    report.SourceLocale,
 		TargetLocales:   targetLocalesFromItems(items),
@@ -157,13 +158,19 @@ func planItem(ctx context.Context, record diff.KeyDiff, options validate.Options
 	if err != nil {
 		return Item{}, fmt.Errorf("parse source %s/%s: %w", record.Namespace, record.Key, err)
 	}
-	return Item{
+	item := Item{
+		MessageFormat: options.MessageFormat, Printf: options.Printf,
 		ID:     itemID(record.Locale, record.Namespace, record.Key),
 		Locale: record.Locale, Namespace: record.Namespace, Key: record.Key, Status: record.Status,
 		SourceValue: record.SourceValue, OldValue: record.TargetValue, SourceHash: record.SourceHash, TargetHash: record.TargetHash,
 		Placeholders: placeholders, Tags: validate.ExtractTags(record.SourceValue), Notes: planNotes(record),
 		SourceFilePath: record.SourceFilePath, TargetFilePath: record.TargetFilePath,
-	}, nil
+	}
+	if options.MessageFormat == "raw" {
+		item.Tags = nil
+		item.Notes = append(item.Notes, "raw policy explicitly skips message and placeholder validation")
+	}
+	return item, nil
 }
 
 func planNotes(record diff.KeyDiff) []string {

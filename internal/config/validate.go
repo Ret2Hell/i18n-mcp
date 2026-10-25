@@ -29,8 +29,21 @@ func (s *Service) Validate(ctx context.Context, cfg Resolved) ValidationResult {
 	validateLocales(cfg, &result)
 	validateLocaleFiles(cfg, &result)
 	validateFormat(cfg, &result)
-	if !slices.Contains([]string{"", "auto", "icu", "interpolation", "i18next"}, cfg.Validation.MessageFormat) {
-		result.Errors = append(result.Errors, Diagnostic{Code: "invalid_message_format", Field: "validation.messageFormat", Message: "messageFormat must be auto, icu, interpolation, or i18next"})
+	if !slices.Contains([]string{"", "auto", "icu", "interpolation", "i18next", "raw"}, cfg.Validation.MessageFormat) {
+		result.Errors = append(result.Errors, Diagnostic{Code: "invalid_message_format", Field: "validation.messageFormat", Message: "messageFormat must be auto, icu, interpolation, i18next, or raw"})
+	}
+	if len(cfg.Validation.Overrides) > 256 {
+		result.Errors = append(result.Errors, Diagnostic{Code: "too_many_validation_overrides", Field: "validation.overrides", Message: "at most 256 overrides are allowed"})
+	}
+	seen := map[string]bool{}
+	for i, rule := range cfg.Validation.Overrides {
+		field := fmt.Sprintf("validation.overrides[%d]", i)
+		invalid := (rule.Namespace == "" && rule.Key == "" && rule.KeyPrefix == "") || (rule.Key != "" && rule.KeyPrefix != "") || (rule.MessageFormat == "" && rule.Printf == nil) || !slices.Contains([]string{"", "auto", "icu", "i18next", "interpolation", "raw"}, rule.MessageFormat)
+		id := rule.Namespace + "\x00" + rule.Key + "\x00" + rule.KeyPrefix
+		if invalid || seen[id] {
+			result.Errors = append(result.Errors, Diagnostic{Code: "invalid_validation_override", Field: field, Message: "provide one unambiguous key/keyPrefix or namespace scope and a supported policy; duplicate scopes are rejected"})
+		}
+		seen[id] = true
 	}
 	s.validateTranslationPaths(cfg, &result)
 

@@ -15,7 +15,9 @@ const (
 	Stale   KeyStatus = "stale"
 	Extra   KeyStatus = "extra"
 	Invalid KeyStatus = "invalid"
-	Unknown KeyStatus = "unknown"
+	// SourceInvalid means the source cannot be validated under its selected policy.
+	SourceInvalid KeyStatus = "source_invalid"
+	Unknown       KeyStatus = "unknown"
 )
 
 // KeyDiff describes one source/target key comparison.
@@ -31,6 +33,7 @@ type KeyDiff struct {
 	TargetHash         string            `json:"targetHash,omitzero"`
 	SourceFilePath     string            `json:"sourceFilePath,omitzero"`
 	TargetFilePath     string            `json:"targetFilePath,omitzero"`
+	SourceValidation   []validate.Issue  `json:"sourceValidation,omitzero"`
 	Validation         []validate.Issue  `json:"validation,omitzero"`
 	Metadata           map[string]string `json:"metadata,omitzero"`
 }
@@ -46,33 +49,37 @@ type Filter struct {
 
 // Report contains locale diff analysis results.
 type Report struct {
-	SourceLocale  string               `json:"sourceLocale"`
-	TargetLocales []string             `json:"targetLocales"`
-	Summary       Summary              `json:"summary"`
-	Items         []KeyDiff            `json:"items"`
-	Warnings      []string             `json:"warnings,omitzero"`
-	WarningsTotal int                  `json:"warningsTotal,omitzero"`
-	Page          *pagination.Metadata `json:"page,omitzero"`
+	SourceIssues     []validate.Issue     `json:"sourceIssues,omitzero"`
+	SourceIssueCount int                  `json:"sourceIssueCount,omitzero"`
+	SourceLocale     string               `json:"sourceLocale"`
+	TargetLocales    []string             `json:"targetLocales"`
+	Summary          Summary              `json:"summary"`
+	Items            []KeyDiff            `json:"items"`
+	Warnings         []string             `json:"warnings,omitzero"`
+	WarningsTotal    int                  `json:"warningsTotal,omitzero"`
+	Page             *pagination.Metadata `json:"page,omitzero"`
 }
 
 // Summary counts key diff statuses.
 type Summary struct {
-	Total    int                     `json:"total"`
-	Current  int                     `json:"current"`
-	Missing  int                     `json:"missing"`
-	Stale    int                     `json:"stale"`
-	Extra    int                     `json:"extra"`
-	Invalid  int                     `json:"invalid"`
-	Unknown  int                     `json:"unknown"`
-	ByLocale map[string]StatusCounts `json:"byLocale,omitzero"`
+	SourceInvalid int                     `json:"sourceInvalid,omitzero"`
+	Total         int                     `json:"total"`
+	Current       int                     `json:"current"`
+	Missing       int                     `json:"missing"`
+	Stale         int                     `json:"stale"`
+	Extra         int                     `json:"extra"`
+	Invalid       int                     `json:"invalid"`
+	Unknown       int                     `json:"unknown"`
+	ByLocale      map[string]StatusCounts `json:"byLocale,omitzero"`
 }
 
 // StatusCounts counts key statuses for one locale.
 type StatusCounts struct {
-	Current int `json:"current"`
-	Missing int `json:"missing"`
-	Stale   int `json:"stale"`
-	Extra   int `json:"extra"`
-	Invalid int `json:"invalid"`
-	Unknown int `json:"unknown"`
+	SourceInvalid int `json:"sourceInvalid,omitzero"`
+	Current       int `json:"current"`
+	Missing       int `json:"missing"`
+	Stale         int `json:"stale"`
+	Extra         int `json:"extra"`
+	Invalid       int `json:"invalid"`
+	Unknown       int `json:"unknown"`
 }

@@ -45,6 +45,9 @@ func ExtractPlaceholdersFor(ctx context.Context, s string, options Options) ([]s
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	if options.MessageFormat == "raw" {
+		return nil, nil
+	}
 	var tokens []string
 	format := options.MessageFormat
 	if format == "icu" || ((format == "" || format == "auto") && LooksLikeICU(s)) {

@@ -49,7 +49,7 @@ func (s *Service) WalkInventory(ctx context.Context, inv locale.Inventory, filte
 		return Report{}, err
 	}
 	for _, status := range filter.Statuses {
-		if !slices.Contains([]KeyStatus{Current, Missing, Stale, Extra, Invalid, Unknown}, status) {
+		if !slices.Contains([]KeyStatus{Current, Missing, Stale, Extra, Invalid, Unknown, SourceInvalid}, status) {
 			return Report{}, fmt.Errorf("unknown diff status %q", status)
 		}
 	}
@@ -66,6 +66,7 @@ func (s *Service) WalkInventory(ctx context.Context, inv locale.Inventory, filte
 	}
 	keys := slices.Sorted(maps.Keys(identities))
 	report := Report{SourceLocale: inv.SourceLocale, TargetLocales: targetLocales(inv), Warnings: inventoryWarnings(inv.Warnings)}
+	checkedSources := map[string][]validate.Issue{}
 	for _, code := range report.TargetLocales {
 		if len(filter.Locales) > 0 && !slices.Contains(filter.Locales, code) {
 			continue
@@ -77,8 +78,31 @@ func (s *Service) WalkInventory(ctx context.Context, inv locale.Inventory, filte
 			namespace, key, _ := strings.Cut(id, "\x00")
 			source, hasSource := sources[id]
 			target, hasTarget := targets[targetIdentity(code, namespace, key)]
+			var sourceIssues []validate.Issue
+			if hasSource {
+				var checked bool
+				sourceIssues, checked = checkedSources[id]
+				if !checked {
+					policy := inv.Validation.ForKey(namespace, key)
+					sourceIssues = validate.CheckSource(ctx, source.Value, validate.Options{MessageFormat: policy.MessageFormat, Printf: policy.Printf})
+					for i := range sourceIssues {
+						sourceIssues[i].Locale = inv.SourceLocale
+						sourceIssues[i].Namespace = namespace
+						sourceIssues[i].Key = key
+					}
+					checkedSources[id] = sourceIssues
+					if len(sourceIssues) > 0 {
+						report.SourceIssueCount++
+						if len(report.SourceIssues) < 20 {
+							report.SourceIssues = append(report.SourceIssues, sourceIssues[0])
+						}
+					}
+				}
+			}
 			var item KeyDiff
 			switch {
+			case len(sourceIssues) > 0:
+				item = KeyDiff{Locale: code, Namespace: namespace, Key: key, Status: SourceInvalid, SourceValue: source.Value, TargetValue: target.Value, SourceHash: state.SourceHash(source.Value), SourceFilePath: source.FilePath, TargetFilePath: target.FilePath, SourceValidation: sourceIssues}
 			case hasSource && hasTarget:
 				item = s.classifyExisting(ctx, inv, source, target, stateFile)
 			case hasSource:
@@ -157,8 +181,9 @@ func (s *Service) classifyExisting(ctx context.Context, inv locale.Inventory, so
 		status = Stale
 	}
 
+	policy := inv.Validation.ForKey(sourceUnit.Namespace, sourceUnit.Key)
 	validation := s.validator.ValidatePairContext(ctx, validate.Pair{
-		Options:      validate.Options{MessageFormat: inv.Validation.MessageFormat, Printf: inv.Validation.Printf},
+		Options:      validate.Options{MessageFormat: policy.MessageFormat, Printf: policy.Printf},
 		SourceLocale: inv.SourceLocale,
 		Locale:       targetUnit.Locale,
 		Namespace:    targetUnit.Namespace,

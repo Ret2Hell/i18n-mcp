@@ -11,6 +11,7 @@ const (
 
 // Issue describes one validation finding.
 type Issue struct {
+	Scope     string   `json:"scope,omitzero" jsonschema:"source, target, or policy; source failures do not establish target defects"`
 	Code      string   `json:"code"`
 	Message   string   `json:"message"`
 	Severity  Severity `json:"severity"`
