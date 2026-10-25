@@ -133,14 +133,15 @@ func collectWarnings(inv locale.Inventory, diffReport diff.Report) []string {
 
 func summarize(r Report) Summary {
 	summary := Summary{
-		Locales:    len(r.Inventory.Locales),
-		Namespaces: len(r.Inventory.Namespaces),
-		Missing:    r.Diff.Summary.Missing,
-		Stale:      r.Diff.Summary.Stale,
-		Invalid:    r.Diff.Summary.Invalid,
-		Extra:      r.Diff.Summary.Extra,
-		Unknown:    r.Diff.Summary.Unknown,
-		Warnings:   len(r.Warnings),
+		SourceInvalid: r.Diff.SourceIssueCount,
+		Locales:       len(r.Inventory.Locales),
+		Namespaces:    len(r.Inventory.Namespaces),
+		Missing:       r.Diff.Summary.Missing,
+		Stale:         r.Diff.Summary.Stale,
+		Invalid:       r.Diff.Summary.Invalid,
+		Extra:         r.Diff.Summary.Extra,
+		Unknown:       r.Diff.Summary.Unknown,
+		Warnings:      len(r.Warnings),
 	}
 	for code, count := range r.Inventory.CountsByLocale {
 		if code == r.Inventory.SourceLocale {

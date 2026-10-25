@@ -74,8 +74,9 @@ func (s *Service) validateProposal(ctx context.Context, inv locale.Inventory, so
 		return ValidatedTranslation{}, rejected
 	}
 
+	policy := inv.Validation.ForKey(proposal.Namespace, proposal.Key)
 	result := s.validator.ValidatePairContext(ctx, validate.Pair{
-		Options:      validate.Options{MessageFormat: inv.Validation.MessageFormat, Printf: inv.Validation.Printf},
+		Options:      validate.Options{MessageFormat: policy.MessageFormat, Printf: policy.Printf},
 		SourceLocale: inv.SourceLocale,
 		Locale:       proposal.Locale,
 		Namespace:    proposal.Namespace,

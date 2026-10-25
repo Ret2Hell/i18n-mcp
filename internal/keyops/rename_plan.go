@@ -103,7 +103,7 @@ func (s *Service) planFileRename(cfg config.Resolved, relPath string, fromKey st
 		return fileEdit{}, false, err
 	}
 	changed := !bytes.Equal(before, after)
-	return fileEdit{Path: relPath, Before: before, After: after, Changed: changed}, changed, nil
+	return fileEdit{CheckBefore: true, Path: relPath, Before: before, After: after, Changed: changed}, changed, nil
 }
 
 func (s *Service) readDocument(relPath string, cfg config.Resolved) ([]byte, *jsonedit.Document, error) {

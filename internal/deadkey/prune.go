@@ -8,13 +8,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
+	"maps"
 	"os"
 	"slices"
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/jsonedit"
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/resources"
 )
@@ -226,11 +227,11 @@ func pruneIdentity(namespace string, key string) string {
 func (s *Service) buildPruneEditsForInventory(ctx context.Context, inv locale.Inventory, keys map[string]PruneKey) ([]pruneEdit, []PruneReject, error) {
 	_ = ctx
 	keysByNamespace := map[string][]PruneKey{}
-	for _, key := range keys {
+	for key := range maps.Values(keys) {
 		keysByNamespace[key.Namespace] = append(keysByNamespace[key.Namespace], key)
 	}
-	for namespace := range keysByNamespace {
-		slices.SortFunc(keysByNamespace[namespace], func(a, b PruneKey) int {
+	for selected := range maps.Values(keysByNamespace) {
+		slices.SortFunc(selected, func(a, b PruneKey) int {
 			return cmp.Compare(a.Key, b.Key)
 		})
 	}

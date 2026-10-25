@@ -30,14 +30,16 @@ func Summarize(items []KeyDiff) Summary {
 
 func addStatus(summary *Summary, status KeyStatus) {
 	counts := StatusCounts{
-		Current: summary.Current,
-		Missing: summary.Missing,
-		Stale:   summary.Stale,
-		Extra:   summary.Extra,
-		Invalid: summary.Invalid,
-		Unknown: summary.Unknown,
+		SourceInvalid: summary.SourceInvalid,
+		Current:       summary.Current,
+		Missing:       summary.Missing,
+		Stale:         summary.Stale,
+		Extra:         summary.Extra,
+		Invalid:       summary.Invalid,
+		Unknown:       summary.Unknown,
 	}
 	addStatusCounts(&counts, status)
+	summary.SourceInvalid = counts.SourceInvalid
 	summary.Current = counts.Current
 	summary.Missing = counts.Missing
 	summary.Stale = counts.Stale
@@ -48,6 +50,8 @@ func addStatus(summary *Summary, status KeyStatus) {
 
 func addStatusCounts(counts *StatusCounts, status KeyStatus) {
 	switch status {
+	case SourceInvalid:
+		counts.SourceInvalid++
 	case Current:
 		counts.Current++
 	case Missing:

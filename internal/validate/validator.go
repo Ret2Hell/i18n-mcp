@@ -39,6 +39,9 @@ func validatePairIssues(ctx context.Context, pair Pair) []Issue {
 		})
 	}
 
+	if pair.Options.MessageFormat == "raw" {
+		return append(issues, Issue{Code: "validation_skipped", Scope: "policy", Severity: SeverityWarning, Message: "raw policy explicitly skips message, placeholder, tag and link validation; only empty-target checks apply"})
+	}
 	var messageIssues []Issue
 	format := pair.Options.MessageFormat
 	if format == "icu" || ((format == "" || format == "auto") && (LooksLikeICU(pair.Source) || LooksLikeICU(pair.Target))) {
@@ -60,6 +63,14 @@ func validatePairIssues(ctx context.Context, pair Pair) []Issue {
 func classify(pair Pair, issues []Issue) Result {
 	var result Result
 	for _, issue := range issues {
+		if strings.Contains(issue.Code, "source_") {
+			issue.Scope = "source"
+		} else if strings.Contains(issue.Code, "target_") {
+			issue.Scope = "target"
+		}
+		if issue.Scope == "" {
+			issue.Scope = "target"
+		}
 		issue.Locale = pair.Locale
 		issue.Namespace = pair.Namespace
 		issue.Key = pair.Key

@@ -12,11 +12,11 @@ func TestJSONEditCreatesMissingTargetFileDocument(t *testing.T) {
 	guard, err := fsutil.NewGuard(t.TempDir())
 	require.NoError(t, err)
 	svc := &Service{guard: guard}
-	cfg := config.Resolved{File: config.File{Format: config.FormatConfig{Indent: 4, TrailingNewline: false}}}
+	cfg := config.Resolved{Format: config.FormatConfig{Indent: 4, TrailingNewline: false}}
 
 	before, doc, err := svc.readEditableJSON("missing.json", cfg)
 	require.NoError(t, err)
-	require.Equal(t, []byte("{}\n"), before)
+	require.Nil(t, before)
 
 	require.NoError(t, doc.SetString([]string{"hello"}, "world"))
 	after, err := doc.Render()

@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
+	"github.com/Ret2Hell/i18n-mcp/internal/preview"
 	"github.com/Ret2Hell/i18n-mcp/internal/resources"
 )
 
@@ -28,6 +29,11 @@ func (s *Service) Rename(ctx context.Context, in RenameInput) (RenameOutput, err
 		return out, nil
 	}
 
+	if in.BeforeWrite != nil {
+		if err := in.BeforeWrite(ctx, out); err != nil {
+			return out, err
+		}
+	}
 	writeReport, err := s.writeEdits(ctx, plan.Edits)
 	out.ChangedFiles = markWritten(out.ChangedFiles, writeReport.Written)
 	s.notifyRenamed(ctx, plan.Edits, writeReport.Written)
@@ -65,7 +71,7 @@ func previewEdits(edits []fileEdit) []ChangedFile {
 	out := make([]ChangedFile, 0, len(edits))
 	for _, edit := range edits {
 		diffText := fsutil.UnifiedDiff(edit.Path, edit.Before, edit.After)
-		out = append(out, ChangedFile{Path: edit.Path, Diff: diffText, Changed: diffText != ""})
+		out = append(out, ChangedFile{Path: edit.Path, Diff: diffText, Changed: diffText != "", BeforeSHA256: preview.HashContent(edit.Before), AfterSHA256: preview.HashContent(edit.After)})
 	}
 	return out
 }

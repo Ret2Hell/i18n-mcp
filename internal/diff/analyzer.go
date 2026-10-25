@@ -4,9 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"maps"
 	"slices"
-	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/state"
@@ -49,7 +47,7 @@ func (s *Service) WalkInventory(ctx context.Context, inv locale.Inventory, filte
 		return Report{}, err
 	}
 	for _, status := range filter.Statuses {
-		if !slices.Contains([]KeyStatus{Current, Missing, Stale, Extra, Invalid, Unknown}, status) {
+		if !slices.Contains([]KeyStatus{Current, Missing, Stale, Extra, Invalid, Unknown, SourceInvalid}, status) {
 			return Report{}, fmt.Errorf("unknown diff status %q", status)
 		}
 	}
@@ -58,13 +56,8 @@ func (s *Service) WalkInventory(ctx context.Context, inv locale.Inventory, filte
 		return Report{}, err
 	}
 	sources, targets := indexUnits(inv)
-	identities := map[string]struct{}{}
-	for _, unit := range inv.Units {
-		if (len(filter.Namespaces) == 0 || slices.Contains(filter.Namespaces, unit.Namespace)) && (len(filter.Keys) == 0 || slices.Contains(filter.Keys, unit.Key)) && strings.HasPrefix(unit.Key, filter.KeyPrefix) {
-			identities[sourceIdentity(unit.Namespace, unit.Key)] = struct{}{}
-		}
-	}
-	keys := slices.Sorted(maps.Keys(identities))
+	analysis := inventoryAnalysis{service: s, inventory: inv, state: stateFile, sources: sources, targets: targets, checkedSources: map[string][]validate.Issue{}}
+	keys := matchingIdentities(inv, filter)
 	report := Report{SourceLocale: inv.SourceLocale, TargetLocales: targetLocales(inv), Warnings: inventoryWarnings(inv.Warnings)}
 	for _, code := range report.TargetLocales {
 		if len(filter.Locales) > 0 && !slices.Contains(filter.Locales, code) {
@@ -74,18 +67,8 @@ func (s *Service) WalkInventory(ctx context.Context, inv locale.Inventory, filte
 			if err := ctx.Err(); err != nil {
 				return Report{}, err
 			}
-			namespace, key, _ := strings.Cut(id, "\x00")
-			source, hasSource := sources[id]
-			target, hasTarget := targets[targetIdentity(code, namespace, key)]
-			var item KeyDiff
-			switch {
-			case hasSource && hasTarget:
-				item = s.classifyExisting(ctx, inv, source, target, stateFile)
-			case hasSource:
-				item = KeyDiff{Locale: code, Namespace: namespace, Key: key, Status: Missing, SourceValue: source.Value, SourceHash: state.SourceHash(source.Value), SourceFilePath: source.FilePath}
-			case hasTarget:
-				item = KeyDiff{Locale: code, Namespace: namespace, Key: key, Status: Extra, TargetValue: target.Value, TargetFilePath: target.FilePath}
-			default:
+			item, ok := analysis.classify(ctx, code, id, &report)
+			if !ok {
 				continue
 			}
 			if len(filter.Statuses) > 0 && !slices.Contains(filter.Statuses, item.Status) {
@@ -157,8 +140,9 @@ func (s *Service) classifyExisting(ctx context.Context, inv locale.Inventory, so
 		status = Stale
 	}
 
+	policy := inv.Validation.ForKey(sourceUnit.Namespace, sourceUnit.Key)
 	validation := s.validator.ValidatePairContext(ctx, validate.Pair{
-		Options:      validate.Options{MessageFormat: inv.Validation.MessageFormat, Printf: inv.Validation.Printf},
+		Options:      validate.Options{MessageFormat: policy.MessageFormat, Printf: policy.Printf},
 		SourceLocale: inv.SourceLocale,
 		Locale:       targetUnit.Locale,
 		Namespace:    targetUnit.Namespace,

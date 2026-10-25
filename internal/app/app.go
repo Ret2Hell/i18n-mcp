@@ -13,6 +13,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/keyops"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
+	"github.com/Ret2Hell/i18n-mcp/internal/preview"
 	"github.com/Ret2Hell/i18n-mcp/internal/project"
 	"github.com/Ret2Hell/i18n-mcp/internal/report"
 	"github.com/Ret2Hell/i18n-mcp/internal/scanner"
@@ -27,6 +28,7 @@ const requestStateSecretEnv = "I18N_MCP_REQUEST_STATE_SECRET"
 
 // App wires together the application services used by the CLI and MCP server.
 type App struct {
+	Previews           *preview.Service
 	Options            Options
 	Logger             *slog.Logger
 	ProjectRoot        string
@@ -80,6 +82,7 @@ func New(ctx context.Context, opts Options) (*App, error) {
 	opts.RequestStateSecret = ""
 
 	return &App{
+		Previews:           preview.NewService(guard.Root(), requestStateSigner),
 		Options:            opts,
 		Logger:             slog.New(zerolog.NewSlogHandler(logger)),
 		ProjectRoot:        guard.Root(),

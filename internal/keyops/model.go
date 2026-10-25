@@ -1,5 +1,10 @@
 package keyops
 
+import (
+	"context"
+	"github.com/Ret2Hell/i18n-mcp/internal/preview"
+)
+
 // ConflictPolicy controls rename behavior when the destination exists.
 type ConflictPolicy string
 
@@ -12,33 +17,31 @@ const (
 
 // RenameInput configures a key rename operation.
 type RenameInput struct {
-	Namespace      string         `json:"namespace" jsonschema:"namespace containing the key to rename"`
-	FromKey        string         `json:"fromKey" jsonschema:"existing flattened key path"`
-	ToKey          string         `json:"toKey" jsonschema:"new flattened key path"`
-	Locales        []string       `json:"locales,omitzero" jsonschema:"locales to update; empty means all locales"`
-	DryRun         *bool          `json:"dryRun,omitzero" jsonschema:"when true, preview changes without writing"`
-	Apply          bool           `json:"apply,omitzero" jsonschema:"must be true to write locale files and state"`
-	ConflictPolicy ConflictPolicy `json:"conflictPolicy,omitzero" jsonschema:"destination conflict policy: reject, overwrite, or skip"`
+	PreviewToken   string                                    `json:"previewToken,omitzero" jsonschema:"approval token from a reviewed preview; required for truncated previews"`
+	BeforeWrite    func(context.Context, RenameOutput) error `json:"-"`
+	Namespace      string                                    `json:"namespace" jsonschema:"namespace containing the key to rename"`
+	FromKey        string                                    `json:"fromKey" jsonschema:"existing flattened key path"`
+	ToKey          string                                    `json:"toKey" jsonschema:"new flattened key path"`
+	Locales        []string                                  `json:"locales,omitzero" jsonschema:"locales to update; empty means all locales"`
+	DryRun         *bool                                     `json:"dryRun,omitzero" jsonschema:"when true, preview changes without writing"`
+	Apply          bool                                      `json:"apply,omitzero" jsonschema:"must be true to write locale files and state"`
+	ConflictPolicy ConflictPolicy                            `json:"conflictPolicy,omitzero" jsonschema:"destination conflict policy: reject, overwrite, or skip"`
 }
 
 // RenameOutput describes the result of a key rename operation.
 type RenameOutput struct {
-	DryRun       bool          `json:"dryRun"`
-	Planned      int           `json:"planned"`
-	Renamed      int           `json:"renamed"`
-	ChangedFiles []ChangedFile `json:"changedFiles"`
-	StateUpdates []StateUpdate `json:"stateUpdates,omitzero"`
-	Conflicts    []Conflict    `json:"conflicts,omitzero"`
-	Warnings     []string      `json:"warnings,omitzero"`
+	Preview      *preview.Metadata `json:"preview,omitzero"`
+	DryRun       bool              `json:"dryRun"`
+	Planned      int               `json:"planned"`
+	Renamed      int               `json:"renamed"`
+	ChangedFiles []ChangedFile     `json:"changedFiles"`
+	StateUpdates []StateUpdate     `json:"stateUpdates,omitzero"`
+	Conflicts    []Conflict        `json:"conflicts,omitzero"`
+	Warnings     []string          `json:"warnings,omitzero"`
 }
 
 // ChangedFile describes changes made or previewed for a locale file.
-type ChangedFile struct {
-	Path    string `json:"path"`
-	Diff    string `json:"diff,omitzero"`
-	Changed bool   `json:"changed"`
-	Written bool   `json:"written,omitzero"`
-}
+type ChangedFile = preview.File
 
 // StateUpdate describes a state entry key rename.
 type StateUpdate struct {
@@ -68,12 +71,13 @@ type Plan struct {
 }
 
 type fileEdit struct {
-	Path      string
-	Before    []byte
-	After     []byte
-	Locale    string
-	Namespace string
-	Changed   bool
+	CheckBefore bool
+	Path        string
+	Before      []byte
+	After       []byte
+	Locale      string
+	Namespace   string
+	Changed     bool
 }
 
 // DryRunValue returns the effective dry-run setting.

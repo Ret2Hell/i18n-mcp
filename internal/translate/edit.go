@@ -17,10 +17,12 @@ import (
 
 // FileEdit describes changes for one locale file.
 type FileEdit struct {
-	Path         string                 `json:"path"`
-	Before       []byte                 `json:"-"`
-	After        []byte                 `json:"-"`
-	Translations []ValidatedTranslation `json:"translations"`
+	CheckBefore   bool                   `json:"-"`
+	BeforeMissing bool                   `json:"-"`
+	Path          string                 `json:"path"`
+	Before        []byte                 `json:"-"`
+	After         []byte                 `json:"-"`
+	Translations  []ValidatedTranslation `json:"translations"`
 }
 
 // BuildEdits builds locale file edits for accepted translations.
@@ -71,7 +73,7 @@ func (s *Service) BuildEdits(ctx context.Context, accepted []ValidatedTranslatio
 		if err != nil {
 			return nil, err
 		}
-		edits = append(edits, FileEdit{Path: path, Before: before, After: after, Translations: translations})
+		edits = append(edits, FileEdit{CheckBefore: true, BeforeMissing: before == nil, Path: path, Before: before, After: after, Translations: translations})
 	}
 	return edits, nil
 }
@@ -85,7 +87,7 @@ func (s *Service) readEditableJSON(relPath string, cfg config.Resolved) ([]byte,
 	if errors.Is(err, os.ErrNotExist) {
 		doc := jsonedit.NewObject(cfg.Format.Indent, cfg.Format.SortKeys)
 		doc.Format.TrailingNewline = cfg.Format.TrailingNewline
-		return []byte("{}\n"), doc, nil
+		return nil, doc, nil
 	}
 	if err != nil {
 		return nil, nil, err

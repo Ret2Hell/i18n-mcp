@@ -44,6 +44,7 @@ func validateTagBalance(label string, tokens []TagToken) []Issue {
 		}
 		if len(stack) == 0 {
 			issues = append(issues, Issue{
+				Scope:    label,
 				Code:     "tag_unopened",
 				Message:  fmt.Sprintf("%s has closing tag %s without a matching opening tag", label, token.Normalized),
 				Severity: SeverityError,
@@ -53,6 +54,7 @@ func validateTagBalance(label string, tokens []TagToken) []Issue {
 		top := stack[len(stack)-1]
 		if top.Name != token.Name {
 			issues = append(issues, Issue{
+				Scope:    label,
 				Code:     "tag_mismatched",
 				Message:  fmt.Sprintf("%s closes %s while %s is still open", label, token.Normalized, top.Normalized),
 				Severity: SeverityError,
@@ -63,6 +65,7 @@ func validateTagBalance(label string, tokens []TagToken) []Issue {
 	}
 	for _, token := range slices.Backward(stack) {
 		issues = append(issues, Issue{
+			Scope:    label,
 			Code:     "tag_unclosed",
 			Message:  fmt.Sprintf("%s has unclosed tag %s", label, token.Normalized),
 			Severity: SeverityError,

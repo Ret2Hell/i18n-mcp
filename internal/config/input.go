@@ -43,8 +43,9 @@ type TranslationInput struct {
 
 // ValidationInput preserves optional message syntax and printf policy.
 type ValidationInput struct {
-	MessageFormat *string `json:"messageFormat,omitzero" jsonschema:"auto, icu, interpolation, or i18next"`
-	Printf        *bool   `json:"printf,omitzero" jsonschema:"explicit opt-in to portable printf validation"`
+	Overrides     *[]ValidationOverride `json:"overrides,omitzero"`
+	MessageFormat *string               `json:"messageFormat,omitzero" jsonschema:"auto, icu, interpolation, i18next, or raw"`
+	Printf        *bool                 `json:"printf,omitzero" jsonschema:"explicit opt-in to portable printf validation"`
 }
 
 // CIInput preserves explicitly disabled CI policies when applying defaults.
@@ -85,6 +86,7 @@ func NormalizeInput(in FileInput) File {
 		provided(&cfg.Translation.GlossaryPath, in.Translation.GlossaryPath)
 	}
 	if in.Validation != nil {
+		provided(&cfg.Validation.Overrides, in.Validation.Overrides)
 		provided(&cfg.Validation.MessageFormat, in.Validation.MessageFormat)
 		provided(&cfg.Validation.Printf, in.Validation.Printf)
 	}

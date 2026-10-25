@@ -12,6 +12,7 @@ import (
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
+	"github.com/Ret2Hell/i18n-mcp/internal/resources"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -41,21 +42,37 @@ func (w *LocaleWatcher) AddDir(path string) error {
 	return w.watcher.Add(path)
 }
 
+// Close releases the watcher, including when setup fails before Run starts.
+func (w *LocaleWatcher) Close() error {
+	return w.watcher.Close()
+}
+
 // Run watches for locale file changes until ctx is cancelled.
 func (w *LocaleWatcher) Run(ctx context.Context, mapper func(string) []string) (err error) {
+	ctx, cancel := context.WithCancel(ctx)
 	timers := map[string]*time.Timer{}
 	defer func() {
-		err = errors.Join(err, w.watcher.Close())
+		cancel()
+		for timer := range maps.Values(timers) {
+			timer.Stop()
+		}
+		err = errors.Join(err, w.Close())
 	}()
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case err := <-w.watcher.Errors:
+		case err, ok := <-w.watcher.Errors:
+			if !ok {
+				return nil
+			}
 			if err != nil {
 				return err
 			}
-		case ev := <-w.watcher.Events:
+		case ev, ok := <-w.watcher.Events:
+			if !ok {
+				return nil
+			}
 			if ev.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove|fsnotify.Rename) == 0 {
 				continue
 			}
@@ -64,7 +81,9 @@ func (w *LocaleWatcher) Run(ctx context.Context, mapper func(string) []string) (
 			}
 			name := ev.Name
 			timers[name] = time.AfterFunc(w.debounce, func() {
-				w.notifier.Updated(context.Background(), mapper(name)...)
+				if uris := mapper(name); ctx.Err() == nil && len(uris) > 0 {
+					w.notifier.Updated(ctx, uris...)
+				}
 			})
 		}
 	}
@@ -103,8 +122,8 @@ func NewLocaleMapper(guard *fsutil.Guard, cfg config.Resolved) func(string) []st
 			}
 			namespace := cmp.Or(ref.Namespace, cfg.DefaultNamespace, "common")
 			return []string{
-				"i18n://locales/" + ref.Locale + "/" + namespace,
-				"i18n://analysis/diff",
+				resources.LocaleURI(ref.Locale, namespace),
+				resources.DiffURI,
 			}
 		}
 		return nil

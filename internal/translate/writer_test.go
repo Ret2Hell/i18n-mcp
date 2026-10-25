@@ -107,6 +107,40 @@ func TestWriteEditsReportsSkippedFilesAfterFailure(t *testing.T) {
 	require.NoFileExists(t, filepath.Join(root, "locales", "not-attempted.json"))
 }
 
+func TestAppendRemainingPreservesOrderAndFirstMatch(t *testing.T) {
+	edits := []FileEdit{{Path: "first"}, {Path: "failed"}, {Path: "next"}, {Path: "failed"}}
+	for _, tc := range []struct {
+		name, failed string
+		edits        []FileEdit
+		want         []string
+	}{
+		{name: "first match", failed: "failed", edits: edits, want: []string{"existing", "failed", "next", "failed"}},
+		{name: "first edit", failed: "first", edits: edits, want: []string{"existing", "first", "failed", "next", "failed"}},
+		{name: "missing", failed: "missing", edits: edits, want: []string{"existing"}},
+		{name: "empty", failed: "failed", want: []string{"existing"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, appendRemaining([]string{"existing"}, tc.edits, tc.failed))
+		})
+	}
+	require.Nil(t, appendRemaining(nil, edits, "missing"))
+}
+
+func TestWriteEditsTreatsNilAndEmptyBytesAsUnchanged(t *testing.T) {
+	guard, err := fsutil.NewGuard(t.TempDir())
+	require.NoError(t, err)
+	svc := &Service{guard: guard}
+
+	report, err := svc.WriteEdits(t.Context(), []FileEdit{
+		{Path: "nil-before.json", After: []byte{}},
+		{Path: "nil-after.json", Before: []byte{}},
+	})
+	require.NoError(t, err)
+	require.Equal(t, WriteReport{Unchanged: []string{"nil-before.json", "nil-after.json"}}, report)
+	require.NoFileExists(t, filepath.Join(guard.Root(), "nil-before.json"))
+	require.NoFileExists(t, filepath.Join(guard.Root(), "nil-after.json"))
+}
+
 func assertFileContent(t *testing.T, path string, want string) {
 	t.Helper()
 	data, err := os.ReadFile(path)

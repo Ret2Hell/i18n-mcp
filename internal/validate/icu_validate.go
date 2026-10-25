@@ -40,7 +40,7 @@ func compareICUMessages(ctx context.Context, source, target string) []Issue {
 					continue
 				}
 				selectors := true
-				for selector := range sourceArg.branches {
+				for selector := range maps.Keys(sourceArg.branches) {
 					if targetArg.kind == "argument" {
 						continue
 					}
@@ -140,7 +140,7 @@ func compatibleICUArgument(source, target icuNode) bool {
 	if target.kind != "argument" || (source.kind != "plural" && source.kind != "selectordinal") || source.offset != 0 {
 		return false
 	}
-	for selector := range source.branches {
+	for selector := range maps.Keys(source.branches) {
 		if strings.HasPrefix(selector, "=") {
 			return false
 		}

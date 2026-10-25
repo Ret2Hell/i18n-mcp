@@ -3,6 +3,7 @@ package validate
 import (
 	"cmp"
 	"context"
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
@@ -45,6 +46,9 @@ func ExtractPlaceholdersFor(ctx context.Context, s string, options Options) ([]s
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	if options.MessageFormat == "raw" {
+		return nil, nil
+	}
 	var tokens []string
 	format := options.MessageFormat
 	if format == "icu" || ((format == "" || format == "auto") && LooksLikeICU(s)) {
@@ -52,7 +56,7 @@ func ExtractPlaceholdersFor(ctx context.Context, s string, options Options) ([]s
 		if err != nil {
 			return nil, err
 		}
-		for name := range icuArguments(nodes) {
+		for name := range maps.Keys(icuArguments(nodes)) {
 			tokens = append(tokens, "{"+name+"}")
 		}
 	} else {

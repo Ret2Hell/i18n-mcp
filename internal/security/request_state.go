@@ -1,15 +1,17 @@
 package security
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"strings"
 	"time"
+
+	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 )
 
 const (
@@ -39,7 +41,7 @@ func NewRequestStateSigner(key []byte) (*RequestStateSigner, error) {
 	if len(key) < sha256.Size {
 		return nil, fmt.Errorf("request state signing key must be at least %d bytes", sha256.Size)
 	}
-	return &RequestStateSigner{key: append([]byte(nil), key...), now: time.Now}, nil
+	return &RequestStateSigner{key: bytes.Clone(key), now: time.Now}, nil
 }
 
 // NewRandomRequestStateSigner constructs a signer with a process-local random key.

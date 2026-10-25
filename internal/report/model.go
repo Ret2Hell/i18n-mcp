@@ -56,14 +56,15 @@ type Report struct {
 
 // Summary contains aggregate report counts.
 type Summary struct {
-	Locales    int `json:"locales"`
-	Namespaces int `json:"namespaces"`
-	SourceKeys int `json:"sourceKeys"`
-	TargetKeys int `json:"targetKeys"`
-	Missing    int `json:"missing"`
-	Stale      int `json:"stale"`
-	Invalid    int `json:"invalid"`
-	Extra      int `json:"extra"`
-	Unknown    int `json:"unknown"`
-	Warnings   int `json:"warnings"`
+	SourceInvalid int `json:"sourceInvalid,omitzero" jsonschema:"distinct source keys with syntax/policy failures, not target translation defects"`
+	Locales       int `json:"locales"`
+	Namespaces    int `json:"namespaces"`
+	SourceKeys    int `json:"sourceKeys"`
+	TargetKeys    int `json:"targetKeys"`
+	Missing       int `json:"missing"`
+	Stale         int `json:"stale"`
+	Invalid       int `json:"invalid"`
+	Extra         int `json:"extra"`
+	Unknown       int `json:"unknown"`
+	Warnings      int `json:"warnings"`
 }

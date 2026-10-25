@@ -16,7 +16,7 @@ func TestValidationPolicyUsesProjectAndExplicitOverrides(t *testing.T) {
 	for _, c := range []struct{ pkg, format string }{
 		{`{"dependencies":{"next-intl":"4"}}`, "icu"},
 		{`{"devDependencies":{"i18next":"25"}}`, "i18next"},
-		{`{}`, ""},
+		{`{}`, "auto"},
 	} {
 		require.NoError(t, os.WriteFile(filepath.Join(root, "package.json"), []byte(c.pkg), 0600))
 		options, err := service.ResolveValidation(t.Context(), ValidationConfig{})

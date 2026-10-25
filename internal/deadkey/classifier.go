@@ -141,12 +141,9 @@ func matchingDynamicHints(cfg config.Resolved, hints []scanner.DynamicHint, name
 }
 
 func matchesAnyPattern(patterns []string, namespace string, key string) bool {
-	for _, pattern := range patterns {
-		if matchesPattern(pattern, namespace, key) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(patterns, func(pattern string) bool {
+		return matchesPattern(pattern, namespace, key)
+	})
 }
 
 func matchesPattern(pattern string, namespace string, key string) bool {

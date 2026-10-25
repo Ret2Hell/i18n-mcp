@@ -18,7 +18,7 @@ func boundedResults(next mcp.MethodHandler) mcp.MethodHandler {
 			return result, err
 		}
 		value, ok := result.(*mcp.CallToolResult)
-		if !ok || value.IsError {
+		if !ok {
 			return result, nil
 		}
 		if value.StructuredContent != nil && len(value.Content) == 1 {

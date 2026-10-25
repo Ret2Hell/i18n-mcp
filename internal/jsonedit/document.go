@@ -231,10 +231,9 @@ func deletePath(value *Value, path []string) (bool, error) {
 }
 
 func findMember(value *Value, key string) *Member {
-	for i := range value.Object {
-		if value.Object[i].Key == key {
-			return &value.Object[i]
-		}
+	i := slices.IndexFunc(value.Object, func(member Member) bool { return member.Key == key })
+	if i < 0 {
+		return nil
 	}
-	return nil
+	return &value.Object[i]
 }

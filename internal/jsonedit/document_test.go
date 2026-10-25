@@ -6,6 +6,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestFindMemberReturnsFirstMatchingMember(t *testing.T) {
+	value := &Value{Kind: KindObject, Object: []Member{{Key: "a"}, {Key: "b"}, {Key: "a"}}}
+	require.Same(t, &value.Object[0], findMember(value, "a"))
+	require.Same(t, &value.Object[1], findMember(value, "b"))
+	require.Nil(t, findMember(value, "missing"))
+	require.Nil(t, findMember(&Value{Kind: KindObject}, "a"))
+}
+
 func TestJSONEditPreservesExistingKeyOrder(t *testing.T) {
 	doc, err := Parse([]byte("{\n  \"z\": \"old\",\n  \"a\": \"first\"\n}\n"), 2, false)
 	require.NoError(t, err)

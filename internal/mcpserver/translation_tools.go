@@ -9,15 +9,29 @@ import (
 )
 
 func translationApplyTool(a *app.App) func(context.Context, *mcp.CallToolRequest, translate.ApplyInput) (*mcp.CallToolResult, translate.ApplyOutput, error) {
-	return func(ctx context.Context, req *mcp.CallToolRequest, in translate.ApplyInput) (*mcp.CallToolResult, translate.ApplyOutput, error) {
-		_ = req
-		out, err := a.Translation.Apply(ctx, in)
+	return func(ctx context.Context, _ *mcp.CallToolRequest, in translate.ApplyInput) (*mcp.CallToolResult, translate.ApplyOutput, error) {
+		canonical := in
+		canonical.Apply = false
+		canonical.DryRun = nil
+		canonical.PreviewToken = ""
+		canonical.BeforeWrite = nil
+		out, err := a.Translation.Apply(ctx, canonical)
 		if err != nil {
 			return nil, translate.ApplyOutput{}, err
 		}
-		if len(out.Rejected) > 0 {
-			return &mcp.CallToolResult{IsError: true}, out, nil
-		}
-		return nil, out, nil
+		return (reviewedWriteOperation[translate.ApplyOutput]{
+			name:        "i18n.translation.apply",
+			canonical:   canonical,
+			dryRun:      in.DryRunValue(),
+			token:       in.PreviewToken,
+			invalidated: "translations no longer validate; request a new preview",
+			outcome: func(out *translate.ApplyOutput) writeOutcome {
+				return writeOutcome{files: &out.ChangedFiles, metadata: &out.Preview, warnings: &out.Warnings, state: out.PlannedStateUpdates, blocked: len(out.Rejected) > 0}
+			},
+			apply: func(ctx context.Context, verify func(context.Context, translate.ApplyOutput) error) (translate.ApplyOutput, error) {
+				in.BeforeWrite = verify
+				return a.Translation.Apply(ctx, in)
+			},
+		}).run(ctx, a.Previews, out)
 	}
 }

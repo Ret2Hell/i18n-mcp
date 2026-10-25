@@ -30,7 +30,9 @@ func TestServerCapabilities(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, clientSession.Close()) })
 
 	capabilities := clientSession.InitializeResult().Capabilities
-	require.Nil(t, capabilities.Logging)
+	capabilitiesJSON, err := json.Marshal(capabilities)
+	require.NoError(t, err)
+	require.NotContains(t, string(capabilitiesJSON), `"logging":`)
 	require.NotNil(t, capabilities.Completions)
 	require.NotNil(t, capabilities.Tools)
 	require.NotNil(t, capabilities.Prompts)
@@ -65,16 +67,15 @@ func TestResourceSubscriptions(t *testing.T) {
 	uri := "i18n://analysis/diff"
 	require.NoError(t, clientSession.Subscribe(ctx, &mcp.SubscribeParams{URI: uri}))
 	deadline := time.NewTimer(time.Second)
-	ticker := time.NewTicker(10 * time.Millisecond)
+	ticks := time.Tick(10 * time.Millisecond)
 	defer deadline.Stop()
-	defer ticker.Stop()
 	for {
 		require.NoError(t, server.ResourceUpdated(ctx, &mcp.ResourceUpdatedNotificationParams{URI: uri}))
 		select {
 		case got := <-updates:
 			require.Equal(t, uri, got)
 			goto subscribed
-		case <-ticker.C:
+		case <-ticks:
 		case <-deadline.C:
 			t.Fatal("timed out waiting for subscribed resource update")
 		}
