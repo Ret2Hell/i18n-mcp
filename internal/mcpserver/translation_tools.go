@@ -2,7 +2,6 @@ package mcpserver
 
 import (
 	"context"
-	"fmt"
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/translate"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -19,46 +18,19 @@ func translationApplyTool(a *app.App) func(context.Context, *mcp.CallToolRequest
 		if err != nil {
 			return nil, translate.ApplyOutput{}, err
 		}
-		token := ""
-		if !in.DryRunValue() {
-			token = in.PreviewToken
-		}
-		view, err := a.Previews.Prepare(ctx, "i18n.translation.apply", canonical, out.ChangedFiles, out.PlannedStateUpdates, token)
-		if err != nil {
-			return nil, translate.ApplyOutput{}, err
-		}
-		out.ChangedFiles = view.Files
-		out.Preview = view.Metadata
-		if err := checkWritePreview(out); err != nil {
-			return nil, translate.ApplyOutput{}, err
-		}
-		if len(out.Rejected) > 0 {
-			return &mcp.CallToolResult{IsError: true}, out, nil
-		}
-		if in.DryRunValue() {
-			return nil, out, nil
-		}
-		if err := requireReview(view, in.PreviewToken); err != nil {
-			return writePreviewError(err), out, nil
-		}
-		in.BeforeWrite = func(ctx context.Context, actual translate.ApplyOutput) error {
-			return a.Previews.Verify(ctx, "i18n.translation.apply", canonical, actual.ChangedFiles, actual.PlannedStateUpdates, view.Metadata.Token)
-		}
-		previous := out
-		out, err = a.Translation.Apply(ctx, in)
-		out.ChangedFiles = reviewedFiles(out.ChangedFiles, view)
-		out.Preview = view.Metadata
-		out.Warnings = boundWriteWarnings(out.Warnings, view)
-		if len(out.Rejected) > 0 && err == nil {
-			err = fmt.Errorf("translations no longer validate; request a new preview")
-		}
-		if err != nil && !anyWritten(out.ChangedFiles) && checkWritePreview(out) != nil {
-			out = previous
-			view.Metadata.DiagnosticsTruncated = true
-		}
-		if err != nil {
-			return writePreviewError(err), out, nil
-		}
-		return nil, out, nil
+		return runReviewedWrite(ctx, a.Previews, reviewedWriteOperation[translate.ApplyOutput]{
+			name:        "i18n.translation.apply",
+			canonical:   canonical,
+			dryRun:      in.DryRunValue(),
+			token:       in.PreviewToken,
+			invalidated: "translations no longer validate; request a new preview",
+			outcome: func(out *translate.ApplyOutput) writeOutcome {
+				return writeOutcome{files: &out.ChangedFiles, metadata: &out.Preview, warnings: &out.Warnings, state: out.PlannedStateUpdates, blocked: len(out.Rejected) > 0}
+			},
+			apply: func(ctx context.Context, verify func(context.Context, translate.ApplyOutput) error) (translate.ApplyOutput, error) {
+				in.BeforeWrite = verify
+				return a.Translation.Apply(ctx, in)
+			},
+		}, out)
 	}
 }
