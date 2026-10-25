@@ -15,7 +15,10 @@ func TestPreviewEditsMarksChangedFiles(t *testing.T) {
 	changedFiles := PreviewEdits(edits)
 
 	require.Len(t, changedFiles, 2)
-	require.Equal(t, ChangedFile{Path: "locales/en.json", Changed: false}, changedFiles[0])
+	require.Equal(t, "locales/en.json", changedFiles[0].Path)
+	require.False(t, changedFiles[0].Changed)
+	require.NotEmpty(t, changedFiles[0].BeforeSHA256)
+	require.Equal(t, changedFiles[0].BeforeSHA256, changedFiles[0].AfterSHA256)
 	require.Equal(t, "locales/fr.json", changedFiles[1].Path)
 	require.True(t, changedFiles[1].Changed)
 	require.Contains(t, changedFiles[1].Diff, "--- a/locales/fr.json\n")

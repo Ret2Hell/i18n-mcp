@@ -72,6 +72,7 @@ func (s *Service) Write(ctx context.Context, in WriteInput) (WriteOutput, error)
 		ConfigPath: displayPath,
 		Validation: validation,
 		ChangedFile: ChangedFile{
+			BeforeMissing: before == nil, BeforeSHA256: preview.HashContent(before), AfterSHA256: preview.HashContent(after),
 			Path:    displayPath,
 			Diff:    fsutil.UnifiedDiff(displayPath, before, after),
 			Changed: !bytes.Equal(before, after),
@@ -94,6 +95,12 @@ func (s *Service) Write(ctx context.Context, in WriteInput) (WriteOutput, error)
 		if err := in.BeforeWrite(ctx, out); err != nil {
 			return out, err
 		}
+	}
+	if err := ctx.Err(); err != nil {
+		return out, err
+	}
+	if err := fsutil.VerifyFileVersion(s.guard, path, before, before == nil); err != nil {
+		return out, err
 	}
 	if err := fsutil.AtomicWriteFile(s.guard, path, after, perm); err != nil {
 		return out, err

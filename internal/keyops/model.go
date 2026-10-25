@@ -71,12 +71,13 @@ type Plan struct {
 }
 
 type fileEdit struct {
-	Path      string
-	Before    []byte
-	After     []byte
-	Locale    string
-	Namespace string
-	Changed   bool
+	CheckBefore bool
+	Path        string
+	Before      []byte
+	After       []byte
+	Locale      string
+	Namespace   string
+	Changed     bool
 }
 
 // DryRunValue returns the effective dry-run setting.

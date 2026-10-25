@@ -16,7 +16,7 @@ func TestJSONEditCreatesMissingTargetFileDocument(t *testing.T) {
 
 	before, doc, err := svc.readEditableJSON("missing.json", cfg)
 	require.NoError(t, err)
-	require.Equal(t, []byte("{}\n"), before)
+	require.Nil(t, before)
 
 	require.NoError(t, doc.SetString([]string{"hello"}, "world"))
 	after, err := doc.Render()

@@ -19,6 +19,19 @@ func (s *Service) WriteEdits(ctx context.Context, edits []FileEdit) (WriteReport
 	var report WriteReport
 	for _, edit := range edits {
 		if err := ctx.Err(); err != nil {
+			return report, err
+		}
+		if edit.CheckBefore {
+			if err := fsutil.VerifyFileVersion(s.guard, edit.Path, edit.Before, edit.BeforeMissing); err != nil {
+				for _, pending := range edits {
+					report.Skipped = append(report.Skipped, pending.Path)
+				}
+				return report, err
+			}
+		}
+	}
+	for _, edit := range edits {
+		if err := ctx.Err(); err != nil {
 			report.Skipped = appendRemaining(report.Skipped, edits, edit.Path)
 			return report, err
 		}
@@ -37,6 +50,12 @@ func (s *Service) WriteEdits(ctx context.Context, edits []FileEdit) (WriteReport
 			perm = info.Mode().Perm()
 		}
 
+		if edit.CheckBefore {
+			if err := fsutil.VerifyFileVersion(s.guard, edit.Path, edit.Before, edit.BeforeMissing); err != nil {
+				report.Skipped = appendRemaining(report.Skipped, edits, edit.Path)
+				return report, err
+			}
+		}
 		if err := fsutil.AtomicWriteFile(s.guard, edit.Path, edit.After, perm); err != nil {
 			report.Skipped = appendRemaining(report.Skipped, edits, edit.Path)
 			return report, err

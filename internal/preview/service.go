@@ -30,6 +30,9 @@ const (
 
 // File describes a file change and any explicitly truncated inline diff.
 type File struct {
+	BeforeMissing bool   `json:"beforeMissing,omitzero"`
+	BeforeSHA256  string `json:"beforeSHA256,omitzero"`
+	AfterSHA256   string `json:"afterSHA256,omitzero"`
 	Path          string `json:"path"`
 	Diff          string `json:"diff,omitzero"`
 	Changed       bool   `json:"changed"`
@@ -80,6 +83,13 @@ type Service struct {
 func NewService(project string, signer *security.RequestStateSigner) *Service {
 	return &Service{project: sum(project), signer: signer, records: map[string]snapshot{}, now: time.Now}
 }
+
+// HashContent fingerprints the exact file bytes, including newline differences.
+func HashContent(data []byte) string {
+	digest := sha256.Sum256(data)
+	return hex.EncodeToString(digest[:])
+}
+
 func sum(s string) string { digest := sha256.Sum256([]byte(s)); return hex.EncodeToString(digest[:]) }
 func digestValue(value any) string {
 	h := sha256.New()
@@ -90,7 +100,7 @@ func planDigest(input string, files []File, extra any) string {
 	h := sha256.New()
 	_ = json.NewEncoder(h).Encode(input)
 	for _, file := range files {
-		_ = json.NewEncoder(h).Encode([]string{file.Path, sum(file.Diff), strconv.FormatBool(file.Changed)})
+		_ = json.NewEncoder(h).Encode([]string{file.Path, sum(file.Diff), file.BeforeSHA256, file.AfterSHA256, strconv.FormatBool(file.BeforeMissing), strconv.FormatBool(file.Changed)})
 	}
 	_ = json.NewEncoder(h).Encode(extra)
 	return hex.EncodeToString(h.Sum(nil))
@@ -109,9 +119,12 @@ func (s *Service) Prepare(ctx context.Context, operation string, input any, file
 		}
 		return view(record), nil
 	}
+	if len(files) > 4096 {
+		return View{}, fmt.Errorf("preview exceeds 4096 files; narrow the operation")
+	}
 	total := 0
 	for _, file := range files {
-		total += len(file.Diff) + len(file.Path)
+		total += len(file.Diff) + len(file.Path) + 512
 		if total > MaxBytes {
 			return View{}, fmt.Errorf("complete preview exceeds 64 MiB; narrow the selected locales/keys before applying")
 		}

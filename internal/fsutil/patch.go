@@ -19,20 +19,20 @@ func UnifiedDiff(path string, before []byte, after []byte) string {
 	fmt.Fprintf(&b, "+++ b/%s\n", path)
 	fmt.Fprintf(&b, "@@ -1,%d +1,%d @@\n", len(beforeLines), len(afterLines))
 	for _, line := range beforeLines {
-		b.WriteByte('-')
-		b.WriteString(line)
-		if !strings.HasSuffix(line, "\n") {
-			b.WriteByte('\n')
-		}
+		writePatchLine(&b, '-', line)
 	}
 	for _, line := range afterLines {
-		b.WriteByte('+')
-		b.WriteString(line)
-		if !strings.HasSuffix(line, "\n") {
-			b.WriteByte('\n')
-		}
+		writePatchLine(&b, '+', line)
 	}
 	return b.String()
+}
+
+func writePatchLine(b *strings.Builder, prefix byte, line string) {
+	b.WriteByte(prefix)
+	b.WriteString(line)
+	if !strings.HasSuffix(line, "\n") {
+		b.WriteString("\n\\ No newline at end of file\n")
+	}
 }
 
 func splitPatchLines(s string) []string {
