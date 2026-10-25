@@ -31,10 +31,16 @@ func (s *Service) Apply(ctx context.Context, in ApplyInput) (ApplyOutput, error)
 		return ApplyOutput{}, err
 	}
 	out.ChangedFiles = PreviewEdits(edits)
+	out.PlannedStateUpdates = len(validation.Accepted)
 	if dryRun {
 		return out, nil
 	}
 
+	if in.BeforeWrite != nil {
+		if err := in.BeforeWrite(ctx, out); err != nil {
+			return out, err
+		}
+	}
 	writeReport, err := s.WriteEdits(ctx, edits)
 	out.ChangedFiles = markWritten(out.ChangedFiles, writeReport.Written)
 	s.notifyApplied(ctx, validation.Accepted, writeReport.Written)

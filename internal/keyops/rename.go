@@ -28,6 +28,11 @@ func (s *Service) Rename(ctx context.Context, in RenameInput) (RenameOutput, err
 		return out, nil
 	}
 
+	if in.BeforeWrite != nil {
+		if err := in.BeforeWrite(ctx, out); err != nil {
+			return out, err
+		}
+	}
 	writeReport, err := s.writeEdits(ctx, plan.Edits)
 	out.ChangedFiles = markWritten(out.ChangedFiles, writeReport.Written)
 	s.notifyRenamed(ctx, plan.Edits, writeReport.Written)

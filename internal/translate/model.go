@@ -1,6 +1,8 @@
 package translate
 
 import (
+	"context"
+	"github.com/Ret2Hell/i18n-mcp/internal/preview"
 	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
@@ -123,30 +125,29 @@ type ValidationSummary struct {
 
 // ApplyInput configures validation and application of translations.
 type ApplyInput struct {
-	BatchID          string                `json:"batchId" jsonschema:"opaque translation batch handle returned by translation.plan"`
-	Translations     []ProposedTranslation `json:"translations" jsonschema:"translations to validate and apply"`
-	DryRun           *bool                 `json:"dryRun,omitzero" jsonschema:"when true, preview changes without writing"`
-	Apply            bool                  `json:"apply,omitzero" jsonschema:"must be true to write locale files and state"`
-	AllowSourceDrift bool                  `json:"allowSourceDrift,omitzero" jsonschema:"allow proposals generated from stale source text"`
+	PreviewToken     string                                   `json:"previewToken,omitzero" jsonschema:"approval token from a reviewed preview; required for truncated previews"`
+	BeforeWrite      func(context.Context, ApplyOutput) error `json:"-"`
+	BatchID          string                                   `json:"batchId" jsonschema:"opaque translation batch handle returned by translation.plan"`
+	Translations     []ProposedTranslation                    `json:"translations" jsonschema:"translations to validate and apply"`
+	DryRun           *bool                                    `json:"dryRun,omitzero" jsonschema:"when true, preview changes without writing"`
+	Apply            bool                                     `json:"apply,omitzero" jsonschema:"must be true to write locale files and state"`
+	AllowSourceDrift bool                                     `json:"allowSourceDrift,omitzero" jsonschema:"allow proposals generated from stale source text"`
 }
 
 // ApplyOutput describes the result of applying translations.
 type ApplyOutput struct {
-	DryRun       bool                  `json:"dryRun"`
-	Applied      int                   `json:"applied"`
-	ChangedFiles []ChangedFile         `json:"changedFiles"`
-	Rejected     []RejectedTranslation `json:"rejected,omitzero"`
-	StateUpdates int                   `json:"stateUpdates,omitzero"`
-	Warnings     []string              `json:"warnings,omitzero"`
+	Preview             *preview.Metadata     `json:"preview,omitzero"`
+	DryRun              bool                  `json:"dryRun"`
+	Applied             int                   `json:"applied"`
+	ChangedFiles        []ChangedFile         `json:"changedFiles"`
+	Rejected            []RejectedTranslation `json:"rejected,omitzero"`
+	PlannedStateUpdates int                   `json:"plannedStateUpdates,omitzero"`
+	StateUpdates        int                   `json:"stateUpdates,omitzero"`
+	Warnings            []string              `json:"warnings,omitzero"`
 }
 
 // ChangedFile describes changes made or previewed for a locale file.
-type ChangedFile struct {
-	Path    string `json:"path"`
-	Diff    string `json:"diff,omitzero"`
-	Changed bool   `json:"changed"`
-	Written bool   `json:"written,omitzero"`
-}
+type ChangedFile = preview.File
 
 // DryRunValue returns the effective dry-run setting.
 func (in ApplyInput) DryRunValue() bool {

@@ -15,6 +15,7 @@ import (
 
 func registerResources(s *mcp.Server, a *app.App) {
 	registerPageResources(s, a)
+	registerPatchResources(s, a)
 	s.AddResource(&mcp.Resource{
 		URI:         resourceuri.LocalesURI,
 		Name:        "locales",

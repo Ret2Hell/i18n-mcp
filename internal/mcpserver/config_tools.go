@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
@@ -53,13 +54,57 @@ func configValidateTool(a *app.App) func(context.Context, *mcp.CallToolRequest, 
 
 func configWriteTool(a *app.App) func(context.Context, *mcp.CallToolRequest, config.WriteInput) (*mcp.CallToolResult, ConfigWriteOutput, error) {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, in config.WriteInput) (*mcp.CallToolResult, ConfigWriteOutput, error) {
-		result, err := a.Config.Write(ctx, in)
+		canonical := in
+		canonical.Apply = false
+		canonical.DryRun = nil
+		canonical.PreviewToken = ""
+		canonical.BeforeWrite = nil
+		result, err := a.Config.Write(ctx, canonical)
 		if err != nil {
 			return nil, ConfigWriteOutput{}, err
 		}
-		out := ConfigWriteOutput{Result: result}
+		token := ""
+		if !in.DryRunValue() {
+			token = in.PreviewToken
+		}
+		view, err := a.Previews.Prepare(ctx, "i18n.config.write", canonical, []config.ChangedFile{result.ChangedFile}, nil, token)
+		if err != nil {
+			return nil, ConfigWriteOutput{}, err
+		}
+		compact := result
+		compact.ChangedFile = view.Files[0]
+		compact.Preview = view.Metadata
+		out := ConfigWriteOutput{Result: compact}
+		if err := checkWritePreview(out); err != nil {
+			return nil, ConfigWriteOutput{}, err
+		}
 		if !result.Validation.Valid {
-			return new(mcp.CallToolResult{IsError: true}), out, nil
+			return &mcp.CallToolResult{IsError: true}, out, nil
+		}
+		if in.DryRunValue() {
+			return nil, out, nil
+		}
+		if err := requireReview(view, in.PreviewToken); err != nil {
+			return writePreviewError(err), out, nil
+		}
+		in.BeforeWrite = func(ctx context.Context, actual config.WriteOutput) error {
+			return a.Previews.Verify(ctx, "i18n.config.write", canonical, []config.ChangedFile{actual.ChangedFile}, nil, view.Metadata.Token)
+		}
+		previous := result
+		result, err = a.Config.Write(ctx, in)
+		result.ChangedFile = reviewedFiles([]config.ChangedFile{result.ChangedFile}, view)[0]
+		result.Preview = view.Metadata
+		result.Warnings = boundWriteWarnings(result.Warnings, view)
+		if !result.Validation.Valid && err == nil {
+			err = fmt.Errorf("configuration no longer validates; request a new preview")
+		}
+		if err != nil && !result.Applied && checkWritePreview(ConfigWriteOutput{Result: result}) != nil {
+			result = previous
+			view.Metadata.DiagnosticsTruncated = true
+		}
+		out.Result = result
+		if err != nil {
+			return writePreviewError(err), out, nil
 		}
 		return nil, out, nil
 	}

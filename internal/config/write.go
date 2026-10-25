@@ -10,32 +10,31 @@ import (
 	"path/filepath"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
+	"github.com/Ret2Hell/i18n-mcp/internal/preview"
 )
 
 // WriteInput describes a requested configuration write.
 type WriteInput struct {
-	Config FileInput `json:"config" jsonschema:"replacement config; sourceLocale and localeFiles required; omitted optional fields use defaults"`
-	DryRun *bool     `json:"dryRun,omitzero" jsonschema:"when true, preview changes without writing"`
-	Apply  bool      `json:"apply,omitzero" jsonschema:"must be true to write .i18n-mcp.json"`
+	PreviewToken string                                   `json:"previewToken,omitzero" jsonschema:"approval token from a reviewed preview; required for truncated previews"`
+	BeforeWrite  func(context.Context, WriteOutput) error `json:"-"`
+	Config       FileInput                                `json:"config" jsonschema:"replacement config; sourceLocale and localeFiles required; omitted optional fields use defaults"`
+	DryRun       *bool                                    `json:"dryRun,omitzero" jsonschema:"when true, preview changes without writing"`
+	Apply        bool                                     `json:"apply,omitzero" jsonschema:"must be true to write .i18n-mcp.json"`
 }
 
 // WriteOutput describes the outcome of a configuration write.
 type WriteOutput struct {
-	DryRun      bool             `json:"dryRun"`
-	Applied     bool             `json:"applied"`
-	ConfigPath  string           `json:"configPath"`
-	Validation  ValidationResult `json:"validation"`
-	ChangedFile ChangedFile      `json:"changedFile"`
-	Warnings    []string         `json:"warnings,omitzero"`
+	Preview     *preview.Metadata `json:"preview,omitzero"`
+	DryRun      bool              `json:"dryRun"`
+	Applied     bool              `json:"applied"`
+	ConfigPath  string            `json:"configPath"`
+	Validation  ValidationResult  `json:"validation"`
+	ChangedFile ChangedFile       `json:"changedFile"`
+	Warnings    []string          `json:"warnings,omitzero"`
 }
 
 // ChangedFile describes the diff and write status for a file.
-type ChangedFile struct {
-	Path    string `json:"path"`
-	Diff    string `json:"diff,omitzero"`
-	Changed bool   `json:"changed"`
-	Written bool   `json:"written,omitzero"`
-}
+type ChangedFile = preview.File
 
 // DryRunValue returns the effective dry-run setting.
 func (in WriteInput) DryRunValue() bool {
@@ -90,6 +89,11 @@ func (s *Service) Write(ctx context.Context, in WriteInput) (WriteOutput, error)
 	perm := os.FileMode(0o600)
 	if resolvedInfo, err := os.Stat(resolvedPath); err == nil {
 		perm = resolvedInfo.Mode().Perm()
+	}
+	if in.BeforeWrite != nil {
+		if err := in.BeforeWrite(ctx, out); err != nil {
+			return out, err
+		}
 	}
 	if err := fsutil.AtomicWriteFile(s.guard, path, after, perm); err != nil {
 		return out, err
