@@ -100,6 +100,9 @@ func newServeStdioCommand(opts *RootOptions) *cobra.Command {
 }
 
 func runStdio(ctx context.Context, opts *RootOptions, watchLocales bool) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	application, err := app.New(ctx, app.Options{
 		ProjectRoot: opts.Project,
 		ConfigPath:  opts.Config,
@@ -137,7 +140,7 @@ func startLocaleWatcher(ctx context.Context, application *app.App, notifier mcpa
 	}
 	for _, dir := range dirs {
 		if err := localeWatcher.AddDir(dir); err != nil {
-			return err
+			return errors.Join(err, localeWatcher.Close())
 		}
 	}
 	mapper := watch.NewLocaleMapper(application.Guard, cfg)

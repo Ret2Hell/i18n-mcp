@@ -41,14 +41,14 @@ func Run(ctx context.Context, cfg Config, provider ServerProvider, logger *slog.
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	go func() {
-		<-ctx.Done()
+	stopShutdown := context.AfterFunc(ctx, func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		if err := server.Shutdown(shutdownCtx); err != nil && logger != nil {
 			logger.Warn("HTTP server shutdown failed", "error", err)
 		}
-	}()
+	})
+	defer stopShutdown()
 
 	err = server.ListenAndServe()
 	if errors.Is(err, http.ErrServerClosed) {
