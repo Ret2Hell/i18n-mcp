@@ -10,9 +10,9 @@ type PrunePlan struct {
 type PruneInput struct {
 	Keys              []PruneKey `json:"keys" jsonschema:"exact namespace and key pairs to prune"`
 	DryRun            *bool      `json:"dryRun,omitempty" jsonschema:"when true, preview changes without writing"`
-	Apply             bool       `json:"apply,omitempty" jsonschema:"must be true to write locale files"`
-	ConfirmWithClient bool       `json:"confirmWithClient,omitempty" jsonschema:"when true with apply, request MCP client confirmation before writing"`
-	AllowUnsafe       bool       `json:"allowUnsafe,omitempty" jsonschema:"allow pruning used, maybe_dynamic, ignored, or kept keys"`
+	Apply             bool       `json:"apply,omitzero" jsonschema:"must be true to write locale files"`
+	ConfirmWithClient bool       `json:"confirmWithClient,omitzero" jsonschema:"when true with apply, request MCP client confirmation before writing"`
+	AllowUnsafe       bool       `json:"allowUnsafe,omitzero" jsonschema:"allow pruning used, maybe_dynamic, ignored, or kept keys"`
 }
 
 // PruneKey identifies a namespace key to remove.
@@ -43,7 +43,7 @@ type ChangedFile struct {
 	Path    string `json:"path"`
 	Diff    string `json:"diff,omitempty"`
 	Changed bool   `json:"changed"`
-	Written bool   `json:"written,omitempty"`
+	Written bool   `json:"written,omitzero"`
 }
 
 // DryRunValue returns the effective dry-run setting.

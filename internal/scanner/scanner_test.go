@@ -107,6 +107,30 @@ func TestLocationBoundaries(t *testing.T) {
 	require.Equal(t, "third", snippet)
 }
 
+func TestLocationEmptyLinesAndByteColumns(t *testing.T) {
+	for _, tc := range []struct {
+		name, input, snippet string
+		offset, line, column int
+	}{
+		{name: "empty", line: 1, column: 1},
+		{name: "empty negative", offset: -1, line: 1, column: 1},
+		{name: "empty past end", offset: 10, line: 1, column: 1},
+		{name: "first newline", input: "\n", line: 1, column: 1},
+		{name: "trailing newline", input: "first\n", offset: 6, line: 2, column: 1},
+		{name: "blank line", input: "a\n\nb", offset: 2, line: 2, column: 1},
+		{name: "CRLF", input: "a\r\n  b\r\n", offset: 5, line: 2, column: 3, snippet: "b"},
+		{name: "unicode byte column", input: "é title", offset: 3, line: 1, column: 4, snippet: "é title"},
+		{name: "unicode after newline", input: "é\n  界", offset: 5, line: 2, column: 3, snippet: "界"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			line, column, snippet := location([]byte(tc.input), tc.offset)
+			require.Equal(t, tc.line, line)
+			require.Equal(t, tc.column, column)
+			require.Equal(t, tc.snippet, snippet)
+		})
+	}
+}
+
 func TestScannerFindsNamespaceBoundKeys(t *testing.T) {
 	root := t.TempDir()
 	writeScannerFile(t, root, "app/login.tsx", `

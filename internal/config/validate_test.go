@@ -30,13 +30,11 @@ func TestValidateRejectsBadConfig(t *testing.T) {
 	service := NewService(guard, "")
 
 	cfg := Resolved{
-		File: File{
-			SourceLocale:  "en",
-			TargetLocales: []string{"en"},
-			LocaleFiles:   []string{"messages/*.json"},
-			Format:        FormatConfig{Indent: 20},
-		},
-		ProjectRoot: root,
+		SourceLocale:  "en",
+		TargetLocales: []string{"en"},
+		LocaleFiles:   []string{"messages/*.json"},
+		Format:        FormatConfig{Indent: 20},
+		ProjectRoot:   root,
 	}
 
 	got := service.Validate(ctx, cfg)

@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -136,7 +137,7 @@ func (s *Service) Prepare(ctx context.Context, operation string, input any, file
 	id := hex.EncodeToString(idBytes)
 	now := s.now()
 	inputDigest := digestValue(input)
-	record := snapshot{id: id, owner: security.SubjectFromContext(ctx), operation: operation, inputDigest: inputDigest, digest: planDigest(inputDigest, files, extra), expires: now.Add(ttl), files: append([]File(nil), files...), bytes: total}
+	record := snapshot{id: id, owner: security.SubjectFromContext(ctx), operation: operation, inputDigest: inputDigest, digest: planDigest(inputDigest, files, extra), expires: now.Add(ttl), files: slices.Clone(files), bytes: total}
 	data, _ := json.Marshal(id)
 	signed, err := s.signer.Sign(security.RequestStateClaims{Subject: record.owner, Operation: operation, InputDigest: s.project + ":" + inputDigest, PlanDigest: record.digest, ExpiresAt: record.expires.Unix(), Data: data})
 	if err != nil {

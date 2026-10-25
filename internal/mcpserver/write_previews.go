@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"unicode/utf8"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/pagination"
@@ -32,12 +33,7 @@ func checkWritePreview(out any) error {
 }
 
 func anyWritten(files []preview.File) bool {
-	for _, file := range files {
-		if file.Written {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(files, func(file preview.File) bool { return file.Written })
 }
 
 func reviewedFiles(actual []preview.File, view preview.View) []preview.File {

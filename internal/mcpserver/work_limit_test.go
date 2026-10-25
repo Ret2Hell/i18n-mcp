@@ -10,15 +10,15 @@ import (
 )
 
 func TestWorkLimitRejectsExcessAndReleasesCapacity(t *testing.T) {
-	var once sync.Once
 	started := make(chan struct{})
+	notifyStarted := sync.OnceFunc(func() { close(started) })
 	release := make(chan struct{})
 	done := make(chan struct{})
 	next := func(_ context.Context, _ string, req mcp.Request) (mcp.Result, error) {
 		if req.GetParams().(*mcp.CallToolParamsRaw).Name == "i18n.health" {
 			return &mcp.CallToolResult{}, nil
 		}
-		once.Do(func() { close(started) })
+		notifyStarted()
 		<-release
 		return &mcp.CallToolResult{}, nil
 	}

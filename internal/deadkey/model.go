@@ -20,10 +20,10 @@ const (
 
 // ReportInput configures dead-key classification.
 type ReportInput struct {
-	RefreshUsage bool     `json:"refreshUsage,omitempty" jsonschema:"rerun usage scan before classifying keys"`
+	RefreshUsage bool     `json:"refreshUsage,omitzero" jsonschema:"rerun usage scan before classifying keys"`
 	Namespaces   []string `json:"namespaces,omitzero" jsonschema:"namespaces to include"`
 	Keys         []string `json:"keys,omitzero" jsonschema:"keys to include"`
-	IncludeUsed  bool     `json:"includeUsed,omitempty" jsonschema:"include keys classified as used"`
+	IncludeUsed  bool     `json:"includeUsed,omitzero" jsonschema:"include keys classified as used"`
 }
 
 // Report contains dead-key classification results.

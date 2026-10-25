@@ -2,7 +2,11 @@
 // declarations that some tool/function clients cannot map to their dialects.
 package schemaport
 
-import "github.com/google/jsonschema-go/jsonschema"
+import (
+	"maps"
+
+	"github.com/google/jsonschema-go/jsonschema"
+)
 
 // Normalize rewrites type arrays to equivalent single-type anyOf branches.
 // Required, defaults, nullability and unrelated constraints are not changed.
@@ -31,7 +35,7 @@ func Normalize(root *jsonschema.Schema) {
 			s.Types = nil
 		}
 		for _, group := range []map[string]*jsonschema.Schema{s.Defs, s.Definitions, s.DependencySchemas, s.Properties, s.PatternProperties, s.DependentSchemas} {
-			for _, child := range group {
+			for child := range maps.Values(group) {
 				walk(child)
 			}
 		}

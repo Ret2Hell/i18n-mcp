@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/keyops"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -18,7 +19,7 @@ func keysRenameTool(a *app.App) func(context.Context, *mcp.CallToolRequest, keyo
 		if err != nil {
 			return nil, keyops.RenameOutput{}, err
 		}
-		return runReviewedWrite(ctx, a.Previews, reviewedWriteOperation[keyops.RenameOutput]{
+		return (reviewedWriteOperation[keyops.RenameOutput]{
 			name:        "i18n.keys.rename",
 			canonical:   canonical,
 			dryRun:      in.DryRunValue(),
@@ -31,6 +32,6 @@ func keysRenameTool(a *app.App) func(context.Context, *mcp.CallToolRequest, keyo
 				in.BeforeWrite = verify
 				return a.KeyOps.Rename(ctx, in)
 			},
-		}, out)
+		}).run(ctx, a.Previews, out)
 	}
 }

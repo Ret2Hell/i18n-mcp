@@ -30,10 +30,10 @@ type reviewedWriteOperation[O any] struct {
 	apply func(context.Context, func(context.Context, O) error) (O, error)
 }
 
-// runReviewedWrite receives an already-computed canonical dry-run result. Review
+// run receives an already-computed canonical dry-run result. Review
 // tokens, response budgets and pre-write verification are identical for every
 // operation; conflicts/rejections remain the responsibility of its adapter.
-func runReviewedWrite[O any](ctx context.Context, previews *preview.Service, op reviewedWriteOperation[O], out O) (*mcp.CallToolResult, O, error) {
+func (op reviewedWriteOperation[O]) run(ctx context.Context, previews *preview.Service, out O) (*mcp.CallToolResult, O, error) {
 	var zero O
 	result := op.outcome(&out)
 	token := ""

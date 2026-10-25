@@ -84,7 +84,7 @@ func TestWalkInventoryPropagatesErrors(t *testing.T) {
 func TestWalkInventoryCountsInvalidSourcesOnceAndBoundsSamples(t *testing.T) {
 	s, _, _ := walkFixture(t)
 	inv := locale.Inventory{SourceLocale: "en", TargetLocales: []string{"de", "fr"}, Validation: config.ValidationConfig{MessageFormat: "icu"}}
-	for i := 0; i < 25; i++ {
+	for i := range 25 {
 		inv.Units = append(inv.Units, locale.Unit{Locale: "en", Namespace: "common", Key: fmt.Sprintf("key%02d", i), Value: `{n, plural, one {broken}}`})
 	}
 	var items []KeyDiff

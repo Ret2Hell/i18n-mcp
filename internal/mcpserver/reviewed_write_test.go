@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -36,6 +37,17 @@ func reviewTestService(t *testing.T) *preview.Service {
 	return preview.NewService(t.TempDir(), signer)
 }
 
+func TestEmptyReviewedWriteSlicesRemainNil(t *testing.T) {
+	for _, files := range [][]preview.File{nil, {}} {
+		require.Nil(t, reviewedFiles(nil, preview.View{Files: files}))
+	}
+	for _, warnings := range [][]string{nil, {}} {
+		view := preview.View{Metadata: &preview.Metadata{}}
+		require.Nil(t, boundWriteWarnings(warnings, view))
+		require.False(t, view.Metadata.DiagnosticsTruncated)
+	}
+}
+
 func TestReviewedWriteRejectsBeforeApply(t *testing.T) {
 	for _, tc := range []struct {
 		name                       string
@@ -63,7 +75,7 @@ func TestReviewedWriteRejectsBeforeApply(t *testing.T) {
 			if tc.truncated {
 				out.Files[0].Diff = strings.Repeat("x", preview.InlineBytes+1)
 			}
-			res, got, err := runReviewedWrite(t.Context(), reviewTestService(t), op, out)
+			res, got, err := op.run(t.Context(), reviewTestService(t), out)
 			require.NoError(t, err)
 			require.NotNil(t, got.Preview)
 			require.False(t, got.Files[0].Written)
@@ -99,7 +111,7 @@ func TestReviewedWriteChecksActualPlanBeforeWrite(t *testing.T) {
 				actual.Files[0].Written = true
 				return actual, nil
 			}
-			res, got, err := runReviewedWrite(t.Context(), previews, op, out)
+			res, got, err := op.run(t.Context(), previews, out)
 			require.NoError(t, err)
 			require.Equal(t, !drift, wrote)
 			require.Equal(t, !drift, got.Files[0].Written)
@@ -129,7 +141,7 @@ func TestReviewedWritePreservesFailureAndBoundsDiagnostics(t *testing.T) {
 			op.apply = func(ctx context.Context, verify func(context.Context, reviewTestOutput) error) (reviewTestOutput, error) {
 				require.NoError(t, verify(ctx, out))
 				actual := out
-				actual.Files = append([]preview.File(nil), out.Files...)
+				actual.Files = slices.Clone(out.Files)
 				actual.Files[0].Written = tc.written
 				actual.Warnings = []string{strings.Repeat("w", 4096)}
 				if tc.blocked {
@@ -141,7 +153,7 @@ func TestReviewedWritePreservesFailureAndBoundsDiagnostics(t *testing.T) {
 				}
 				return actual, errors.New("write failed")
 			}
-			res, got, err := runReviewedWrite(t.Context(), reviewTestService(t), op, out)
+			res, got, err := op.run(t.Context(), reviewTestService(t), out)
 			require.NoError(t, err)
 			require.True(t, res.IsError)
 			require.True(t, got.Preview.DiagnosticsTruncated)

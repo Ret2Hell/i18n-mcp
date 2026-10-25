@@ -119,7 +119,7 @@ func TestNewLocaleMapper(t *testing.T) {
 		{"invalid pattern", "[/{locale}.json", "", "messages/fr.json", nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			mapper := NewLocaleMapper(guard, config.Resolved{File: config.File{LocaleFiles: []string{tc.pattern}, DefaultNamespace: tc.namespace}})
+			mapper := NewLocaleMapper(guard, config.Resolved{LocaleFiles: []string{tc.pattern}, DefaultNamespace: tc.namespace})
 			require.Equal(t, tc.want, mapper(filepath.Join(guard.Root(), tc.path)))
 		})
 	}

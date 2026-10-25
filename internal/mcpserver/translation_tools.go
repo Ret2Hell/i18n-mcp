@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"context"
+
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/translate"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -18,7 +19,7 @@ func translationApplyTool(a *app.App) func(context.Context, *mcp.CallToolRequest
 		if err != nil {
 			return nil, translate.ApplyOutput{}, err
 		}
-		return runReviewedWrite(ctx, a.Previews, reviewedWriteOperation[translate.ApplyOutput]{
+		return (reviewedWriteOperation[translate.ApplyOutput]{
 			name:        "i18n.translation.apply",
 			canonical:   canonical,
 			dryRun:      in.DryRunValue(),
@@ -31,6 +32,6 @@ func translationApplyTool(a *app.App) func(context.Context, *mcp.CallToolRequest
 				in.BeforeWrite = verify
 				return a.Translation.Apply(ctx, in)
 			},
-		}, out)
+		}).run(ctx, a.Previews, out)
 	}
 }

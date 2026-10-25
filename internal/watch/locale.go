@@ -53,7 +53,7 @@ func (w *LocaleWatcher) Run(ctx context.Context, mapper func(string) []string) (
 	timers := map[string]*time.Timer{}
 	defer func() {
 		cancel()
-		for _, timer := range timers {
+		for timer := range maps.Values(timers) {
 			timer.Stop()
 		}
 		err = errors.Join(err, w.Close())

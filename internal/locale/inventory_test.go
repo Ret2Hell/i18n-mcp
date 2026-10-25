@@ -50,11 +50,11 @@ func TestInventoryUnsupportedValuesAndDuplicateNamespace(t *testing.T) {
 
 func TestInventoryForConfigDeduplicatesRepeatedPatterns(t *testing.T) {
 	service := localeServiceForFixture(t, "next-intl-basic")
-	inv, err := service.InventoryForConfig(t.Context(), config.Resolved{File: config.File{
+	inv, err := service.InventoryForConfig(t.Context(), config.Resolved{
 		SourceLocale:     "en",
 		LocaleFiles:      []string{"messages/{locale}.json", "messages/{locale}.json"},
 		DefaultNamespace: "common",
-	}})
+	})
 	require.NoError(t, err)
 
 	require.Len(t, inv.Files, 2)

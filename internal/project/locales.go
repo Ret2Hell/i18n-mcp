@@ -171,7 +171,7 @@ func countStrings(value any) int {
 		return count
 	case map[string]any:
 		count := 0
-		for _, item := range v {
+		for item := range maps.Values(v) {
 			count += countStrings(item)
 		}
 		return count

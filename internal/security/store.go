@@ -2,6 +2,7 @@ package security
 
 import (
 	"context"
+	"maps"
 	"sync"
 	"time"
 )
@@ -37,11 +38,9 @@ func (s *Store[T]) Put(ctx context.Context, id string, value T) {
 	}
 	owner := SubjectFromContext(ctx)
 	now := time.Now().UTC()
-	for key, record := range s.records {
-		if now.Sub(record.CreatedAt) >= recordTTL {
-			delete(s.records, key)
-		}
-	}
+	maps.DeleteFunc(s.records, func(_ storeKey, record OwnedRecord[T]) bool {
+		return now.Sub(record.CreatedAt) >= recordTTL
+	})
 	key := storeKey{owner: owner, id: id}
 	if _, exists := s.records[key]; !exists && len(s.records) >= maxStoredRecords {
 		var oldest storeKey

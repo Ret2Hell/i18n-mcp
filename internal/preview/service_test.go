@@ -75,10 +75,21 @@ func TestPatchChunksAreExactImmutableOwnedAndBounded(t *testing.T) {
 	page, err := service.Page(ctx, id, "file", 0, 0)
 	require.NoError(t, err)
 	require.NotNil(t, page)
+	record, err := service.owned(ctx, id)
+	require.NoError(t, err)
+	require.Equal(t, original, record.files[0].Diff)
 	require.Error(t, NewService("other", signer).Verify(ctx, "op", nil, files, nil, view.Metadata.Token))
 	service.now = func() time.Time { return time.Now().Add(ttl + time.Second) }
 	_, err = service.Page(ctx, id, "file", 0, 0)
 	require.Error(t, err)
+}
+
+func TestEmptyPreviewFilesRemainNil(t *testing.T) {
+	for _, files := range [][]File{nil, {}} {
+		got := view(snapshot{files: files})
+		require.Nil(t, got.Files)
+		require.Zero(t, got.Metadata.TotalFiles)
+	}
 }
 
 func TestManifestBudgetPreservesEveryFile(t *testing.T) {

@@ -32,8 +32,8 @@ func TestBuildPathFromPattern(t *testing.T) {
 
 func TestTargetPathForPrefersInventoryAndFallsBackToMatchingPattern(t *testing.T) {
 	s := &Service{}
-	cfg := config.Resolved{File: config.File{DefaultNamespace: "common", LocaleFiles: []string{"flat/{locale}.json", "locales/{locale}/{namespace}.json"}}}
-	inv := locale.Inventory{Files: []locale.FileSummary{{FileRef: locale.FileRef{Locale: "fr", Namespace: "admin", Path: "existing/fr/admin.json"}}}}
+	cfg := config.Resolved{DefaultNamespace: "common", LocaleFiles: []string{"flat/{locale}.json", "locales/{locale}/{namespace}.json"}}
+	inv := locale.Inventory{Files: []locale.FileSummary{{Locale: "fr", Namespace: "admin", Path: "existing/fr/admin.json"}}}
 	path, err := s.targetPathFor(cfg, inv, "fr", "admin")
 	require.NoError(t, err)
 	require.Equal(t, "existing/fr/admin.json", path)

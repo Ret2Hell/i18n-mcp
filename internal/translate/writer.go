@@ -1,8 +1,10 @@
 package translate
 
 import (
+	"bytes"
 	"context"
 	"os"
+	"slices"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 )
@@ -35,7 +37,7 @@ func (s *Service) WriteEdits(ctx context.Context, edits []FileEdit) (WriteReport
 			report.Skipped = appendRemaining(report.Skipped, edits, edit.Path)
 			return report, err
 		}
-		if string(edit.Before) == string(edit.After) {
+		if bytes.Equal(edit.Before, edit.After) {
 			report.Unchanged = append(report.Unchanged, edit.Path)
 			continue
 		}
@@ -66,14 +68,14 @@ func (s *Service) WriteEdits(ctx context.Context, edits []FileEdit) (WriteReport
 }
 
 func appendRemaining(out []string, edits []FileEdit, failedPath string) []string {
-	started := false
-	for _, edit := range edits {
-		if edit.Path == failedPath {
-			started = true
-		}
-		if started {
-			out = append(out, edit.Path)
-		}
+	failed := slices.IndexFunc(edits, func(edit FileEdit) bool {
+		return edit.Path == failedPath
+	})
+	if failed == -1 {
+		return out
+	}
+	for _, edit := range edits[failed:] {
+		out = append(out, edit.Path)
 	}
 	return out
 }

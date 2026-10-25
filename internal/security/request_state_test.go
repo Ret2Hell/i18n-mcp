@@ -63,6 +63,15 @@ func TestRequestStateSignerRejectsInvalidState(t *testing.T) {
 	}
 }
 
+func TestRequestStateSignerCopiesKey(t *testing.T) {
+	key := []byte(strings.Repeat("k", 32))
+	signer, err := NewRequestStateSigner(key)
+	require.NoError(t, err)
+
+	clear(key)
+	require.Equal(t, []byte(strings.Repeat("k", 32)), signer.key)
+}
+
 func TestRequestStateSignerRequiresStrongKey(t *testing.T) {
 	_, err := NewRequestStateSigner([]byte("short"))
 	require.ErrorContains(t, err, "at least 32 bytes")
