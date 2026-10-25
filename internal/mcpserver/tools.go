@@ -37,7 +37,7 @@ func registerTools(s *mcp.Server, a *app.App) {
 	addTool(s, new(mcp.Tool{
 		Name:        "i18n.config.write",
 		Title:       "Write i18n MCP Config",
-		Description: "Preview or write .i18n-mcp.json from explicit config input. Dry-run by default; writes only with apply true.",
+		Description: "Preview or write .i18n-mcp.json. Dry-run by default. If preview.truncated is true, retrieve the complete patch resources and review them before applying with previewToken=preview.token.",
 		Annotations: writeOp("Write i18n MCP Config", false, true),
 	}), configWriteTool(a))
 
@@ -51,7 +51,7 @@ func registerTools(s *mcp.Server, a *app.App) {
 	addTool(s, &mcp.Tool{
 		Name:        "i18n.keys.diff",
 		Title:       "Diff Locale Keys",
-		Description: "Return a bounded, filtered page of missing, stale, extra, invalid, unknown, and current keys with complete matching summary counts. Follow page.nextCursor or page.nextResource.",
+		Description: "Return a bounded filtered diff page. Target defects (invalid) are separate from source-policy failures (source_invalid); sourceIssueCount counts distinct source keys. Follow page.nextCursor or page.nextResource.",
 		Annotations: readOnly("Diff Locale Keys"),
 	}, keysDiffTool(a))
 
@@ -60,7 +60,7 @@ func registerTools(s *mcp.Server, a *app.App) {
 	addTool(s, &mcp.Tool{
 		Name:        "i18n.keys.rename",
 		Title:       "Rename i18n Keys",
-		Description: "Rename or move exact locale keys across locale JSON files and update state. Dry-run by default; writes only with apply true.",
+		Description: "Preview or rename exact locale keys and update state. Dry-run by default. Truncated previews require complete patch retrieval/review, then apply true with previewToken=preview.token.",
 		Annotations: writeOp("Rename i18n Keys", true, true),
 	}, keysRenameTool(a))
 
@@ -81,7 +81,7 @@ func registerTools(s *mcp.Server, a *app.App) {
 	addTool(s, &mcp.Tool{
 		Name:        "i18n.translation.apply",
 		Title:       "Apply Translations",
-		Description: "Validate translations, preview patches, and write locale files plus state only when apply is true. Dry-run by default.",
+		Description: "Validate translations and preview locale patches plus planned state-update counts. Dry-run by default. For truncated previews, retrieve/review complete patches before apply true with previewToken=preview.token.",
 		Annotations: writeOp("Apply Translations", false, true),
 	}, translationApplyTool(a))
 

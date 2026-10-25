@@ -40,19 +40,19 @@ type File struct {
 	DiffBytes     int    `json:"diffBytes,omitzero"`
 	DiffSHA256    string `json:"diffSHA256,omitzero"`
 	DiffTruncated bool   `json:"diffTruncated,omitzero"`
-	PatchURI      string `json:"patchUri,omitzero"`
+	PatchURI      string `json:"patchUri,omitzero" jsonschema:"immutable byte-exact patch resource; follow base64 chunks and verify diffSHA256"`
 }
 
 // Metadata identifies a complete immutable review snapshot and its approval token.
 type Metadata struct {
-	Token                string    `json:"token"`
+	Token                string    `json:"token" jsonschema:"approval token bound to this operation and exact file versions; pass unchanged as previewToken"`
 	ExpiresAt            time.Time `json:"expiresAt"`
 	TotalFiles           int       `json:"totalFiles"`
 	ReturnedFiles        int       `json:"returnedFiles"`
 	TotalDiffBytes       int       `json:"totalDiffBytes"`
-	Truncated            bool      `json:"truncated"`
+	Truncated            bool      `json:"truncated" jsonschema:"inline diff text or file list is incomplete; retrieve manifest and full patch resources before approving"`
 	DiagnosticsTruncated bool      `json:"diagnosticsTruncated,omitzero"`
-	ManifestURI          string    `json:"manifestUri"`
+	ManifestURI          string    `json:"manifestUri" jsonschema:"paged metadata for every file in this snapshot, including files omitted from the inline list"`
 }
 
 // View is the bounded inline representation of a complete snapshot.
