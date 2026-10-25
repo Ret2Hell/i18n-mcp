@@ -22,7 +22,7 @@ const (
 	// InlineBytes bounds the combined inline patch text, not each file separately.
 	InlineBytes    = 16 << 10
 	MaxInlineFiles = 50
-	ChunkBytes     = 16 << 10
+	ChunkBytes     = 48 << 10
 	MaxBytes       = 64 << 20
 	maxSnapshots   = 16
 	ttl            = 15 * time.Minute
@@ -259,12 +259,27 @@ func (s *Service) Page(ctx context.Context, id, kind string, index, offset int) 
 		if offset > len(record.files) {
 			return nil, fmt.Errorf("preview manifest offset out of range")
 		}
-		end := min(len(record.files), offset+MaxInlineFiles)
-		files := append([]File(nil), record.files[offset:end]...)
-		for i := range files {
-			files[i].DiffBytes = len(files[i].Diff)
-			files[i].Diff = ""
-			files[i].PatchURI = fmt.Sprintf("i18n://patches/%s/file/%d/0", id, offset+i)
+		end := offset
+		files := []File{}
+		used := 0
+		for end < len(record.files) && len(files) < MaxInlineFiles {
+			file := record.files[end]
+			file.DiffBytes = len(file.Diff)
+			file.Diff = ""
+			file.PatchURI = fmt.Sprintf("i18n://patches/%s/file/%d/0", id, end)
+			encoded, err := json.Marshal(file)
+			if err != nil {
+				return nil, err
+			}
+			if used+len(encoded) > 32<<10 {
+				if len(files) == 0 {
+					return nil, fmt.Errorf("individual patch metadata exceeds resource budget")
+				}
+				break
+			}
+			files = append(files, file)
+			used += len(encoded)
+			end++
 		}
 		next := ""
 		if end < len(record.files) {

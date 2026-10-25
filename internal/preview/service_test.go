@@ -50,7 +50,7 @@ func TestPatchChunksAreExactImmutableOwnedAndBounded(t *testing.T) {
 		require.NoError(t, err)
 		raw, err := json.Marshal(page)
 		require.NoError(t, err)
-		require.Less(t, len(raw), 32<<10)
+		require.Less(t, len(raw), 96<<10)
 		var chunk struct {
 			Data         string
 			TotalBytes   int
@@ -79,6 +79,39 @@ func TestPatchChunksAreExactImmutableOwnedAndBounded(t *testing.T) {
 	service.now = func() time.Time { return time.Now().Add(ttl + time.Second) }
 	_, err = service.Page(ctx, id, "file", 0, 0)
 	require.Error(t, err)
+}
+
+func TestManifestBudgetPreservesEveryFile(t *testing.T) {
+	signer, err := security.NewRandomRequestStateSigner()
+	require.NoError(t, err)
+	service := NewService("project", signer)
+	files := make([]File, 80)
+	for i := range files {
+		path := "file"
+		if i >= 50 {
+			path = strings.Repeat("\x01", 2000)
+		}
+		files[i] = File{Path: path, Diff: "patch", Changed: true}
+	}
+	view, err := service.Prepare(t.Context(), "op", nil, files, nil, "")
+	require.NoError(t, err)
+	id := strings.Split(view.Metadata.ManifestURI, "/")[3]
+	offset := 0
+	for offset < len(files) {
+		page, err := service.Page(t.Context(), id, "manifest", 0, offset)
+		require.NoError(t, err)
+		raw, err := json.Marshal(page)
+		require.NoError(t, err)
+		require.Less(t, len(raw), 40<<10)
+		var manifest struct {
+			Files        []File
+			NextResource string
+		}
+		require.NoError(t, json.Unmarshal(raw, &manifest))
+		require.NotEmpty(t, manifest.Files)
+		offset += len(manifest.Files)
+	}
+	require.Equal(t, len(files), offset)
 }
 
 func TestPreviewRetentionAndManifestLimits(t *testing.T) {
