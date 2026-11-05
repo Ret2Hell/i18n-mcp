@@ -1,7 +1,9 @@
 package keyops_test
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
+
 	"os"
 	"path/filepath"
 	"testing"
@@ -188,7 +190,7 @@ func newRenameFixtureApp(t *testing.T) *app.App {
 		UpdatedAt:          renameTestTime(),
 		UpdatedBy:          "fixture",
 	}
-	data, err := json.MarshalIndent(stateFile, "", "  ")
+	data, err := json.Marshal(stateFile, jsontext.WithIndent("  "))
 	require.NoError(t, err)
 	writeRenameFile(t, root, state.DefaultStatePath, string(data)+"\n")
 
