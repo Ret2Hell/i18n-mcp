@@ -33,6 +33,64 @@ The selected inventory/diff services reread files rather than retaining a full a
 
 `ns/op` is mean elapsed operation cost (or amortized attempt cost under saturation); p50/p95 are per-sample observed successful-call latency percentiles. Allocation counts cover **both server and client** in the same process. The latency sample buffer is allocated outside the timer; timestamping and per-call success checks are included. Per-sample p95 estimates, especially fresh-lifecycle/saturation samples with fewer successful calls, are descriptive, not production SLO estimates.
 
+## Results: Go 1.27.3 / Sonic v1.15.5
+
+Linux/amd64, AMD Ryzen AI 9 365. Six independent 1-second samples per case/backend, `GOMAXPROCS=4`, affinity to logical CPUs 8–11. Backend order rotates across repetitions to reduce thermal/order bias. Full environment, test logs, and raw samples are in [results/](results/). These saved samples were collected before the benchmark source was relocated from `internal/httpserver/` to `benchmarks/mcp/`, which is why their package header uses the old path. The workload and production handler are unchanged; the standalone location was subsequently validated under all three backends. Statistical comparison: [results/comparison.txt](results/comparison.txt), generated with `golang.org/x/perf/cmd/benchstat@v0.0.0-20261009192801-be2c69fb417e`.
+
+**The end-to-end difference is much smaller than the isolated JSON speedups.** Sonic retains a modest advantage in several measured tool paths, but many differences are within run-to-run noise. These results do not justify claims of a 2–3x faster MCP server.
+
+### Established connection: mean request cost
+
+Medians of six `ns/op` samples, expressed in **milliseconds per request**:
+
+| Tool | Requested / returned items | Sonic | JSON v1 | v2 compatible | v2 vs Sonic |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Locales | 50 / 50 | 6.99 | 7.76 | 8.17 | +16.9%, inconclusive |
+| Diff | 50 / 50 | 19.27 | 20.06 | 20.31 | +5.4%, inconclusive |
+| Plan | 50 / 50 | 20.03 | 20.91 | 21.40 | **+6.8%**, p=0.004 |
+| Locales | 200 / 200 | 11.99 | 13.32 | 13.40 | **+11.7%**, p=0.009 |
+| Diff | 200 / 200 | 25.60 | 27.28 | 27.19 | +6.2%, inconclusive |
+| Plan | 200 / 195 | 27.93 | 30.52 | 30.95 | **+10.8%**, p=0.002 |
+
+“Inconclusive” means benchstat did not detect a mean-cost difference at p<0.05 with these six samples; it does **not** establish equivalence. Comparisons are exploratory and not corrected for multiple testing. Health cost was 0.85 / 0.91 / 1.02 ms respectively; its absolute difference is small and it is not an analysis workload.
+
+Successful-call latency, **median of per-sample p50 / p95 in milliseconds**:
+
+| Tool / requested limit | Sonic p50 / p95 | v2 compatible p50 / p95 |
+| --- | ---: | ---: |
+| Locales / 50 | 6.96 / 9.04 | 7.89 / 10.30 |
+| Diff / 50 | 19.12 / 22.21 | 20.10 / 23.30 |
+| Plan / 50 | 19.87 / 23.04 | 21.27 / 24.64 |
+| Locales / 200 | 11.69 / 15.05 | 13.16 / 16.02 |
+| Diff / 200 | 25.51 / 28.68 | 27.27 / 30.33 |
+| Plan / 200 | 27.91 / 31.89 | 30.45 / 36.01 |
+
+At requested limit 200, total client+server allocation was **5.11 vs 5.02 MiB** (locales), **10.70 vs 10.56 MiB** (diff), and **12.96 vs 12.48 MiB** (plan), Sonic vs v2-compatible. V2 saved some bytes, but made roughly 1,600 more allocations per request in this fixture. Neither backend changes the SDK's substantial common overhead.
+
+### Fresh application/connection lifecycle
+
+At requested limit 200: Sonic vs v2-compatible mean costs were **38.44 vs 39.23 ms** for locales, **50.69 vs 54.04 ms** for diff, and **53.52 vs 56.78 ms** for planning. Only the diff difference was statistically detected in mean cost (+6.6%, p=0.002); most lifecycle comparisons were inconclusive.
+
+This must not be presented as a cold-process startup comparison: process-global JSON caches/JIT and OS caches are already warm.
+
+### Saturated single-project server
+
+At requested limit 200, successful calls/second were:
+
+| Tool | Sonic | v2 compatible | Busy rejection fraction (both) |
+| --- | ---: | ---: | ---: |
+| Locales | 51.26 | 44.81 | about 95% |
+| Diff | 22.12 | 20.66 | about 98% |
+| Plan | 18.78 | 18.71 | about 98% |
+
+This is intentionally aggressive, retry-without-backoff traffic, **not normal client behavior**. It demonstrates the existing backpressure policy; reject traffic consumes resources and reduces successful throughput. The plan result is effectively indistinguishable here. A tiny amortized `ns/op` under overload is not evidence of fast tool execution.
+
+## Conclusion and limits
+
+Keep the current backend unless dependency simplicity or v2 semantics justify trading a modest amount of latency. This fixture shows **roughly 7–12% higher warm mean cost for v2 in the statistically detected analysis cases**, not multi-fold differences. Diff and several lifecycle comparisons remain inconclusive. A native-v2 refactor or a change to SDK serialization is a different experiment.
+
+This is substantially closer to actual MCP usage than JSON microbenchmarks, but it still uses a synthetic project and localhost transport. The fixture has no saved translation-state database, so it does not represent state-heavy projects. It does not measure remote network latency, TLS/OAuth, stdio, write/apply workflows, resource reads, continuation-page requests, multi-project traffic, real cold disk/process startup, or all project sizes. Authentication is disabled; the rest of the production HTTP handler is retained. Filesystem cache, machine load, and CPU frequency still introduce noise. Profile actual projects before treating small differences as universal.
+
 ## Reproduce
 
 On an amd64/arm64 machine with Go 1.27+, uv, and an appropriate CPU affinity:
