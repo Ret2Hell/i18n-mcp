@@ -6,12 +6,13 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
+	"encoding/json/jsontext"
 )
 
 const (
@@ -21,13 +22,13 @@ const (
 
 // RequestStateClaims binds an MCP multi-round-trip retry to the operation that requested input.
 type RequestStateClaims struct {
-	Version     int             `json:"version"`
-	Subject     string          `json:"subject"`
-	Operation   string          `json:"operation"`
-	InputDigest string          `json:"inputDigest"`
-	PlanDigest  string          `json:"planDigest"`
-	ExpiresAt   int64           `json:"expiresAt"`
-	Data        json.RawMessage `json:"data,omitempty"`
+	Version     int            `json:"version"`
+	Subject     string         `json:"subject"`
+	Operation   string         `json:"operation"`
+	InputDigest string         `json:"inputDigest"`
+	PlanDigest  string         `json:"planDigest"`
+	ExpiresAt   int64          `json:"expiresAt"`
+	Data        jsontext.Value `json:"data,omitzero"`
 }
 
 // RequestStateSigner signs and verifies opaque MCP multi-round-trip request state.
@@ -62,7 +63,7 @@ func (s *RequestStateSigner) Sign(claims RequestStateClaims) (string, error) {
 	if err := validateRequestStateClaims(claims, s.now()); err != nil {
 		return "", err
 	}
-	payload, err := json.Marshal(claims)
+	payload, err := json.Marshal(claims, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return "", fmt.Errorf("marshal request state: %w", err)
 	}
@@ -95,9 +96,7 @@ func (s *RequestStateSigner) Verify(token string) (RequestStateClaims, error) {
 		return RequestStateClaims{}, errors.New("request state signature is invalid")
 	}
 	var claims RequestStateClaims
-	decoder := json.NewDecoder(strings.NewReader(string(payload)))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&claims); err != nil {
+	if err := json.Unmarshal(payload, &claims, json.RejectUnknownMembers(true)); err != nil {
 		return RequestStateClaims{}, errors.New("request state payload is invalid")
 	}
 	if err := validateRequestStateClaims(claims, s.now()); err != nil {

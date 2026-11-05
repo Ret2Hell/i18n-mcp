@@ -3,21 +3,34 @@ package locale
 import (
 	"bytes"
 	"context"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
-	"io"
 	"os"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 )
 
+// Preserve numeric literals at every depth without a float64 round-trip.
+// The cloned raw value remains valid after the streaming decoder advances.
+var exactNumbers = json.UnmarshalFromFunc(func(dec *jsontext.Decoder, out *any) error {
+	if dec.PeekKind() != '0' {
+		return errors.ErrUnsupported
+	}
+	raw, err := dec.ReadValue()
+	if err == nil {
+		*out = raw.Clone()
+	}
+	return err
+})
+
 // JSONDocument is a parsed locale JSON file with raw and decoded contents.
 type JSONDocument struct {
-	Path  string          `json:"path"`
-	Bytes int             `json:"bytes"`
-	Raw   json.RawMessage `json:"raw,omitzero"`
-	Value any             `json:"-"`
+	Path  string         `json:"path"`
+	Bytes int            `json:"bytes"`
+	Raw   jsontext.Value `json:"raw,omitzero"`
+	Value any            `json:"-"`
 }
 
 // ParseError wraps JSON parsing errors with the source path.
@@ -52,19 +65,8 @@ func ParseJSONFile(ctx context.Context, guard *fsutil.Guard, relPath string) (JS
 	if err := ctx.Err(); err != nil {
 		return JSONDocument{}, err
 	}
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.UseNumber()
-
 	var value any
-	if err := dec.Decode(&value); err != nil {
-		return JSONDocument{}, &ParseError{Path: relPath, Err: err}
-	}
-
-	var extra any
-	if err := dec.Decode(&extra); err != io.EOF {
-		if err == nil {
-			err = errors.New("multiple JSON values")
-		}
+	if err := json.Unmarshal(data, &value, json.WithUnmarshalers(exactNumbers)); err != nil {
 		return JSONDocument{}, &ParseError{Path: relPath, Err: err}
 	}
 
@@ -74,7 +76,7 @@ func ParseJSONFile(ctx context.Context, guard *fsutil.Guard, relPath string) (JS
 	return JSONDocument{
 		Path:  relPath,
 		Bytes: len(data),
-		Raw:   json.RawMessage(bytes.Clone(data)),
+		Raw:   jsontext.Value(bytes.Clone(data)),
 		Value: value,
 	}, nil
 }

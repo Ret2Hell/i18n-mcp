@@ -1,8 +1,8 @@
 package locale
 
 import (
+	"encoding/json/jsontext"
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/pagination"
 )
 
@@ -84,6 +84,6 @@ type NamespaceContent struct {
 
 // RawFileContent contains raw JSON for a locale file.
 type RawFileContent struct {
-	Path string          `json:"path"`
-	JSON json.RawMessage `json:"json"`
+	Path string         `json:"path"`
+	JSON jsontext.Value `json:"json"`
 }

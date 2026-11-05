@@ -3,9 +3,11 @@ package state
 import (
 	"cmp"
 	"context"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
+
 	"os"
 	"time"
 
@@ -82,7 +84,7 @@ func (s *Store) Save(ctx context.Context, file File) error {
 	file.Version = CurrentVersion
 	file.UpdatedAt = time.Now().UTC()
 
-	data, err := json.MarshalIndent(file, "", "  ")
+	data, err := json.Marshal(file, jsontext.WithIndent("  "), json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return fmt.Errorf("marshal state file: %w", err)
 	}
