@@ -787,6 +787,10 @@ i18n-mcp audit --project /path/to/frontend-app --output markdown
 i18n-mcp audit --project /path/to/frontend-app --output json
 ```
 
+## JSON Processing
+
+Application code uses Go's standard-library JSON v2 directly on every architecture, without Sonic or a JSON wrapper. It rejects duplicate keys, invalid UTF-8, and trailing input; configuration field names are case-sensitive. See the [JSON v2 migration notes](docs/json-v2.md) for output changes, dependency boundaries, and upgrade considerations.
+
 ## Security Model
 
 `i18n-mcp` supports stdio and Streamable HTTP. With either transport, the server has the same filesystem access as the user running it.

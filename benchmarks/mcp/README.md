@@ -1,6 +1,6 @@
 # MCP request-path JSON backend benchmark
 
-This benchmark compares the effect of the **application's JSON wrapper** on real MCP tool calls. The old isolated JSON microbenchmarks were removed because their results were misleading as a proxy for MCP performance.
+This benchmark measures real MCP tool calls against the current production implementation, now using JSON v2 directly. The old JSON wrapper and Sonic backend have been removed. The comparison below is historical; it must not be read as a benchmark of the native-v2 implementation. The old isolated JSON microbenchmarks were removed because their results were misleading as a proxy for MCP performance.
 
 ## What actually runs
 
@@ -23,7 +23,7 @@ The comparison below was measured at commit `bbd4890`, before the native-v2 migr
 | `stdlib_v1` | Existing standard-library fallback wrapper, enabled on this architecture |
 | `stdlib_v2_compat` | Benchmark-only v2 adapter with `DefaultOptionsV1()`, including exact `json.Number` streaming decoding |
 
-The historical runner used Go's `-overlay` to substitute **only** `internal/jsonutil/json_sonic.go`. No production source files are edited. Direct `encoding/json` imports in our application and the SDK remain unchanged, as they would when migrating just this wrapper. All application tests, plus the benchmark's page-count/budget checks, passed under every historical backend before measurement. Native v2 defaults are deliberately **not** benchmarked here: they change the application contract and require a separate migration, not a drop-in backend switch. The v2 adapter is a compatibility implementation, not a fully optimized refactor to native v2 call sites.
+The historical runner used Go's `-overlay` to substitute **only** `internal/jsonutil/json_sonic.go`, without editing production sources. At that revision, direct `encoding/json` imports in the application and SDK were left unchanged. The subsequent migration removed the wrapper and migrated all first-party call sites; third-party dependencies retain their own serializers. All application tests, plus the benchmark's page-count/budget checks, passed under every historical backend before measurement. Native v2 defaults are deliberately **not** benchmarked here: they change the application contract and require a separate migration, not a drop-in backend switch. The v2 adapter is a compatibility implementation, not a fully optimized refactor to native v2 call sites.
 
 ## Measurement modes
 
