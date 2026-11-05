@@ -1,7 +1,7 @@
 [tools]
 go = "1.27.3"
 golangci-lint = "2.15.0"
-jactionlint = "2.3.0"
+jactionlint = "2.4.0"
 hk = "latest"
 gitleaks = "latest"
 goreleaser = "2.19.0"
@@ -29,7 +29,14 @@ alias = ["hook"]
 [tasks.build]
 description = "Build the i18n-mcp binary"
 depends = ["install"]
-sources = ["cmd/**/*.go", "internal/**/*.go", "go.mod", "go.sum", "scripts/build.sh", "version"]
+sources = [
+  "cmd/**/*.go",
+  "internal/**/*.go",
+  "go.mod",
+  "go.sum",
+  "scripts/build.sh",
+  "version",
+]
 outputs = ["bin/i18n-mcp"]
 run = "sh scripts/build.sh"
 alias = ["b"]
@@ -42,7 +49,14 @@ alias = ["s"]
 
 [tasks.docker-build]
 description = "Build the Docker image"
-sources = ["cmd/**/*.go", "internal/**/*.go", "Dockerfile", "go.mod", "go.sum", "version"]
+sources = [
+  "cmd/**/*.go",
+  "internal/**/*.go",
+  "Dockerfile",
+  "go.mod",
+  "go.sum",
+  "version",
+]
 run = "VERSION=$(tr -d '[:space:]' < version); COMMIT=$(git rev-parse --short=12 HEAD); DATE=$(date -u '+%Y-%m-%dT%H:%M:%SZ'); docker build --build-arg VERSION=$VERSION --build-arg COMMIT=$COMMIT --build-arg DATE=$DATE -t i18n-mcp:$VERSION -t i18n-mcp:latest ."
 alias = ["db"]
 
