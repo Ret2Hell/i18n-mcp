@@ -1,9 +1,9 @@
 package jsonedit
 
 import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
-	"strconv"
 	"unicode"
 )
 
@@ -13,6 +13,11 @@ type parser struct {
 }
 
 func parseOrderedValue(data []byte) (*Value, error) {
+	// Validate the complete document, including duplicate names and UTF-8,
+	// before retaining its original member order and numeric spellings.
+	if !jsontext.Value(data).IsValid() {
+		return nil, fmt.Errorf("invalid JSON document")
+	}
 	p := &parser{data: data}
 	value, err := p.parseValue()
 	if err != nil {
@@ -124,8 +129,8 @@ func (p *parser) parseStringLiteral() (string, string, error) {
 		case '"':
 			p.pos++
 			raw := string(p.data[start:p.pos])
-			decoded, err := strconv.Unquote(raw)
-			if err != nil {
+			var decoded string
+			if err := json.Unmarshal(p.data[start:p.pos], &decoded); err != nil {
 				return "", "", err
 			}
 			return decoded, raw, nil
@@ -151,7 +156,7 @@ func (p *parser) parseRaw() (*Value, error) {
 }
 
 func validRawJSON(raw string) bool {
-	return json.Valid([]byte(raw))
+	return jsontext.Value(raw).IsValid()
 }
 
 func isValueTerminator(ch byte) bool {

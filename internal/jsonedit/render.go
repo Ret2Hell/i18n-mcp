@@ -2,36 +2,45 @@ package jsonedit
 
 import (
 	"cmp"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
+	"fmt"
 	"slices"
 	"strings"
 )
 
-func renderValue(b *strings.Builder, value *Value, depth int, format Format) {
+func renderValue(b *strings.Builder, value *Value, depth int, format Format) error {
 	if value == nil {
 		b.WriteString("null")
-		return
+		return nil
 	}
 	switch value.Kind {
 	case KindObject:
-		renderObject(b, value, depth, format)
+		return renderObject(b, value, depth, format)
 	case KindArray:
-		renderArray(b, value, depth, format)
+		return renderArray(b, value, depth, format)
 	case KindString:
-		b.WriteString(quoteString(value.String))
+		text, err := quoteString(value.String)
+		if err != nil {
+			return err
+		}
+		b.WriteString(text)
 	case KindRaw:
 		if value.RawJSON == "" {
 			b.WriteString("null")
-			return
+			return nil
 		}
 		b.WriteString(value.RawJSON)
+	default:
+		return fmt.Errorf("invalid JSON value kind %d", value.Kind)
 	}
+	return nil
 }
 
-func renderObject(b *strings.Builder, value *Value, depth int, format Format) {
+func renderObject(b *strings.Builder, value *Value, depth int, format Format) error {
 	if len(value.Object) == 0 {
 		b.WriteString("{}")
-		return
+		return nil
 	}
 	members := value.Object
 	if format.SortKeys {
@@ -47,19 +56,26 @@ func renderObject(b *strings.Builder, value *Value, depth int, format Format) {
 		}
 		b.WriteByte('\n')
 		writeIndent(b, depth+1, format.Indent)
-		b.WriteString(quoteString(member.Key))
+		key, err := quoteString(member.Key)
+		if err != nil {
+			return err
+		}
+		b.WriteString(key)
 		b.WriteString(": ")
-		renderValue(b, member.Value, depth+1, format)
+		if err := renderValue(b, member.Value, depth+1, format); err != nil {
+			return err
+		}
 	}
 	b.WriteByte('\n')
 	writeIndent(b, depth, format.Indent)
 	b.WriteByte('}')
+	return nil
 }
 
-func renderArray(b *strings.Builder, value *Value, depth int, format Format) {
+func renderArray(b *strings.Builder, value *Value, depth int, format Format) error {
 	if len(value.Array) == 0 {
 		b.WriteString("[]")
-		return
+		return nil
 	}
 	b.WriteByte('[')
 	for i, item := range value.Array {
@@ -68,19 +84,19 @@ func renderArray(b *strings.Builder, value *Value, depth int, format Format) {
 		}
 		b.WriteByte('\n')
 		writeIndent(b, depth+1, format.Indent)
-		renderValue(b, item, depth+1, format)
+		if err := renderValue(b, item, depth+1, format); err != nil {
+			return err
+		}
 	}
 	b.WriteByte('\n')
 	writeIndent(b, depth, format.Indent)
 	b.WriteByte(']')
+	return nil
 }
 
-func quoteString(value string) string {
-	data, err := json.Marshal(value)
-	if err != nil {
-		return `""`
-	}
-	return string(data)
+func quoteString(value string) (string, error) {
+	data, err := json.Marshal(value, jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
+	return string(data), err
 }
 
 func writeIndent(b *strings.Builder, depth int, indent string) {
