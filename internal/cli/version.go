@@ -1,8 +1,9 @@
 package cli
 
 import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/version"
 	"github.com/spf13/cobra"
@@ -17,9 +18,8 @@ func newVersionCommand(opts *RootOptions) *cobra.Command {
 			info := version.Get()
 			switch opts.Output {
 			case "json":
-				enc := json.NewEncoder(cmd.OutOrStdout())
-				enc.SetIndent("", "  ")
-				return enc.Encode(info)
+				enc := jsontext.NewEncoder(cmd.OutOrStdout(), jsontext.WithIndent("  "))
+				return json.MarshalEncode(enc, info, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 			case "markdown":
 				_, err := fmt.Fprintf(cmd.OutOrStdout(), "| Field | Value |\n| --- | --- |\n| Name | `%s` |\n| Version | `%s` |\n| Commit | `%s` |\n| Built | `%s` |\n", info.Name, info.Version, info.Commit, info.Built)
 				return err
