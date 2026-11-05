@@ -1,0 +1,84 @@
+//go:build amd64 || arm64
+
+// Benchmark-only overlay for internal/jsonutil/json_sonic.go.
+package jsonutil
+
+import (
+	"bytes"
+	stdjson "encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
+	"errors"
+	"io"
+)
+
+func Marshal(value any) ([]byte, error) {
+	return jsonv2.Marshal(value, stdjson.DefaultOptionsV1())
+}
+
+func MarshalIndent(value any, prefix, indent string) ([]byte, error) {
+	return jsonv2.Marshal(value, stdjson.DefaultOptionsV1(), jsontext.WithIndentPrefix(prefix), jsontext.WithIndent(indent))
+}
+
+func Unmarshal(data []byte, value any) error {
+	return jsonv2.Unmarshal(data, value, stdjson.DefaultOptionsV1())
+}
+
+func Valid(data []byte) bool {
+	return jsontext.Value(data).IsValid(stdjson.DefaultOptionsV1())
+}
+
+type v2Decoder struct {
+	decoder *jsontext.Decoder
+	options []jsonv2.Options
+}
+
+func NewDecoder(reader io.Reader) Decoder {
+	return &v2Decoder{decoder: jsontext.NewDecoder(reader, stdjson.DefaultOptionsV1())}
+}
+
+func (d *v2Decoder) Decode(value any) error {
+	return jsonv2.UnmarshalDecode(d.decoder, value, stdjson.DefaultOptionsV1(), jsonv2.JoinOptions(d.options...))
+}
+
+func (d *v2Decoder) Buffered() io.Reader { return bytes.NewReader(d.decoder.UnreadBuffer()) }
+func (d *v2Decoder) More() bool {
+	kind := d.decoder.PeekKind()
+	return kind != 0 && kind != '}' && kind != ']'
+}
+func (d *v2Decoder) DisallowUnknownFields() {
+	d.options = append(d.options, jsonv2.RejectUnknownMembers(true))
+}
+func (d *v2Decoder) UseNumber() {
+	d.options = append(d.options, useNumber)
+}
+
+var useNumber = jsonv2.WithUnmarshalers(jsonv2.UnmarshalFromFunc(func(dec *jsontext.Decoder, out *any) error {
+	if dec.PeekKind() != '0' {
+		return errors.ErrUnsupported
+	}
+	raw, err := dec.ReadValue()
+	if err == nil {
+		*out = stdjson.Number(string(raw))
+	}
+	return err
+}))
+
+type v2Encoder struct {
+	writer         io.Writer
+	escapeHTML     bool
+	prefix, indent string
+}
+
+func NewEncoder(writer io.Writer) Encoder {
+	return &v2Encoder{writer: writer, escapeHTML: true}
+}
+func (e *v2Encoder) SetEscapeHTML(value bool)        { e.escapeHTML = value }
+func (e *v2Encoder) SetIndent(prefix, indent string) { e.prefix, e.indent = prefix, indent }
+func (e *v2Encoder) Encode(value any) error {
+	opts := []jsonv2.Options{stdjson.DefaultOptionsV1(), jsontext.EscapeForHTML(e.escapeHTML)}
+	if e.prefix != "" || e.indent != "" {
+		opts = append(opts, jsontext.WithIndentPrefix(e.prefix), jsontext.WithIndent(e.indent))
+	}
+	return jsonv2.MarshalEncode(jsontext.NewEncoder(e.writer, opts...), value)
+}
