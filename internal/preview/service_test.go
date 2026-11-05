@@ -3,7 +3,8 @@ package preview
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/json/v2"
+
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -52,10 +53,10 @@ func TestPatchChunksAreExactImmutableOwnedAndBounded(t *testing.T) {
 		require.NoError(t, err)
 		require.Less(t, len(raw), 96<<10)
 		var chunk struct {
-			Data         string
-			TotalBytes   int
-			NextResource string
-			SHA256       string
+			Data         string `json:"data"`
+			TotalBytes   int    `json:"totalBytes"`
+			NextResource string `json:"nextResource"`
+			SHA256       string `json:"sha256"`
 		}
 		require.NoError(t, json.Unmarshal(raw, &chunk))
 		bytes, err := base64.StdEncoding.DecodeString(chunk.Data)
@@ -115,8 +116,8 @@ func TestManifestBudgetPreservesEveryFile(t *testing.T) {
 		require.NoError(t, err)
 		require.Less(t, len(raw), 40<<10)
 		var manifest struct {
-			Files        []File
-			NextResource string
+			Files        []File `json:"files"`
+			NextResource string `json:"nextResource"`
 		}
 		require.NoError(t, json.Unmarshal(raw, &manifest))
 		require.NotEmpty(t, manifest.Files)
