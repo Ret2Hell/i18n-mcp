@@ -23,8 +23,8 @@ defaults:
     shell: bash
 
 env:
-  JACTIONLINT_VERSION: v2.3.0
-  GORELEASER_VERSION: v2.19.0
+  JACTIONLINT_VERSION: v2.5.0
+  GORELEASER_VERSION: v2.20.0
   GOVULNCHECK_VERSION: v1.7.0
 
 concurrency:
