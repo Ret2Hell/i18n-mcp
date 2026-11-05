@@ -15,7 +15,7 @@ A generated project has **1,000 source keys and 500 translated keys across two n
 
 ## Historical backend comparison
 
-The comparison below was measured at commit `bbd4890`, before the native-v2 migration. It is an archive, **not a measurement of the current application**. At that revision, three separately built binaries used these application backends:
+The comparison below was measured before the native-v2 migration and documented at commit `4cff2a0`. It is an archive, **not a measurement of the current application**. At that revision, three separately built binaries used these application backends:
 
 | Backend | Application wrapper |
 | --- | --- |
@@ -37,7 +37,7 @@ The selected inventory/diff services reread files rather than retaining a full a
 
 ## Results: Go 1.27.3 / Sonic v1.15.5
 
-Linux/amd64, AMD Ryzen AI 9 365. Six independent 1-second samples per case/backend, `GOMAXPROCS=4`, affinity to logical CPUs 8–11. Backend order rotates across repetitions to reduce thermal/order bias. Full environment, test logs, and raw samples are in [results/](results/). These saved samples were collected before the benchmark source was relocated from `internal/httpserver/` to `benchmarks/mcp/`, which is why their package header uses the old path. The workload and production handler are unchanged; the standalone location was subsequently validated under all three backends. Statistical comparison: [results/comparison.txt](results/comparison.txt), generated with `golang.org/x/perf/cmd/benchstat@v0.0.0-20261009192801-be2c69fb417e`.
+Linux/amd64, AMD Ryzen AI 9 365. Six independent 1-second samples per case/backend, `GOMAXPROCS=4`, affinity to logical CPUs 8–11. Backend order rotates across repetitions to reduce thermal/order bias. Generated environments, test logs, raw samples, and comparison output are intentionally not tracked in Git; only the historical summary below is retained. Comparisons were generated with `golang.org/x/perf/cmd/benchstat@v0.0.0-20261009192801-be2c69fb417e`.
 
 **The end-to-end difference is much smaller than the isolated JSON speedups.** Sonic retains a modest advantage in several measured tool paths, but many differences are within run-to-run noise. These results do not justify claims of a 2–3x faster MCP server.
 
@@ -108,4 +108,4 @@ go run golang.org/x/perf/cmd/benchstat@v0.0.0-20261009192801-be2c69fb417e \
 
 Omit `--affinity` or choose valid logical CPU IDs on another machine. `--validate-only` runs the application/workload tests without timing. `--bench` accepts a Go benchmark regex for focused runs. The runner records the Git revision and dirty state; compiled binaries live in a temporary directory.
 
-To reproduce the **historical** three-backend experiment, check out `bbd4890` in a separate worktree and follow its README. Do not interpret the archived v1-compatible v2 results as timings for the subsequent native-v2 migration.
+To reproduce the **historical** three-backend experiment, check out `4cff2a0` in a separate worktree and follow its README. Do not interpret the archived v1-compatible v2 results as timings for the subsequent native-v2 migration.

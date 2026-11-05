@@ -27,7 +27,7 @@ Restart the service after upgrading and regenerate active cursors, translation p
 
 This migration covers code owned by this repository. The MCP SDK, Viper, and other third-party dependencies retain their own JSON implementations and compatibility behavior; they were not forked or rewritten. In particular, JSON handled entirely by the SDK is not guaranteed to have the application's v2 defaults. There is no Sonic module or code dependency remaining, but `encoding/json` and other JSON libraries can still appear in the transitive dependency graph.
 
-The [archived benchmark](../benchmarks/mcp/README.md) compared the old Sonic wrapper with a v1-compatible v2 adapter. Those measurements are historical, not measurements of this native-v2 implementation. The current benchmark runner measures the migrated application without backend overlays.
+The [historical benchmark summary](../benchmarks/mcp/README.md) compared the old Sonic wrapper with a v1-compatible v2 adapter. Those measurements are historical, not measurements of this native-v2 implementation. The current benchmark runner measures the migrated application without backend overlays.
 
 ## Verification
 
