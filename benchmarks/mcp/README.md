@@ -13,7 +13,9 @@ This benchmark compares the effect of the **application's JSON wrapper** on real
 
 A generated project has **1,000 source keys and 500 translated keys across two namespaces**, in four locale JSON files. Messages include `{name}` placeholders and Unicode. It exercises `i18n.health`, `i18n.locales.list`, `i18n.keys.diff`, and `i18n.translation.plan`, with requested page sizes 50 and 200. The byte budget limits the 200-item translation plan to **195 returned items**; correctness assertions require this exact count under every backend. Other pages return the requested count, with continuation cursors.
 
-Three separately built binaries use these application backends:
+## Historical backend comparison
+
+The comparison below was measured at commit `bbd4890`, before the native-v2 migration. It is an archive, **not a measurement of the current application**. At that revision, three separately built binaries used these application backends:
 
 | Backend | Application wrapper |
 | --- | --- |
@@ -21,7 +23,7 @@ Three separately built binaries use these application backends:
 | `stdlib_v1` | Existing standard-library fallback wrapper, enabled on this architecture |
 | `stdlib_v2_compat` | Benchmark-only v2 adapter with `DefaultOptionsV1()`, including exact `json.Number` streaming decoding |
 
-The runner uses Go's `-overlay` to substitute **only** `internal/jsonutil/json_sonic.go`. No production source files are edited. Direct `encoding/json` imports in our application and the SDK remain unchanged, as they would when migrating just this wrapper. All application tests, plus the benchmark's page-count/budget checks, must pass under every backend before measurement. Native v2 defaults are deliberately **not** benchmarked here: they change the application contract and require a separate migration, not a drop-in backend switch. The v2 adapter is a compatibility implementation, not a fully optimized refactor to native v2 call sites.
+The historical runner used Go's `-overlay` to substitute **only** `internal/jsonutil/json_sonic.go`. No production source files are edited. Direct `encoding/json` imports in our application and the SDK remain unchanged, as they would when migrating just this wrapper. All application tests, plus the benchmark's page-count/budget checks, passed under every historical backend before measurement. Native v2 defaults are deliberately **not** benchmarked here: they change the application contract and require a separate migration, not a drop-in backend switch. The v2 adapter is a compatibility implementation, not a fully optimized refactor to native v2 call sites.
 
 ## Measurement modes
 
@@ -85,15 +87,15 @@ At requested limit 200, successful calls/second were:
 
 This is intentionally aggressive, retry-without-backoff traffic, **not normal client behavior**. It demonstrates the existing backpressure policy; reject traffic consumes resources and reduces successful throughput. The plan result is effectively indistinguishable here. A tiny amortized `ns/op` under overload is not evidence of fast tool execution.
 
-## Conclusion and limits
+## Historical conclusion and limits
 
-Keep the current backend unless dependency simplicity or v2 semantics justify trading a modest amount of latency. This fixture shows **roughly 7–12% higher warm mean cost for v2 in the statistically detected analysis cases**, not multi-fold differences. Diff and several lifecycle comparisons remain inconclusive. A native-v2 refactor or a change to SDK serialization is a different experiment.
+These measurements supported trading a modest amount of latency for dependency simplicity and native v2 semantics. This fixture shows **roughly 7–12% higher warm mean cost for v2 in the statistically detected analysis cases**, not multi-fold differences. Diff and several lifecycle comparisons remain inconclusive. A native-v2 refactor or a change to SDK serialization is a different experiment.
 
 This is substantially closer to actual MCP usage than JSON microbenchmarks, but it still uses a synthetic project and localhost transport. The fixture has no saved translation-state database, so it does not represent state-heavy projects. It does not measure remote network latency, TLS/OAuth, stdio, write/apply workflows, resource reads, continuation-page requests, multi-project traffic, real cold disk/process startup, or all project sizes. Authentication is disabled; the rest of the production HTTP handler is retained. Filesystem cache, machine load, and CPU frequency still introduce noise. Profile actual projects before treating small differences as universal.
 
-## Reproduce
+## Run the current application
 
-On an amd64/arm64 machine with Go 1.27+, uv, and an appropriate CPU affinity:
+The runner now builds and measures the current production backend only; there are no source overlays or benchmark-only JSON implementations. Historical Sonic dependencies are not needed. On a machine with Go 1.27+, uv, and an appropriate CPU affinity:
 
 ```sh
 uv run --no-project python benchmarks/mcp/run.py \
@@ -101,7 +103,9 @@ uv run --no-project python benchmarks/mcp/run.py \
   --output /tmp/mcp-json-results
 
 go run golang.org/x/perf/cmd/benchstat@v0.0.0-20261009192801-be2c69fb417e \
-  /tmp/mcp-json-results/{sonic,stdlib_v1,stdlib_v2_compat}.txt
+  /tmp/mcp-json-results/application.txt
 ```
 
-Omit `--affinity` or choose valid logical CPU IDs on another machine. `--validate-only` runs/builds the three backends without timing. `--bench` accepts a Go benchmark regex for focused runs. Production and benchmark files are not rewritten by the runner; overlays and compiled binaries live in a temporary directory.
+Omit `--affinity` or choose valid logical CPU IDs on another machine. `--validate-only` runs the application/workload tests without timing. `--bench` accepts a Go benchmark regex for focused runs. The runner records the Git revision and dirty state; compiled binaries live in a temporary directory.
+
+To reproduce the **historical** three-backend experiment, check out `bbd4890` in a separate worktree and follow its README. Do not interpret the archived v1-compatible v2 results as timings for the subsequent native-v2 migration.
