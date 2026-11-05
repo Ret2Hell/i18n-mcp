@@ -3,8 +3,8 @@
   "projectRoot": "/repo",
   "config": {
     "sourceLocale": "",
-    "targetLocales": null,
-    "localeFiles": null,
+    "targetLocales": [],
+    "localeFiles": [],
     "format": {
       "sortKeys": false,
       "indent": 0,
@@ -32,7 +32,7 @@
     "namespaces": [
       "common"
     ],
-    "files": null,
+    "files": [],
     "countsByLocale": {
       "en": 2,
       "fr": 1
