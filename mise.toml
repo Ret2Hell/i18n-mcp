@@ -1,11 +1,11 @@
 [tools]
 go = "1.27.3"
 golangci-lint = "2.15.0"
-jactionlint = "2.4.0"
+jactionlint = "2.5.0"
 hk = "latest"
 gitleaks = "latest"
-goreleaser = "2.19.0"
-syft = "1.55.0"
+goreleaser = "2.20.0"
+syft = "1.56.0"
 
 [settings]
 jobs = 4
