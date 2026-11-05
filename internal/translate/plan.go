@@ -2,8 +2,10 @@ package translate
 
 import (
 	"context"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
+
 	"maps"
 	"slices"
 	"time"
@@ -135,7 +137,7 @@ func (s *Service) signBatch(ctx context.Context, in PlanInput, batch Batch) (str
 	if s.StateSigner == nil {
 		return "", fmt.Errorf("translation batch signer is not configured")
 	}
-	planInput, err := json.Marshal(in)
+	planInput, err := json.Marshal(in, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return "", fmt.Errorf("marshal translation plan input: %w", err)
 	}

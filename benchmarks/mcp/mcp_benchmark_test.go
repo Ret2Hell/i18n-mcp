@@ -4,9 +4,11 @@ package mcpbench
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
+
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -166,8 +168,8 @@ func checkMCPBenchmark(tb testing.TB, session *mcp.ClientSession, workload mcpWo
 		tb.Fatal(err)
 	}
 	var output map[string]struct {
-		Items []json.RawMessage   `json:"items"`
-		Units []json.RawMessage   `json:"units"`
+		Items []jsontext.Value    `json:"items"`
+		Units []jsontext.Value    `json:"units"`
 		Page  pagination.Metadata `json:"page"`
 	}
 	if err := json.Unmarshal(data, &output); err != nil {

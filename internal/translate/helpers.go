@@ -2,8 +2,9 @@ package translate
 
 import (
 	"cmp"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"io"
 	"os"
 	"slices"
@@ -27,7 +28,7 @@ func batchDigest(projectRoot string, batch Batch) (string, error) {
 		TargetLocales: slices.Clone(batch.TargetLocales),
 		Items:         slices.Clone(batch.Items),
 	}
-	data, err := json.Marshal(payload)
+	data, err := json.Marshal(payload, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return "", err
 	}

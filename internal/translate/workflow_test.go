@@ -2,7 +2,8 @@ package translate_test
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"os"
 	"path/filepath"
 	"slices"
@@ -234,7 +235,7 @@ func newTranslationFixtureApp(t *testing.T) *app.App {
 		UpdatedAt:          testTime(),
 		UpdatedBy:          "fixture",
 	}
-	data, err := json.MarshalIndent(stateFile, "", "  ")
+	data, err := json.Marshal(stateFile, jsontext.WithIndent("  "))
 	require.NoError(t, err)
 	writeFixtureFile(t, root, state.DefaultStatePath, string(data)+"\n")
 

@@ -3,8 +3,10 @@ package mcpserver
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
+
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
@@ -15,7 +17,7 @@ import (
 )
 
 func pageURI(kind string, input any) string {
-	raw, _ := json.Marshal(input)
+	raw, _ := json.Marshal(input, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	return "i18n://pages/" + kind + "/" + base64.RawURLEncoding.EncodeToString(raw)
 }
 

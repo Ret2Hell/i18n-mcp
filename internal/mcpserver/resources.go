@@ -2,8 +2,9 @@ package mcpserver
 
 import (
 	"context"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
@@ -74,7 +75,7 @@ func readLocalesResource(a *app.App) mcp.ResourceHandler {
 }
 
 func jsonResource(uri string, value any) (*mcp.ReadResourceResult, error) {
-	data, err := json.Marshal(value)
+	data, err := json.Marshal(value, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +89,7 @@ func jsonResource(uri string, value any) (*mcp.ReadResourceResult, error) {
 			Text:     string(data),
 		}},
 	}
-	envelope, err := json.Marshal(result)
+	envelope, err := json.Marshal(result, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return nil, err
 	}

@@ -2,7 +2,8 @@ package mcpserver
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"strings"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/pagination"
@@ -32,7 +33,7 @@ func boundedResults(next mcp.MethodHandler) mcp.MethodHandler {
 		}
 		switch params.Name {
 		case "i18n.keys.diff", "i18n.locales.list", "i18n.translation.plan", "i18n.report.generate":
-			raw, err := json.Marshal(value)
+			raw, err := json.Marshal(value, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 			if err != nil {
 				return nil, err
 			}
