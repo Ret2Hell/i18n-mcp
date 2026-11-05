@@ -1,11 +1,7 @@
 package config
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
+	"encoding/json/v2"
 )
 
 // FileInput is the presence-aware disk/MCP configuration contract. Only the
@@ -101,14 +97,6 @@ func NormalizeInput(in FileInput) File {
 
 func decodeInput(data []byte) (FileInput, error) {
 	var in FileInput
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&in); err != nil {
-		return in, err
-	}
-	var trailing any
-	if err := decoder.Decode(&trailing); err != io.EOF {
-		return in, fmt.Errorf("configuration must contain exactly one JSON object")
-	}
-	return in, nil
+	err := json.Unmarshal(data, &in, json.RejectUnknownMembers(true))
+	return in, err
 }

@@ -4,8 +4,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"time"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/app"
@@ -173,7 +174,7 @@ func validatePruneRequestState(ctx context.Context, a *app.App, req *mcp.CallToo
 }
 
 func pruneInputDigest(in deadkey.PruneInput) (string, error) {
-	payload, err := json.Marshal(in)
+	payload, err := json.Marshal(in, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return "", fmt.Errorf("marshal prune confirmation input: %w", err)
 	}

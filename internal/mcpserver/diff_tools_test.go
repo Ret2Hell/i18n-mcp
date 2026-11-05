@@ -1,7 +1,9 @@
 package mcpserver_test
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
+
 	"os"
 	"path/filepath"
 	"testing"
@@ -89,7 +91,7 @@ func makeMCPDiffFixture(t *testing.T) string {
 		Status:             state.StatusCurrent,
 		UpdatedAt:          time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC),
 	}
-	data, err := json.MarshalIndent(stateFile, "", "  ")
+	data, err := json.Marshal(stateFile, jsontext.WithIndent("  "))
 	require.NoError(t, err)
 	writeMCPDiffFile(t, root, state.DefaultStatePath, string(data)+"\n")
 	return root

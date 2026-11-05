@@ -1,8 +1,10 @@
 package schemaport_test
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
+
 	"github.com/Ret2Hell/i18n-mcp/internal/schemaport"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/stretchr/testify/require"
@@ -55,7 +57,7 @@ func TestConfigurationOmissionNullAndFalseSemanticsAreUnchanged(t *testing.T) {
 }
 
 func TestDefaultsAndExamplesAreDataNotSchemas(t *testing.T) {
-	raw := json.RawMessage(`{"type":["array","null"]}`)
+	raw := jsontext.Value(`{"type":["array","null"]}`)
 	s := &jsonschema.Schema{Types: []string{"null", "object"}, Default: raw, Examples: []any{map[string]any{"type": []any{"string", "null"}}}}
 	schemaport.Normalize(s)
 	require.JSONEq(t, string(raw), string(s.Default))

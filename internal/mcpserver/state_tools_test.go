@@ -1,7 +1,8 @@
 package mcpserver_test
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
+
 	"os"
 	"path/filepath"
 	"testing"

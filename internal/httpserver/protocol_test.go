@@ -3,7 +3,7 @@ package httpserver
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -105,7 +105,7 @@ func TestStatelessHTTPDeliversResourceSubscriptions(t *testing.T) {
 	application, err := app.New(t.Context(), app.Options{ProjectRoot: t.TempDir(), LogLevel: "error"})
 	require.NoError(t, err)
 	server := mcpserver.New(application)
-	handler, err := newHandler(Config{}, staticServerProvider{server: server}, application.Logger)
+	handler, err := NewHandler(Config{}, staticServerProvider{server: server}, application.Logger)
 	require.NoError(t, err)
 	httpServer := httptest.NewServer(handler)
 
@@ -151,7 +151,7 @@ func TestMCPOriginProtection(t *testing.T) {
 			application, err := app.New(t.Context(), app.Options{ProjectRoot: t.TempDir(), LogLevel: "error"})
 			require.NoError(t, err)
 			server := mcpserver.New(application)
-			handler, err := newHandler(Config{JSONResponse: true, TrustedOrigins: tt.trustedOrigins}, staticServerProvider{server: server}, application.Logger)
+			handler, err := NewHandler(Config{JSONResponse: true, TrustedOrigins: tt.trustedOrigins}, staticServerProvider{server: server}, application.Logger)
 			require.NoError(t, err)
 			httpServer := httptest.NewServer(handler)
 			t.Cleanup(httpServer.Close)
@@ -172,7 +172,7 @@ func TestMCPRejectsMalformedTrustedOrigin(t *testing.T) {
 	application, err := app.New(t.Context(), app.Options{ProjectRoot: t.TempDir(), LogLevel: "error"})
 	require.NoError(t, err)
 	server := mcpserver.New(application)
-	_, err = newHandler(Config{TrustedOrigins: []string{"not-an-origin"}}, staticServerProvider{server: server}, application.Logger)
+	_, err = NewHandler(Config{TrustedOrigins: []string{"not-an-origin"}}, staticServerProvider{server: server}, application.Logger)
 	require.ErrorContains(t, err, "trusted origin")
 }
 
@@ -319,7 +319,7 @@ func TestModernHTTPPropagatesRequestCancellation(t *testing.T) {
 		cancelled <- struct{}{}
 		return nil, struct{}{}, ctx.Err()
 	})
-	handler, err := newHandler(Config{}, staticServerProvider{server: server}, nil)
+	handler, err := NewHandler(Config{}, staticServerProvider{server: server}, nil)
 	require.NoError(t, err)
 	httpServer := httptest.NewServer(handler)
 	t.Cleanup(httpServer.Close)
@@ -410,7 +410,7 @@ func newStatelessTestServerWithRoot(t *testing.T, root string) *httptest.Server 
 	application, err := app.New(t.Context(), app.Options{ProjectRoot: root, LogLevel: "error"})
 	require.NoError(t, err)
 	server := mcpserver.New(application)
-	handler, err := newHandler(Config{JSONResponse: true}, staticServerProvider{server: server}, application.Logger)
+	handler, err := NewHandler(Config{JSONResponse: true}, staticServerProvider{server: server}, application.Logger)
 	require.NoError(t, err)
 	httpServer := httptest.NewServer(handler)
 	t.Cleanup(httpServer.Close)

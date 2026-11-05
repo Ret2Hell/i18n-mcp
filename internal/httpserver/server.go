@@ -31,7 +31,7 @@ type ServerProvider interface {
 // Run serves MCP and health endpoints until ctx is canceled or serving fails.
 func Run(ctx context.Context, cfg Config, provider ServerProvider, logger *slog.Logger) error {
 	cfg = configWithDefaults(cfg)
-	handler, err := newHandler(cfg, provider, logger)
+	handler, err := NewHandler(cfg, provider, logger)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,9 @@ func configWithDefaults(cfg Config) Config {
 	return cfg
 }
 
-func newHandler(cfg Config, provider ServerProvider, logger *slog.Logger) (http.Handler, error) {
+// NewHandler constructs the production MCP HTTP handler without starting a server.
+// It includes origin protection, optional authentication, and the health endpoint.
+func NewHandler(cfg Config, provider ServerProvider, logger *slog.Logger) (http.Handler, error) {
 	cfg = configWithDefaults(cfg)
 	if err := cfg.Auth.Validate(cfg.Addr); err != nil {
 		return nil, err

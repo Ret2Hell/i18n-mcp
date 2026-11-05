@@ -1,10 +1,13 @@
 package report
 
-import json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
+import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
+)
 
 // RenderJSON renders report as indented JSON.
 func RenderJSON(report Report) (string, error) {
-	data, err := json.MarshalIndent(report, "", "  ")
+	data, err := json.Marshal(report, jsontext.WithIndent("  "), json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return "", err
 	}

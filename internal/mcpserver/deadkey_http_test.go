@@ -2,7 +2,8 @@ package mcpserver_test
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -51,9 +52,9 @@ func TestStatelessHTTPReturnsInputRequiredMRTRResult(t *testing.T) {
 
 	var message struct {
 		Result struct {
-			ResultType    string                     `json:"resultType"`
-			InputRequests map[string]json.RawMessage `json:"inputRequests"`
-			RequestState  string                     `json:"requestState"`
+			ResultType    string                    `json:"resultType"`
+			InputRequests map[string]jsontext.Value `json:"inputRequests"`
+			RequestState  string                    `json:"requestState"`
 		} `json:"result"`
 	}
 	require.NoError(t, json.Unmarshal(responseBody, &message))

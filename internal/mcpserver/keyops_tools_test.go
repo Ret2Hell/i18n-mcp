@@ -1,7 +1,8 @@
 package mcpserver_test
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"os"
 	"path/filepath"
 	"testing"
@@ -71,7 +72,7 @@ func makeRenameMCPFixture(t *testing.T) string {
 		UpdatedAt:          time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC),
 		UpdatedBy:          "fixture",
 	}
-	data, err := json.MarshalIndent(stateFile, "", "  ")
+	data, err := json.Marshal(stateFile, jsontext.WithIndent("  "))
 	require.NoError(t, err)
 	writeRenameMCPFile(t, root, state.DefaultStatePath, string(data)+"\n")
 	return root

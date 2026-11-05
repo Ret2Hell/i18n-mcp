@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"os"
 	"path/filepath"
 
@@ -127,7 +128,7 @@ func (s *Service) displayPath(path string) (string, error) {
 }
 
 func renderConfig(cfg File) ([]byte, error) {
-	data, err := json.MarshalIndent(cfg, "", "  ")
+	data, err := json.Marshal(cfg, jsontext.WithIndent("  "), json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return nil, err
 	}

@@ -5,8 +5,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
+
 	"hash"
 	"time"
 
@@ -66,7 +68,7 @@ func New[T any](ctx context.Context, signer *security.RequestStateSigner, operat
 		Project string
 		Query   any
 		Limit   int
-	}{project, query, in.Limit})
+	}{project, query, in.Limit}, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +97,7 @@ func (b *Builder[T]) Add(item T) error {
 	if err := b.ctx.Err(); err != nil {
 		return err
 	}
-	raw, err := json.Marshal(item)
+	raw, err := json.Marshal(item, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return err
 	}
@@ -131,7 +133,7 @@ func (b *Builder[T]) Finish() (Metadata, error) {
 	}
 	m := Metadata{Returned: len(b.Items), TotalMatched: b.total, Truncated: b.offset+len(b.Items) < b.total}
 	if m.Truncated {
-		data, _ := json.Marshal(cursorData{Offset: b.offset + len(b.Items)})
+		data, _ := json.Marshal(cursorData{Offset: b.offset + len(b.Items)}, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 		token, err := b.signer.Sign(security.RequestStateClaims{Subject: security.SubjectFromContext(b.ctx), Operation: b.operation, InputDigest: b.queryDigest, PlanDigest: snapshot, ExpiresAt: time.Now().Add(time.Hour).Unix(), Data: data})
 		if err != nil {
 			return Metadata{}, err

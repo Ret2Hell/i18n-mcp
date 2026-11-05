@@ -7,8 +7,10 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
+
 	"slices"
 	"strconv"
 	"sync"
@@ -92,19 +94,28 @@ func HashContent(data []byte) string {
 }
 
 func sum(s string) string { digest := sha256.Sum256([]byte(s)); return hex.EncodeToString(digest[:]) }
-func digestValue(value any) string {
+func digestValue(value any) (string, error) {
 	h := sha256.New()
-	_ = json.NewEncoder(h).Encode(value)
-	return hex.EncodeToString(h.Sum(nil))
-}
-func planDigest(input string, files []File, extra any) string {
-	h := sha256.New()
-	_ = json.NewEncoder(h).Encode(input)
-	for _, file := range files {
-		_ = json.NewEncoder(h).Encode([]string{file.Path, sum(file.Diff), file.BeforeSHA256, file.AfterSHA256, strconv.FormatBool(file.BeforeMissing), strconv.FormatBool(file.Changed)})
+	if err := json.MarshalEncode(jsontext.NewEncoder(h), value, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true)); err != nil {
+		return "", fmt.Errorf("digest preview input: %w", err)
 	}
-	_ = json.NewEncoder(h).Encode(extra)
-	return hex.EncodeToString(h.Sum(nil))
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+func planDigest(input string, files []File, extra any) (string, error) {
+	h := sha256.New()
+	enc := jsontext.NewEncoder(h)
+	if err := json.MarshalEncode(enc, input, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true)); err != nil {
+		return "", err
+	}
+	for _, file := range files {
+		if err := json.MarshalEncode(enc, []string{file.Path, sum(file.Diff), file.BeforeSHA256, file.AfterSHA256, strconv.FormatBool(file.BeforeMissing), strconv.FormatBool(file.Changed)}, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true)); err != nil {
+			return "", fmt.Errorf("digest preview file: %w", err)
+		}
+	}
+	if err := json.MarshalEncode(enc, extra, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true)); err != nil {
+		return "", fmt.Errorf("digest preview metadata: %w", err)
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // Prepare publishes a new snapshot, or validates/reuses an existing review token.
@@ -136,9 +147,16 @@ func (s *Service) Prepare(ctx context.Context, operation string, input any, file
 	}
 	id := hex.EncodeToString(idBytes)
 	now := s.now()
-	inputDigest := digestValue(input)
-	record := snapshot{id: id, owner: security.SubjectFromContext(ctx), operation: operation, inputDigest: inputDigest, digest: planDigest(inputDigest, files, extra), expires: now.Add(ttl), files: slices.Clone(files), bytes: total}
-	data, _ := json.Marshal(id)
+	inputDigest, err := digestValue(input)
+	if err != nil {
+		return View{}, err
+	}
+	digest, err := planDigest(inputDigest, files, extra)
+	if err != nil {
+		return View{}, err
+	}
+	record := snapshot{id: id, owner: security.SubjectFromContext(ctx), operation: operation, inputDigest: inputDigest, digest: digest, expires: now.Add(ttl), files: slices.Clone(files), bytes: total}
+	data, _ := json.Marshal(id, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	signed, err := s.signer.Sign(security.RequestStateClaims{Subject: record.owner, Operation: operation, InputDigest: s.project + ":" + inputDigest, PlanDigest: record.digest, ExpiresAt: record.expires.Unix(), Data: data})
 	if err != nil {
 		return View{}, err
@@ -191,8 +209,15 @@ func (s *Service) verify(ctx context.Context, operation string, input any, files
 	if err != nil {
 		return snapshot{}, fmt.Errorf("invalid preview token: %w", err)
 	}
-	inputDigest := digestValue(input)
-	if claims.Subject != security.SubjectFromContext(ctx) || claims.Operation != operation || claims.InputDigest != s.project+":"+inputDigest || claims.PlanDigest != planDigest(inputDigest, files, extra) {
+	inputDigest, err := digestValue(input)
+	if err != nil {
+		return snapshot{}, err
+	}
+	digest, err := planDigest(inputDigest, files, extra)
+	if err != nil {
+		return snapshot{}, err
+	}
+	if claims.Subject != security.SubjectFromContext(ctx) || claims.Operation != operation || claims.InputDigest != s.project+":"+inputDigest || claims.PlanDigest != digest {
 		return snapshot{}, fmt.Errorf("preview is stale or belongs to a different operation; review a new preview before applying")
 	}
 	var id string
@@ -268,7 +293,7 @@ func (s *Service) Page(ctx context.Context, id, kind string, index, offset int) 
 			file.DiffBytes = len(file.Diff)
 			file.Diff = ""
 			file.PatchURI = fmt.Sprintf("i18n://patches/%s/file/%d/0", id, end)
-			encoded, err := json.Marshal(file)
+			encoded, err := json.Marshal(file, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 			if err != nil {
 				return nil, err
 			}

@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"maps"
@@ -13,9 +14,9 @@ import (
 	"slices"
 	"strings"
 
+	"encoding/json/v2"
 	"github.com/Ret2Hell/i18n-mcp/internal/fsutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/jsonedit"
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"
 	"github.com/Ret2Hell/i18n-mcp/internal/resources"
 )
@@ -91,7 +92,7 @@ func (s *Service) applyPruneEdits(ctx context.Context, in PruneInput, edits []pr
 }
 
 func pruneEditsDigest(edits []pruneEdit) (string, error) {
-	payload, err := json.Marshal(edits)
+	payload, err := json.Marshal(edits, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return "", fmt.Errorf("marshal prune plan: %w", err)
 	}

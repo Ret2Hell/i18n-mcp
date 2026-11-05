@@ -3,7 +3,7 @@ package report_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"strings"
@@ -61,7 +61,7 @@ func TestFullJSONExportCancelsDuringStreaming(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled)
 	require.Equal(t, 1, rows, "must stop before streaming the second row")
 	require.NotEmpty(t, partial.Bytes())
-	require.False(t, json.Valid(partial.Bytes()), "canceled output is incomplete")
+	require.False(t, jsontext.Value(partial.Bytes()).IsValid(), "canceled output is incomplete")
 	_, ok, err := a.Reports.Latest(t.Context())
 	require.NoError(t, err)
 	require.False(t, ok)

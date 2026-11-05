@@ -1,7 +1,8 @@
 package cli
 
 import (
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/config"
 	"github.com/spf13/cobra"
@@ -18,9 +19,8 @@ func newSchemaCommand(opts *RootOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			enc := json.NewEncoder(cmd.OutOrStdout())
-			enc.SetIndent("", "  ")
-			return enc.Encode(schema)
+			enc := jsontext.NewEncoder(cmd.OutOrStdout(), jsontext.WithIndent("  "))
+			return json.MarshalEncode(enc, schema, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 		},
 	}
 }

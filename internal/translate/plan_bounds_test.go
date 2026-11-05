@@ -1,7 +1,7 @@
 package translate_test
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"testing"
 

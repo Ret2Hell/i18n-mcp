@@ -1,7 +1,7 @@
 package mcpserver_test
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"testing"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/locale"

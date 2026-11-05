@@ -1,6 +1,7 @@
 package jsonedit
 
 import (
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"slices"
@@ -149,11 +150,17 @@ func (d *Document) Delete(path []string) (bool, error) {
 // Render serializes the document with its configured formatting.
 func (d *Document) Render() ([]byte, error) {
 	var b strings.Builder
-	renderValue(&b, d.Root, 0, d.Format)
+	if err := renderValue(&b, d.Root, 0, d.Format); err != nil {
+		return nil, err
+	}
 	if d.Format.TrailingNewline {
 		b.WriteByte('\n')
 	}
-	return []byte(b.String()), nil
+	data := []byte(b.String())
+	if !jsontext.Value(data).IsValid() {
+		return nil, fmt.Errorf("rendered document is not valid JSON")
+	}
+	return data, nil
 }
 
 func valueAt(value *Value, path []string) (*Value, bool, error) {

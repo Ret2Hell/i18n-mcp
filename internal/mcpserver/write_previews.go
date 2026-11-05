@@ -1,7 +1,8 @@
 package mcpserver
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"slices"
 	"unicode/utf8"
@@ -22,7 +23,7 @@ func writePreviewError(err error) *mcp.CallToolResult {
 // Reserve headroom for final write flags and bounded filesystem error messages.
 // This check occurs before writes, not after a successful operation.
 func checkWritePreview(out any) error {
-	raw, err := json.Marshal(out)
+	raw, err := json.Marshal(out, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	if err != nil {
 		return err
 	}

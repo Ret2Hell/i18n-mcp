@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	json "github.com/Ret2Hell/i18n-mcp/internal/jsonutil"
+	"encoding/json/v2"
 )
 
 // ValidationConfig selects the project's message syntax, independently of prose.

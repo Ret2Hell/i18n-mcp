@@ -2,10 +2,11 @@ package report
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"io"
 	"time"
 
+	"encoding/json/v2"
 	"github.com/Ret2Hell/i18n-mcp/internal/diff"
 )
 
@@ -27,47 +28,42 @@ func (s *Service) WriteFullJSON(ctx context.Context, w io.Writer) (Report, error
 	metadata := inv
 	metadata.Units = nil
 	r := Report{GeneratedAt: time.Now().UTC(), ProjectRoot: s.projectRoot, Config: cfg, Inventory: metadata}
-	encoder := json.NewEncoder(w)
+	encoder := jsontext.NewEncoder(w)
 	field := func(name string, value any) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if _, err := io.WriteString(w, ",\""+name+"\":"); err != nil {
+		if err := encoder.WriteToken(jsontext.String(name)); err != nil {
 			return err
 		}
-		return encoder.Encode(value)
+		return json.MarshalEncode(encoder, value, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	}
-	if _, err := io.WriteString(w, "{\"generatedAt\":"); err != nil {
-		return Report{}, err
-	}
-	if err := encoder.Encode(r.GeneratedAt); err != nil {
+	if err := encoder.WriteToken(jsontext.BeginObject); err != nil {
 		return Report{}, err
 	}
 	for _, entry := range []struct {
 		name  string
 		value any
-	}{{"projectRoot", r.ProjectRoot}, {"config", cfg}, {"inventory", metadata}} {
+	}{{"generatedAt", r.GeneratedAt}, {"projectRoot", r.ProjectRoot}, {"config", cfg}, {"inventory", metadata}} {
 		if err := field(entry.name, entry.value); err != nil {
 			return Report{}, err
 		}
 	}
-	if _, err := io.WriteString(w, ",\"diff\":{\"items\":["); err != nil {
-		return Report{}, err
-	}
-	first := true
-	analyzed, err := s.diff.WalkInventory(ctx, inv, diff.Filter{}, func(item diff.KeyDiff) error {
-		if !first {
-			if _, err := io.WriteString(w, ","); err != nil {
-				return err
-			}
+	for _, token := range []jsontext.Token{jsontext.String("diff"), jsontext.BeginObject, jsontext.String("items"), jsontext.BeginArray} {
+		if err := encoder.WriteToken(token); err != nil {
+			return Report{}, err
 		}
-		first = false
-		return encoder.Encode(item)
+	}
+	analyzed, err := s.diff.WalkInventory(ctx, inv, diff.Filter{}, func(item diff.KeyDiff) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return json.MarshalEncode(encoder, item, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 	})
 	if err != nil {
 		return Report{}, err
 	}
-	if _, err := io.WriteString(w, "]"); err != nil {
+	if err := encoder.WriteToken(jsontext.EndArray); err != nil {
 		return Report{}, err
 	}
 	for _, entry := range []struct {
@@ -78,7 +74,7 @@ func (s *Service) WriteFullJSON(ctx context.Context, w io.Writer) (Report, error
 			return Report{}, err
 		}
 	}
-	if _, err := io.WriteString(w, "}"); err != nil {
+	if err := encoder.WriteToken(jsontext.EndObject); err != nil {
 		return Report{}, err
 	}
 	r.Diff = analyzed
@@ -90,6 +86,9 @@ func (s *Service) WriteFullJSON(ctx context.Context, w io.Writer) (Report, error
 	if err := field("warnings", r.Warnings); err != nil {
 		return Report{}, err
 	}
-	_, err = io.WriteString(w, "}\n")
+	if err := ctx.Err(); err != nil {
+		return Report{}, err
+	}
+	err = encoder.WriteToken(jsontext.EndObject)
 	return r, err
 }

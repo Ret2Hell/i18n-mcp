@@ -1,7 +1,8 @@
 package diff
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"os"
 	"path/filepath"
 	"testing"
@@ -48,7 +49,7 @@ func TestAnalyzeIsDeterministicallySorted(t *testing.T) {
 }
 
 func TestSummarizeEmptyItemsHasNilByLocale(t *testing.T) {
-	for _, items := range [][]KeyDiff{nil, []KeyDiff{}} {
+	for _, items := range [][]KeyDiff{nil, {}} {
 		summary := Summarize(items)
 
 		require.Zero(t, summary.Total)
@@ -131,7 +132,7 @@ func makeDiffFixture(t *testing.T) string {
 		Status:             state.StatusCurrent,
 		UpdatedAt:          time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC),
 	}
-	data, err := json.MarshalIndent(stateFile, "", "  ")
+	data, err := json.Marshal(stateFile, jsontext.WithIndent("  "))
 	require.NoError(t, err)
 	writeDiffFile(t, root, state.DefaultStatePath, string(data)+"\n")
 	return root

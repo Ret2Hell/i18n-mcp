@@ -1,7 +1,9 @@
 package mcpserver
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
+
 	"reflect"
 
 	"github.com/Ret2Hell/i18n-mcp/internal/schemaport"
@@ -12,7 +14,7 @@ import (
 func portableSchema[T any](provided any) *jsonschema.Schema {
 	var schema *jsonschema.Schema
 	if provided != nil {
-		raw, err := json.Marshal(provided)
+		raw, err := json.Marshal(provided, json.Deterministic(true), jsontext.EscapeForHTML(true), jsontext.EscapeForJS(true))
 		if err != nil {
 			panic(err)
 		}

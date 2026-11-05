@@ -1,7 +1,9 @@
 package mcpserver_test
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
+
 	"path/filepath"
 	"testing"
 	"time"
@@ -181,7 +183,7 @@ func makeTranslationMCPFixture(t *testing.T) string {
 		UpdatedAt:          translationMCPTestTime(),
 		UpdatedBy:          "fixture",
 	}
-	data, err := json.MarshalIndent(stateFile, "", "  ")
+	data, err := json.Marshal(stateFile, jsontext.WithIndent("  "))
 	require.NoError(t, err)
 	writeFile(t, root, state.DefaultStatePath, string(data)+"\n")
 	return root
